@@ -1,54 +1,45 @@
 # TemplatePlugin
 
-[![Jitpack latest version](https://jitpack.io/v/fr.xpdustry/TemplatePlugin.svg)](https://jitpack.io/#fr.xpdustry/TemplatePlugin)
-[![Build status](https://github.com/Xpdustry/TemplatePlugin/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/Xpdustry/TemplatePlugin/actions/workflows/build.yml)
+[![Build status](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml)
 [![Mindustry 6.0 | 7.0 ](https://img.shields.io/badge/Mindustry-6.0%20%7C%207.0-ffd37f)](https://github.com/Anuken/Mindustry/releases)
-[![Xpdustry latest](https://repo.xpdustry.fr/api/badge/latest/snapshots/fr/xpdustry/template-plugin?color=00FFFF&name=TemplatePlugin&prefix=v)](https://github.com/Xpdustry/TemplatePlugin/releases)
+[![Xpdustry latest](https://repo.xpdustry.fr/api/badge/latest/snapshots/fr/xpdustry/no-horny-plugin?color=00FFFF&name=NoHornyPlugin&prefix=v)](https://github.com/Xpdustry/NoHornyPlugin/releases)
 
 ## Description
 
-**Xpdustry variation for publishing packages to our repo.**
+**/!\ This plugin requires [Distributor](https://github.com/Xpdustry/Distributor) which can only be used in a BE server since [#6328](https://github.com/Anuken/Mindustry/pull/6328) is needed.**
 
-This template features some cool stuff such as:
+Simple Mindustry plugin which aims to provide utilities to manage horny stuff in your server.
 
-- [Jitpack](https://jitpack.io/) support.
+For now, it's an implementation of [L0615T1C5-216AC-9437/GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) via a service API.
 
-- Gradle tasks for testing:
-    - `./gradlew runMindustryClient`: Run mindustry in desktop.
-    - `./gradlew runMindustryServer`: Run mindustry in a server.
+To interact with it, you can either use this plugin as a dependency with your jvm project by adding the following in your `build.gradle`
 
-- GitHub action for easier release and Jitpack usage:
-    - To create a new release, edit `CHANGELOG.md` and then run `./gradlew createRelease`, it will automatically create
-      a release tag and push it to trigger the release workflow. If you pushed your release by mistake, simply run this
-      in your terminal:
+```gradle
+repositories {
+    maven { url = uri("https://repo.xpdustry.fr/releases") }
+}
 
-      ```batch
-      # https://stackoverflow.com/a/5480292/15861283
-      git push --delete origin v{release-version}
-      git tag -d v{release-version}
-      ```
+dependencies {
+    compileOnly("fr.xpdustry:no-horny-plugin:1.0.0")
+}
+```
+
+Or call it in javascript with [distributor-js](https://github.com/Xpdustry/Distributor/tree/master/distributor-script/distributor-js).
+
+The easiest way is to listen to the hit event such as :
+
+```java
+Events.on(HornyLogicBuildEvent.class, event -> {
+  /* ... */  
+})
+```
 
 ## Building
 
 - `./gradlew jar` for a simple jar that contains only the plugin code.
 - `./gradlew shadowJar` for a fatJar that contains the plugin and its dependencies (use this for your server).
 
-## Nice tips
+## Testing
 
-- When using this template, don't forget to change `plugin.json` and `gradle.properties`.
-
-- This template targets V6 by default, you can change it by editing `minGameVersion` in `plugin.json`.
-
-- Don't forget to edit `props.root-package` in `gradle.properties` to enable NullAway.
-
-- To make sure gradle is always executable do:
-
-    ```batch
-    # https://stackoverflow.com/a/54048315/15861283
-    git update-index --chmod=+x gradlew
-    git add .
-    git commit -m "Changing permission of gradlew"
-    git push
-    ```
-
-- Don't forget to bump your dependencies with the `dependencyUpdates` task.
+- `./gradlew runMindustryClient`: Run mindustry in desktop with the plugin.
+- `./gradlew runMindustryServer`: Run mindustry in a server with the plugin.
