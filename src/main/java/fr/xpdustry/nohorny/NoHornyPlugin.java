@@ -1,6 +1,7 @@
 package fr.xpdustry.nohorny;
 
 import arc.Events;
+import arc.util.Log;
 import fr.xpdustry.distributor.Distributor;
 import fr.xpdustry.distributor.plugin.AbstractPlugin;
 import fr.xpdustry.nohorny.logic.HornyLogicBuildContext;
@@ -21,7 +22,7 @@ public final class NoHornyPlugin extends AbstractPlugin {
     Distributor.getServicePipeline()
       .registerServiceType(
         TypeToken.get(HornyLogicBuildService.class),
-        new GlobalImageBanService()
+        GlobalImageBanService.getInstance()
       );
 
     Events.on(BlockBuildEndEvent.class, event -> {
@@ -31,17 +32,21 @@ public final class NoHornyPlugin extends AbstractPlugin {
       if (event.tile.build instanceof LogicBlock.LogicBuild building) {
         building.configure(event.config);
 
+        final var context = new HornyLogicBuildContext(building, player);
         final var future = Distributor.getServicePipeline()
-          .pump(new HornyLogicBuildContext(building, player))
+          .pump(context)
           .through(HornyLogicBuildService.class)
           .getResultAsynchronously();
 
         future.whenComplete((type, throwable) -> {
-          if (type != HornyLogicBuildType.NOT_HORNY)
+          if (type != HornyLogicBuildType.NOT_HORNY) {
+            Log.debug("GIB: Hit @ at (@, @)", player, context.x(), context.y());
             Events.fire(new HornyLogicBuildEvent(type, player));
+          } else {
+            Log.debug("GIB: Miss @ at (@, @)", player, context.x(), context.y());
+          }
         });
       }
     });
   }
-
 }

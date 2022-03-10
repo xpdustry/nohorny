@@ -59,10 +59,6 @@ dependencies {
     errorprone("com.google.errorprone:error_prone_core:2.11.0")
 }
 
-tasks.shadowJar {
-    // relocate("com.google.code")
-}
-
 tasks.withType(JavaCompile::class.java).configureEach {
     options.errorprone {
         disableWarningsInGeneratedCode.set(true)

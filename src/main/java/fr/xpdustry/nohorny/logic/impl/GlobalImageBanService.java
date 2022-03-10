@@ -24,6 +24,8 @@ import org.jetbrains.annotations.NotNull;
 
 public final class GlobalImageBanService implements HornyLogicBuildService {
 
+  private static final GlobalImageBanService INSTANCE = new GlobalImageBanService();
+
   private static final MessageDigest messageDigest;
   private static final String GIB_API_ENDPOINT = "http://c-n.ddns.net:9999/bmi/check/?b64hash=";
   private static final int DEFAULT_CACHE_SIZE = 200;
@@ -44,6 +46,13 @@ public final class GlobalImageBanService implements HornyLogicBuildService {
     }
   }
 
+  private GlobalImageBanService() {
+  }
+
+  public static GlobalImageBanService getInstance() {
+    return INSTANCE;
+  }
+
   @Override
   public @NotNull HornyLogicBuildType handle(final @NonNull HornyLogicBuildContext context) {
     if (!DRAW_FLUSH_PATTERN.matcher(context.code()).find()) {
@@ -56,7 +65,8 @@ public final class GlobalImageBanService implements HornyLogicBuildService {
       final var hash = Base64.getEncoder().encodeToString(bytes);
       final var type = CACHE.computeIfAbsent(hash, h -> {
         try {
-          final var url = new URL(GIB_API_ENDPOINT + URLEncoder.encode(hash, StandardCharsets.UTF_8));
+          Log.info("GIB: Querying hash @", h);
+          final var url = new URL(GIB_API_ENDPOINT + URLEncoder.encode(h, StandardCharsets.UTF_8));
           final var con = (HttpURLConnection) url.openConnection();
           con.setConnectTimeout(DEFAULT_TIMEOUT);
           con.setRequestMethod("GET");
@@ -72,7 +82,7 @@ public final class GlobalImageBanService implements HornyLogicBuildService {
             }
           }
         } catch (IOException e) {
-          Log.debug("An unexpected exception happened while querying the API.", e);
+          Log.debug("An unexpected exception happened while querying the GIB API.", e);
         }
 
         return HornyLogicBuildType.NOT_HORNY;
