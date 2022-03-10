@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("fr.xpdustry:no-horny-plugin:1.0.0")
+    compileOnly("fr.xpdustry:no-horny-plugin:1.0.1")
 }
 ```
 
