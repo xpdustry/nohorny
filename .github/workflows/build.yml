@@ -1,0 +1,71 @@
+name: Build
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+    # Only run on PRs if the source branch is on someone else's repo
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - uses: gradle/wrapper-validation-action@v1
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build artifact
+        id: build
+        run: |
+          ./gradlew build
+          echo '::set-output name=ARTIFACT_PATH::'$(./gradlew getArtifactPath -q)
+
+      - name: Determine Status
+        run: |
+          if [ "$(./gradlew properties | awk '/^version:/ { print $2; }' | grep '\-SNAPSHOT')" ]; then
+            echo "STATUS=snapshot" >> $GITHUB_ENV
+          else
+            echo "STATUS=release" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Release
+        if: "${{ env.STATUS == 'release' }}"
+        id: release
+        run: |
+          tag=$(cat plugin.json | grep "version*")          # Cut the line with the version in plugin.json
+          tag=$(echo $tag | cut -d ":" -f 2,3)              # Split with ":" and take the version number
+          tag=$(echo $tag | tr -d \"," ")                   # Trim the " and , and spaces
+          echo '::set-output name=RELEASE_TAG::'$tag
+
+          r=$(cat CHANGELOG.md)
+          r="${r//'%'/'%25'}"                               # Multiline escape sequences for %
+          r="${r//$'\n'/'%0A'}"                             # Multiline escape sequences for '\n'
+          r="${r//$'\r'/'%0D'}"                             # Multiline escape sequences for '\r'
+          echo "::set-output name=CHANGELOG::$r"
+
+      - name: Upload artifact to Release
+        if: "${{ env.STATUS == 'release' }}"
+        uses: svenstaro/upload-release-action@v2
+        with:
+          release_name: v${{ steps.release.outputs.RELEASE_TAG }} release
+          body: ${{ steps.release.outputs.CHANGELOG }}
+
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          asset_name: ${{ github.event.repository.name }}.jar
+          file: ${{ steps.build.outputs.ARTIFACT_PATH }}
+          tag: v${{ steps.release.outputs.RELEASE_TAG }}
+
+      - name: Upload artifact to Actions
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}
+          path: ${{ steps.build.outputs.ARTIFACT_PATH }}

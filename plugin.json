@@ -1,0 +1,13 @@
+{
+  "name": "xpdustry-template-plugin",
+  "displayName": "Xpdustry TemplatePlugin",
+  "author": "Xpdustry",
+  "description": "A template plugin for easier development, enjoy.",
+  "version": "2.3.0",
+  "minGameVersion": "v126.2",
+  "hidden": true,
+  "java": true,
+  "main": "fr.xpdustry.template.TemplatePlugin",
+  "repo": "Xpdustry/TemplatePlugin",
+  "dependencies": []
+}
