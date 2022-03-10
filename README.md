@@ -34,6 +34,16 @@ Events.on(HornyLogicBuildEvent.class, event -> {
 })
 ```
 
+A concrete example with `distributor-js` would be :
+
+```js
+importPackage(Packages.fr.xpdustry.nohorny.logic)
+
+Events.on(HornyLogicBuildEvent, cons(e => {
+	e.player().kick("Building NSFW");
+}))
+```
+
 ## Building
 
 - `./gradlew jar` for a simple jar that contains only the plugin code.
@@ -43,3 +53,9 @@ Events.on(HornyLogicBuildEvent.class, event -> {
 
 - `./gradlew runMindustryClient`: Run mindustry in desktop with the plugin.
 - `./gradlew runMindustryServer`: Run mindustry in a server with the plugin.
+
+## TODO
+
+- [ ] Adding faster service implementations.
+- [ ] Adding configurations for GIB.
+
