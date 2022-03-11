@@ -12,37 +12,39 @@ Simple Mindustry plugin which aims to provide utilities to manage horny stuff in
 
 For now, it's an implementation of [L0615T1C5-216AC-9437/GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) via a service API.
 
-To interact with it, you can either use this plugin as a dependency with your jvm project by adding the following in your `build.gradle`
+To interact with it, you can either :
 
-```gradle
-repositories {
-    maven { url = uri("https://repo.xpdustry.fr/releases") }
-}
+- Configure it with the created config file `./distributor/plugins/xpdustry-no-horny-plugin/config.properties` :
 
-dependencies {
-    compileOnly("fr.xpdustry:no-horny-plugin:1.0.1")
-}
-```
+  - `nohorny.logic-build.cache-size`: The number of logic build cached by the anti nsfw logic service.
 
-Or call it in javascript with [distributor-js](https://github.com/Xpdustry/Distributor/tree/master/distributor-script/distributor-js).
+  - `nohorny.logic-build.deep-search`: Enable/Disable the deep search feature, which means more accurate results but longer execution time. You may increase the number of threads with the `distributor.service.threads` property in Distributor config.
 
-The easiest way is to listen to the hit event such as :
+  - `nohorny.logic-build.default-action`: The default action to perform on a player (`NONE`, `KICK` or `BAN`) depending on your needs.
 
-```java
-Events.on(HornyLogicBuildEvent.class, event -> {
-  /* ... */  
-})
-```
+- Use this plugin as a dependency with your jvm project by adding the following :
 
-A concrete example with `distributor-js` would be :
+  - `build.gradle`
 
-```js
-importPackage(Packages.fr.xpdustry.nohorny.logic)
-
-Events.on(HornyLogicBuildEvent, cons(e => {
-	e.player().kick("Building NSFW");
-}))
-```
+    ```gradle
+    repositories {
+        maven { url = uri("https://repo.xpdustry.fr/releases") }
+    }
+    
+    dependencies {
+        compileOnly("fr.xpdustry:no-horny-plugin:1.0.1")
+    }
+    ```
+    
+  - `plugin.json`
+    
+    ```json
+    {
+      "dependencies": [
+        "xpdustry-no-horny-plugin"
+      ]
+    }
+    ```
 
 ## Building
 
@@ -51,11 +53,10 @@ Events.on(HornyLogicBuildEvent, cons(e => {
 
 ## Testing
 
-- `./gradlew runMindustryClient`: Run mindustry in desktop with the plugin.
-- `./gradlew runMindustryServer`: Run mindustry in a server with the plugin.
+- `./gradlew runMindustryClient`: Run Mindustry in desktop mode with the plugin.
+- `./gradlew runMindustryServer`: Run Mindustry in a server mode with the plugin.
 
 ## TODO
 
 - [ ] Adding faster service implementations.
-- [ ] Adding configurations for GIB.
-
+- [x] Adding configurations for GIB.

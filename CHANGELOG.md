@@ -1,4 +1,5 @@
-What a nice day for an HotFix
+What a nice day for new Features
 
-- Added debug logs.
-- Turned `GlobalImageBanService` into a singleton.
+- Added easy configuration.
+- Removed `HornyLogicBuildType.NUDITY`.
+- Random optimizations.
