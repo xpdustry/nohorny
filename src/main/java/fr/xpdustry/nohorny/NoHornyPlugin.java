@@ -12,12 +12,9 @@ import fr.xpdustry.nohorny.logic.impl.GlobalImageBanService;
 import io.leangen.geantyref.TypeToken;
 import mindustry.Vars;
 import mindustry.game.EventType.BlockBuildEndEvent;
-import mindustry.gen.Call;
-import mindustry.net.Packets.KickReason;
-import mindustry.ui.dialogs.AdminsDialog;
-import mindustry.ui.fragments.PlayerListFragment;
 import mindustry.world.blocks.logic.LogicBlock;
 import net.mindustry_ddns.store.FileStore;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public final class NoHornyPlugin extends AbstractPlugin {
@@ -28,7 +25,7 @@ public final class NoHornyPlugin extends AbstractPlugin {
   /**
    * Returns the config of the plugin.
    */
-  public static NoHornyConfig config() {
+  public static @NotNull NoHornyConfig config() {
     return config.get();
   }
 

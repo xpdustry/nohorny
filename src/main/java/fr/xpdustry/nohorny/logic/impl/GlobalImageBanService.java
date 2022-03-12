@@ -78,7 +78,7 @@ public final class GlobalImageBanService implements HornyLogicBuildService {
 
   private @NotNull HornyLogicBuildType queryGibDatabase(final @NotNull String hash) {
     try {
-      Log.info("GIB: Querying hash @", hash);
+      Log.debug("GIB: Querying hash @", hash);
 
       final var url = new URL(GIB_API_ENDPOINT + URLEncoder.encode(hash, StandardCharsets.UTF_8));
       final var con = (HttpURLConnection) url.openConnection();
