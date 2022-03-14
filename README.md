@@ -6,9 +6,7 @@
 
 ## Description
 
-**/!\ This plugin requires [Distributor](https://github.com/Xpdustry/Distributor) which can only be used in a BE server since [#6328](https://github.com/Anuken/Mindustry/pull/6328) is needed.**
-
-Simple Mindustry plugin which aims to provide utilities to manage horny stuff in your server.
+A simple Mindustry plugin which aims to provide utilities to manage horny stuff in your server, especially logic NSFW.
 
 For now, it's an implementation of [L0615T1C5-216AC-9437/GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) via a service API.
 
@@ -32,7 +30,7 @@ To interact with it, you can either :
     }
     
     dependencies {
-        compileOnly("fr.xpdustry:no-horny-plugin:1.0.1")
+        compileOnly("fr.xpdustry:no-horny-plugin:1.1.2")
     }
     ```
     
@@ -45,6 +43,12 @@ To interact with it, you can either :
       ]
     }
     ```
+    
+## Running
+
+[distributor-core](https://github.com/Xpdustry/Distributor) is required as a dependency.
+
+If you run on V6 or V7 up to v135, you will need [mod-loader](https://github.com/Xpdustry/ModLoaderPlugin).
 
 ## Building
 
