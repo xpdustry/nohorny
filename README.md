@@ -57,8 +57,8 @@ If you run on V6 or V7 up to v135, you will need [mod-loader](https://github.com
 
 ## Testing
 
-- `./gradlew runMindustryClient`: Run Mindustry in desktop mode with the plugin.
-- `./gradlew runMindustryServer`: Run Mindustry in a server mode with the plugin.
+- `./gradlew runMindustryClient`: Run Mindustry in desktop with the plugin.
+- `./gradlew runMindustryServer`: Run Mindustry in a server with the plugin.
 
 ## TODO
 
