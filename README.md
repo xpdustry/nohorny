@@ -1,3 +1,9 @@
+> **Warning**
+>
+> This project is archived due to [GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) being shutdown.
+> Use the new plugin [BannedMindustryImage](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage) instead.
+
+
 # NoHornyPlugin
 
 [![Build status](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml)
