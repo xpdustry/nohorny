@@ -8,11 +8,13 @@
 
 This plugin requires :
 
-- Java 17 or above.
+- Java 17 or above
 
-- Mindustry v146 or above.
+- Mindustry v146 or above
 
-- [Distributor](https://github.com/xpdustry/distributor) v3.2.1.
+- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.1.0-k.1.9.10
+
+- [Distributor](https://github.com/xpdustry/distributor) v3.2.1
 
 ## Building
 
