@@ -1,3 +1,5 @@
+This file is part of NoHorny. The plugin securing your server against nsfw.
+
 MIT License
 
 Copyright (c) 2023 Xpdustry

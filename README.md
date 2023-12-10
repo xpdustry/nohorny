@@ -1,72 +1,29 @@
-> **Warning**
->
-> This project is archived due to [GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) being shutdown.
-> Use the new plugin [BannedMindustryImage](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage) instead.
+# nohorny
 
-
-# NoHornyPlugin
-
-[![Build status](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/Xpdustry/NoHornyPlugin/actions/workflows/build.yml)
+[![Xpdustry latest](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny?color=00FFFF&name=nohorny&prefix=v)](https://github.com/xpdustry/nohorny/releases)
+[![Build status](https://github.com/xpdustry/nohorny/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/xpdustry/nohorny/actions/workflows/build.yml)
 [![Mindustry 7.0 ](https://img.shields.io/badge/Mindustry-7.0-ffd37f)](https://github.com/Anuken/Mindustry/releases)
-[![Xpdustry latest](https://repo.xpdustry.fr/api/badge/latest/releases/fr/xpdustry/no-horny-plugin?color=00FFFF&name=NoHornyPlugin&prefix=v)](https://github.com/Xpdustry/NoHornyPlugin/releases)
 
-## Description
+## Installation
 
-A simple Mindustry plugin which aims to provide utilities to manage horny stuff in your server, especially logic NSFW.
+This plugin requires :
 
-For now, it's an implementation of [L0615T1C5-216AC-9437/GlobalImageBan](https://github.com/L0615T1C5-216AC-9437/GlobalImageBan) via a service API.
+- Java 17 or above.
 
-To interact with it, you can either :
+- Mindustry v146 or above.
 
-- Configure it with the created config file `./distributor/plugins/xpdustry-no-horny-plugin/config.properties` :
-
-  - `nohorny.logic-build.cache-size`: The number of logic build cached by the anti nsfw logic service.
-
-  - `nohorny.logic-build.deep-search`: Enable/Disable the deep search feature, which means more accurate results but longer execution time. You may increase the number of threads with the `distributor.service.threads` property in Distributor config.
-
-  - `nohorny.logic-build.default-action`: The default action to perform on a player (`NONE`, `KICK` or `BAN`) depending on your needs.
-
-- Use this plugin as a dependency with your jvm project by adding the following :
-
-  - `build.gradle`
-
-    ```gradle
-    repositories {
-        maven { url = uri("https://repo.xpdustry.fr/releases") }
-    }
-    
-    dependencies {
-        compileOnly("fr.xpdustry:no-horny-plugin:1.1.2")
-    }
-    ```
-    
-  - `plugin.json`
-    
-    ```json
-    {
-      "dependencies": [
-        "xpdustry-no-horny-plugin"
-      ]
-    }
-    ```
-    
-## Running
-
-[distributor-core](https://github.com/Xpdustry/Distributor) is required as a dependency.
-
-If you run on V6 or V7 up to v135, you will need [mod-loader](https://github.com/Xpdustry/ModLoaderPlugin).
+- [Distributor](https://github.com/xpdustry/distributor) v3.2.1.
 
 ## Building
 
-- `./gradlew jar` for a simple jar that contains only the plugin code.
-- `./gradlew shadowJar` for a fatJar that contains the plugin and its dependencies (use this for your server).
+- `./gradlew shadowJar` to compile the plugin into a usable jar (will be located at `builds/libs/nohorny.jar`).
 
-## Testing
+- `./gradlew jar` for a plain jar that contains only the plugin code.
 
-- `./gradlew runMindustryClient`: Run Mindustry in desktop with the plugin.
-- `./gradlew runMindustryServer`: Run Mindustry in a server with the plugin.
+- `./gradlew runMindustryServer` to run the plugin in a local Mindustry server.
 
-## TODO
+- `./gradlew runMindustryClient` to start a local Mindustry client that will let you test the plugin.
 
-- [ ] Adding faster service implementations.
-- [x] Adding configurations for GIB.
+- `./gradlew spotlessApply` to apply the code formatting and the licence header.
+
+- `./gradlew dependencyUpdates` to check for dependency updates.

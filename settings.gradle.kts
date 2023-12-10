@@ -1,5 +1,12 @@
-import java.util.*
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven("https://maven.xpdustry.com/releases") {
+            name = "xpdustry-releases"
+            mavenContent { releasesOnly() }
+        }
+    }
+}
 
-val props = Properties()
-file("./gradle.properties").reader().use { props.load(it) }
-rootProject.name = props.getProperty("props.project-name")
+// The project name, used as the name of the final artifact
+rootProject.name = "nohorny"
