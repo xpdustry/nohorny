@@ -3,6 +3,7 @@ import fr.xpdustry.toxopid.dsl.mindustryDependencies
 import fr.xpdustry.toxopid.spec.ModMetadata
 import fr.xpdustry.toxopid.spec.ModPlatform
 import fr.xpdustry.toxopid.task.GithubArtifactDownload
+import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
     kotlin("jvm") version "1.9.10"
@@ -47,17 +48,30 @@ toxopid {
 
 repositories {
     mavenCentral()
+
     // This repository provides mindustry artifacts built by xpdustry
-    maven("https://maven.xpdustry.com/mindustry")
+    maven("https://maven.xpdustry.com/mindustry") {
+        name = "xpdustry-mindustry"
+        mavenContent { releasesOnly() }
+    }
+
     // This repository provides xpdustry libraries, such as the distributor-api
-    maven("https://maven.xpdustry.com/releases")
+    maven("https://maven.xpdustry.com/releases") {
+        name = "xpdustry-releases"
+        mavenContent { releasesOnly() }
+    }
 }
 
 dependencies {
     mindustryDependencies()
-    compileOnly(kotlin("stdlib-jdk8"))
     compileOnly("fr.xpdustry:distributor-api:3.2.1")
+    compileOnly(kotlin("stdlib-jdk8"))
+
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
+    implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.guava:guava:32.1.3-jre")
 
     val junit = "5.10.1"
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junit")
@@ -69,13 +83,13 @@ configurations.runtimeClasspath {
     exclude("org.jetbrains.kotlin", "kotlin-stdlib")
     exclude("org.jetbrains.kotlin", "kotlin-stdlib-common")
     exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk8")
-    exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-core")
-    exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8")
+    exclude("org.jetbrains.kotlin", "kotlin-reflect")
 }
 
 kotlin {
     jvmToolchain(17)
     coreLibrariesVersion = "1.9.10"
+    explicitApi = ExplicitApiMode.Strict
     target {
         compilations.configureEach {
             kotlinOptions {
@@ -154,8 +168,14 @@ tasks.shadowJar {
     val relocationPackage = "com.xpdustry.nohorny.shadow"
     kotlinRelocate("okhttp3", "$relocationPackage.okhttp3")
     kotlinRelocate("okio", "$relocationPackage.okio")
+    kotlinRelocate("com.sksamuel.hoplite", "$relocationPackage.hoplite")
+    relocate("com.google.gson", "$relocationPackage.gson")
+    relocate("com.google.common", "$relocationPackage.common")
 
-    minimize()
+    mergeServiceFiles()
+    minimize {
+        exclude(dependency("com.sksamuel.hoplite:hoplite-.*:.*"))
+    }
 
     doFirst {
         val temp = temporaryDir.resolve("plugin.json")

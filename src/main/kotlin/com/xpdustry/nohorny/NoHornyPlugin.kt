@@ -25,10 +25,93 @@
  */
 package com.xpdustry.nohorny
 
+import arc.util.CommandHandler
+import com.google.common.util.concurrent.ThreadFactoryBuilder
+import com.google.gson.Gson
+import com.sksamuel.hoplite.ConfigException
+import com.sksamuel.hoplite.ConfigLoaderBuilder
+import com.sksamuel.hoplite.addPathSource
+import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
+import com.xpdustry.nohorny.analyzer.ImageAnalyzer
+import com.xpdustry.nohorny.analyzer.SightEngineImageAnalyzer
 import fr.xpdustry.distributor.api.plugin.AbstractMindustryPlugin
+import java.util.concurrent.Executors
+import kotlin.io.path.notExists
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 
-class NoHornyPlugin : AbstractMindustryPlugin() {
+public class NoHornyPlugin : AbstractMindustryPlugin() {
+
+    private val file = directory.resolve("config.yaml")
+    private val gson = Gson()
+
+    private val loader =
+        ConfigLoaderBuilder.empty()
+            .withClassLoader(javaClass.classLoader)
+            .addDefaultDecoders()
+            .addDefaultParamMappers()
+            .addDefaultParsers()
+            .addPathSource(file)
+            .strict()
+            .build()
+
+    private val http =
+        OkHttpClient.Builder()
+            .connectTimeout(10.seconds.toJavaDuration())
+            .connectTimeout(10.seconds.toJavaDuration())
+            .readTimeout(10.seconds.toJavaDuration())
+            .writeTimeout(10.seconds.toJavaDuration())
+            .dispatcher(
+                Dispatcher(
+                    Executors.newFixedThreadPool(
+                        2,
+                        ThreadFactoryBuilder()
+                            .setDaemon(true)
+                            .setNameFormat("nohorny-worker-http-%d")
+                            .build())))
+            .build()
+
+    internal var config = NoHornyConfig()
+    internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
+
     override fun onInit() {
-        logger.info("To the horny jail!")
+        reload()
+        addListener(NoHornyTracker(this))
+        addListener(NoHornyAutoBan(this))
+        logger.info("Initialized nohorny, to the horny jail we go.")
+    }
+
+    override fun onServerCommandsRegistration(handler: CommandHandler) {
+        handler.register<Unit>("nohorny-reload", "Reload nohorny config.") { _, _ ->
+            try {
+                reload()
+                logger.info("Reloaded config")
+            } catch (e: ConfigException) {
+                logger.error(e.message)
+            } catch (e: Exception) {
+                logger.error("Failed to reload config", e)
+            }
+        }
+    }
+
+    private fun reload() {
+        if (file.notExists()) {
+            analyzer = ImageAnalyzer.None
+            return
+        }
+
+        val config = loader.loadConfigOrThrow<NoHornyConfig>()
+        val analyzer =
+            when (config.analyzer) {
+                is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
+                is NoHornyConfig.Analyzer.SightEngine ->
+                    SightEngineImageAnalyzer(config.analyzer, gson, http)
+                is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
+            }
+
+        this.config = config
+        this.analyzer = analyzer
     }
 }
