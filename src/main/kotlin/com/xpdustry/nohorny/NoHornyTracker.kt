@@ -32,7 +32,6 @@ import arc.struct.IntSet
 import arc.util.CommandHandler
 import com.google.common.net.InetAddresses
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
-import com.xpdustry.nohorny.analyzer.LogicImage
 import com.xpdustry.nohorny.extension.*
 import com.xpdustry.nohorny.extension.onPlayerBuildEvent
 import com.xpdustry.nohorny.extension.onPlayerConfigureEvent
@@ -65,9 +64,9 @@ import org.slf4j.LoggerFactory
 internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListener {
 
     private val processors = mutableMapOf<Point, ProcessorWithLinks>()
-    private val displays = SimpleClusterManager<LogicImage.Display>()
+    private val displays = SimpleClusterManager<NoHornyImage.Display>()
     private val displayProcessingQueue = PriorityQueue<ProcessingTask>()
-    private val canvases = SimpleClusterManager<LogicImage.Canvas>()
+    private val canvases = SimpleClusterManager<NoHornyImage.Canvas>()
     private val canvasProcessingQueue = PriorityQueue<ProcessingTask>()
     private val debug = IntSet()
 
@@ -131,7 +130,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                     block.y.toFloat() * Vars.tilesize,
                 )
                 val data = block.payload
-                if (data is LogicImage.Display) {
+                if (data is NoHornyImage.Display) {
                     for (processor in data.processors.keys) {
                         Call.label(
                             player.con,
@@ -159,7 +158,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T : LogicImage> startProcessing(
+    private fun <T : NoHornyImage> startProcessing(
         manager: SimpleClusterManager<T>,
         queue: PriorityQueue<ProcessingTask>,
         name: String
@@ -203,7 +202,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                     canvas.rx,
                     canvas.ry,
                     canvas.block.size,
-                    LogicImage.Canvas(
+                    NoHornyImage.Canvas(
                         (canvas.block as CanvasBlock).canvasSize,
                         readCanvas(canvas),
                         player.asAuthor()))))
@@ -232,10 +231,10 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
 
     private fun addDisplay(display: LogicDisplay.LogicDisplayBuild) {
         val resolution = (display.block as LogicDisplay).displaySize
-        val map = mutableMapOf<Point, LogicImage.Processor>()
+        val map = mutableMapOf<Point, NoHornyImage.Processor>()
         val block =
             Cluster.Block(
-                display.rx, display.ry, display.block.size, LogicImage.Display(resolution, map))
+                display.rx, display.ry, display.block.size, NoHornyImage.Display(resolution, map))
 
         for ((position, data) in processors) {
             if (display.within(
@@ -287,7 +286,8 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
 
             if (instructions.size >= plugin.config.minimumInstructionCount && links.isNotEmpty()) {
                 val data =
-                    ProcessorWithLinks(LogicImage.Processor(instructions, player.asAuthor()), links)
+                    ProcessorWithLinks(
+                        NoHornyImage.Processor(instructions, player.asAuthor()), links)
                 processors[processor.point] = data
                 for (link in links) {
                     val element = displays.getBlock(link.x, link.y) ?: continue
@@ -310,8 +310,8 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         handleDisplaysModifications(modified)
     }
 
-    private fun readInstructions(executor: LExecutor): List<LogicImage.Instruction> {
-        val instructions = mutableListOf<LogicImage.Instruction>()
+    private fun readInstructions(executor: LExecutor): List<NoHornyImage.Instruction> {
+        val instructions = mutableListOf<NoHornyImage.Instruction>()
         for (instruction in executor.instructions) {
             if (instruction !is LExecutor.DrawI) {
                 continue
@@ -323,14 +323,14 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                         val g = normalizeColorValue(executor.numi(instruction.y))
                         val b = normalizeColorValue(executor.numi(instruction.p1))
                         val a = normalizeColorValue(executor.numi(instruction.p2))
-                        LogicImage.Instruction.Color(r, g, b, a)
+                        NoHornyImage.Instruction.Color(r, g, b, a)
                     }
                     LogicDisplay.commandRect -> {
                         val x = executor.numi(instruction.x)
                         val y = executor.numi(instruction.y)
                         val w = executor.numi(instruction.p1)
                         val h = executor.numi(instruction.p2)
-                        LogicImage.Instruction.Rect(x, y, w, h)
+                        NoHornyImage.Instruction.Rect(x, y, w, h)
                     }
                     LogicDisplay.commandTriangle -> {
                         val x1 = executor.numi(instruction.x)
@@ -339,7 +339,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                         val y2 = executor.numi(instruction.p2)
                         val x3 = executor.numi(instruction.p3)
                         val y3 = executor.numi(instruction.p4)
-                        LogicImage.Instruction.Triangle(x1, y1, x2, y2, x3, y3)
+                        NoHornyImage.Instruction.Triangle(x1, y1, x2, y2, x3, y3)
                     }
                     else -> continue
                 }
@@ -380,7 +380,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         return result
     }
 
-    private fun Player.asAuthor() = LogicImage.Author(uuid(), InetAddresses.forString(ip()))
+    private fun Player.asAuthor() = NoHornyImage.Author(uuid(), InetAddresses.forString(ip()))
 
     data class ProcessingTask(val identifier: Int, val instant: Instant) :
         Comparable<ProcessingTask> {
@@ -392,4 +392,4 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     }
 }
 
-private typealias ProcessorWithLinks = Pair<LogicImage.Processor, List<Point>>
+private typealias ProcessorWithLinks = Pair<NoHornyImage.Processor, List<Point>>

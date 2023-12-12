@@ -27,7 +27,6 @@ package com.xpdustry.nohorny
 
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
-import com.xpdustry.nohorny.analyzer.LogicImage
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.extension.schedule
 import fr.xpdustry.distributor.api.plugin.PluginListener
@@ -60,7 +59,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListene
                 queuedDestruction(
                     cluster.blocks.flatMapTo(ArrayDeque()) { block ->
                         val points = mutableListOf(Point(block.x, block.y))
-                        if (block.payload is LogicImage.Display) {
+                        if (block.payload is NoHornyImage.Display) {
                             points += block.payload.processors.keys
                         }
                         points

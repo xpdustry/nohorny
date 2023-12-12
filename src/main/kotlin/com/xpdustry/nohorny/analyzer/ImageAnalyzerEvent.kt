@@ -25,27 +25,28 @@
  */
 package com.xpdustry.nohorny.analyzer
 
+import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.geometry.Cluster
 
 public data class ImageAnalyzerEvent(
     val result: ImageAnalyzer.Result,
-    val cluster: Cluster<out LogicImage>
+    val cluster: Cluster<out NoHornyImage>
 ) {
-    public operator fun component3(): LogicImage.Author? = author
+    public operator fun component3(): NoHornyImage.Author? = author
 
-    val author: LogicImage.Author?
+    val author: NoHornyImage.Author?
         get() =
             cluster.blocks
                 .flatMap { block ->
                     when (block.payload) {
-                        is LogicImage.Canvas -> listOf(block.payload.author)
-                        is LogicImage.Display -> block.payload.processors.values.map { it.author }
+                        is NoHornyImage.Canvas -> listOf(block.payload.author)
+                        is NoHornyImage.Display -> block.payload.processors.values.map { it.author }
                     }
                 }
                 .let { authors ->
                     val max =
                         authors
-                            .groupingBy(LogicImage.Author::address)
+                            .groupingBy(NoHornyImage.Author::address)
                             .eachCount()
                             .maxByOrNull { it.value }
                             ?.key ?: return@let null

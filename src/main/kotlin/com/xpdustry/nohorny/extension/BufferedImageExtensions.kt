@@ -25,7 +25,7 @@
  */
 package com.xpdustry.nohorny.extension
 
-import com.xpdustry.nohorny.analyzer.LogicImage
+import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.geometry.Cluster
 import java.awt.Color
 import java.awt.geom.AffineTransform
@@ -43,7 +43,7 @@ internal fun BufferedImage.toJpgByteArray(): ByteArray {
     return ByteArrayOutputStream().also { ImageIO.write(image, "jpg", it) }.toByteArray()
 }
 
-internal fun render(cluster: Cluster<out LogicImage>): BufferedImage {
+internal fun render(cluster: Cluster<out NoHornyImage>): BufferedImage {
     val image =
         BufferedImage(
             cluster.w * RES_PER_BLOCK, cluster.h * RES_PER_BLOCK, BufferedImage.TYPE_INT_ARGB)
@@ -68,29 +68,29 @@ internal fun render(cluster: Cluster<out LogicImage>): BufferedImage {
     return inverted
 }
 
-private fun createImage(image: LogicImage): BufferedImage {
+private fun createImage(image: NoHornyImage): BufferedImage {
     var output = BufferedImage(image.resolution, image.resolution, BufferedImage.TYPE_INT_RGB)
     val graphics = output.graphics
     graphics.color = Color(0, 0, 0, 0)
     graphics.fillRect(0, 0, output.width, output.height)
 
     when (image) {
-        is LogicImage.Canvas -> {
+        is NoHornyImage.Canvas -> {
             for (pixel in image.pixels) {
                 output.setRGB(
                     pixel.key % image.resolution, pixel.key / image.resolution, pixel.value)
             }
             output = invertYAxis(output)
         }
-        is LogicImage.Display -> {
+        is NoHornyImage.Display -> {
             for (processor in image.processors.values) {
                 for (instruction in processor.instructions) {
                     when (instruction) {
-                        is LogicImage.Instruction.Color -> {
+                        is NoHornyImage.Instruction.Color -> {
                             graphics.color =
                                 Color(instruction.r, instruction.g, instruction.b, instruction.a)
                         }
-                        is LogicImage.Instruction.Rect -> {
+                        is NoHornyImage.Instruction.Rect -> {
                             if (instruction.w == 1 && instruction.h == 1) {
                                 output.setRGB(instruction.x, instruction.y, graphics.color.rgb)
                             } else {
@@ -98,7 +98,7 @@ private fun createImage(image: LogicImage): BufferedImage {
                                     instruction.x, instruction.y, instruction.w, instruction.h)
                             }
                         }
-                        is LogicImage.Instruction.Triangle -> {
+                        is NoHornyImage.Instruction.Triangle -> {
                             graphics.fillPolygon(
                                 intArrayOf(instruction.x1, instruction.x2, instruction.x3),
                                 intArrayOf(instruction.y1, instruction.y2, instruction.y3),

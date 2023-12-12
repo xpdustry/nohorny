@@ -23,29 +23,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny
 
 import arc.struct.IntIntMap
 import java.awt.Point
 import java.net.InetAddress
 
-public sealed interface LogicImage {
+public sealed interface NoHornyImage {
     public val resolution: Int
 
-    public fun copy(): LogicImage
+    public fun copy(): NoHornyImage
 
     public class Canvas(
         override val resolution: Int,
         public val pixels: IntIntMap,
         public val author: Author
-    ) : LogicImage {
+    ) : NoHornyImage {
         override fun copy(): Canvas = Canvas(resolution, IntIntMap(pixels), author)
     }
 
     public class Display(
         override val resolution: Int,
         public val processors: MutableMap<Point, Processor>
-    ) : LogicImage {
+    ) : NoHornyImage {
         override fun copy(): Display = Display(resolution, processors.toMutableMap())
     }
 
