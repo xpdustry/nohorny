@@ -2,7 +2,6 @@
 .gradle
 **/build/
 !src/**/build/
-!gradle-wrapper.jar
 
 ## Eclipse
 bin/
@@ -26,6 +25,7 @@ bin/
 *.tar.gz
 hs_err_pid*
 replay_pid*
+!gradle/wrapper/gradle-wrapper.jar
 
 ## Intellij
 .idea/
