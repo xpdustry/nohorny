@@ -27,13 +27,13 @@ package com.xpdustry.nohorny
 
 import arc.util.CommandHandler
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.gson.Gson
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addPathSource
 import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
-import com.xpdustry.nohorny.analyzer.SightEngineImageAnalyzer
+import com.xpdustry.nohorny.analyzer.ModerateContentAnalyzer
+import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
 import fr.xpdustry.distributor.api.plugin.AbstractMindustryPlugin
 import java.util.concurrent.Executors
 import kotlin.io.path.notExists
@@ -45,7 +45,6 @@ import okhttp3.OkHttpClient
 public class NoHornyPlugin : AbstractMindustryPlugin() {
 
     private val file = directory.resolve("config.yaml")
-    private val gson = Gson()
 
     private val loader =
         ConfigLoaderBuilder.empty()
@@ -106,9 +105,10 @@ public class NoHornyPlugin : AbstractMindustryPlugin() {
         val analyzer =
             when (config.analyzer) {
                 is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
-                is NoHornyConfig.Analyzer.SightEngine ->
-                    SightEngineImageAnalyzer(config.analyzer, gson, http)
                 is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
+                is NoHornyConfig.Analyzer.ModerateContent ->
+                    ModerateContentAnalyzer(config.analyzer, http)
+                is NoHornyConfig.Analyzer.SightEngine -> SightEngineAnalyzer(config.analyzer, http)
             }
 
         this.config = config

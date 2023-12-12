@@ -38,7 +38,7 @@ import com.xpdustry.nohorny.extension.onPlayerConfigureEvent
 import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
 import com.xpdustry.nohorny.geometry.Cluster
-import com.xpdustry.nohorny.geometry.SimpleClusterManager
+import com.xpdustry.nohorny.geometry.ClusterManager
 import fr.xpdustry.distributor.api.DistributorProvider
 import fr.xpdustry.distributor.api.plugin.PluginListener
 import fr.xpdustry.distributor.api.util.ArcCollections
@@ -64,9 +64,9 @@ import org.slf4j.LoggerFactory
 internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListener {
 
     private val processors = mutableMapOf<Point, ProcessorWithLinks>()
-    private val displays = SimpleClusterManager<NoHornyImage.Display>()
+    private val displays = ClusterManager.create<NoHornyImage.Display>()
     private val displayProcessingQueue = PriorityQueue<ProcessingTask>()
-    private val canvases = SimpleClusterManager<NoHornyImage.Canvas>()
+    private val canvases = ClusterManager.create<NoHornyImage.Canvas>()
     private val canvasProcessingQueue = PriorityQueue<ProcessingTask>()
     private val debug = IntSet()
 
@@ -128,7 +128,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         startProcessing(canvases, canvasProcessingQueue, "canvas")
     }
 
-    private fun renderCluster(player: Player, manager: SimpleClusterManager<*>, color: Color) {
+    private fun renderCluster(player: Player, manager: ClusterManager<*>, color: Color) {
         for (cluster in manager.clusters) {
             for (block in cluster.blocks) {
                 Call.label(
@@ -168,7 +168,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
 
     @Suppress("UNCHECKED_CAST")
     private fun <T : NoHornyImage> startProcessing(
-        manager: SimpleClusterManager<T>,
+        manager: ClusterManager<T>,
         queue: PriorityQueue<ProcessingTask>,
         name: String
     ) =

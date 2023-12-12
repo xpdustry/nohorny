@@ -50,6 +50,8 @@ internal data class NoHornyConfig(
     sealed interface Analyzer {
         data object None : Analyzer
 
+        data object Debug : Analyzer
+
         data class SightEngine(
             val sightEngineUser: String,
             val sightEngineSecret: Secret,
@@ -64,6 +66,6 @@ internal data class NoHornyConfig(
             }
         }
 
-        data object Debug : Analyzer
+        data class ModerateContent(val moderateContentToken: Secret) : Analyzer
     }
 }

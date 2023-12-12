@@ -23,35 +23,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny.extension
 
-import com.xpdustry.nohorny.NoHornyImage
-import com.xpdustry.nohorny.geometry.Cluster
-import java.awt.image.BufferedImage
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 
-public data class ImageAnalyzerEvent(
-    val result: ImageAnalyzer.Result,
-    val cluster: Cluster<out NoHornyImage>,
-    val image: BufferedImage
-) {
-    public operator fun component4(): NoHornyImage.Author? = author
+internal fun Call.toCompletableFuture(): CompletableFuture<Response> {
+    val future = CompletableFuture<Response>()
+    enqueue(
+        object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                future.complete(response)
+            }
 
-    public val author: NoHornyImage.Author?
-        get() =
-            cluster.blocks
-                .flatMap { block ->
-                    when (block.payload) {
-                        is NoHornyImage.Canvas -> listOf(block.payload.author)
-                        is NoHornyImage.Display -> block.payload.processors.values.map { it.author }
-                    }
-                }
-                .let { authors ->
-                    val max =
-                        authors
-                            .groupingBy(NoHornyImage.Author::address)
-                            .eachCount()
-                            .maxByOrNull { it.value }
-                            ?.key ?: return@let null
-                    return authors.firstOrNull { it.address == max }
-                }
+            override fun onFailure(call: Call, e: IOException) {
+                if (future.isCancelled) return
+                future.completeExceptionally(e)
+            }
+        })
+    return future
+}
+
+private val GSON = Gson()
+
+internal fun Response.toJsonObject(): JsonObject = use {
+    GSON.fromJson(body!!.charStream(), JsonObject::class.java)
 }
