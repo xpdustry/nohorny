@@ -39,6 +39,8 @@ public interface ClusterManager<T : Any> {
 
     public fun removeBlock(x: Int, y: Int): List<Int>
 
+    public fun clear()
+
     public companion object {
         @JvmStatic public fun <T : Any> create(): ClusterManager<T> = SimpleClusterManager()
     }

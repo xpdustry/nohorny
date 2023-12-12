@@ -152,5 +152,9 @@ internal class SimpleClusterManager<T : Any> : ClusterManager<T> {
         return modified
     }
 
+    override fun clear() {
+        _clusters.clear()
+    }
+
     private fun nextIdentifier() = generator.getAndUpdate { it.inc().coerceAtLeast(0) }
 }

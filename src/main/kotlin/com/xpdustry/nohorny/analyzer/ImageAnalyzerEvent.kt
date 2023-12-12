@@ -27,12 +27,14 @@ package com.xpdustry.nohorny.analyzer
 
 import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.geometry.Cluster
+import java.awt.image.BufferedImage
 
 public data class ImageAnalyzerEvent(
     val result: ImageAnalyzer.Result,
-    val cluster: Cluster<out NoHornyImage>
+    val cluster: Cluster<out NoHornyImage>,
+    val image: BufferedImage
 ) {
-    public operator fun component3(): NoHornyImage.Author? = author
+    public operator fun component4(): NoHornyImage.Author? = author
 
     val author: NoHornyImage.Author?
         get() =

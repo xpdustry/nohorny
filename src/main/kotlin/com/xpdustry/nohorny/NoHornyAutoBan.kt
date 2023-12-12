@@ -44,7 +44,7 @@ import mindustry.world.blocks.logic.LogicDisplay
 internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListener {
 
     override fun onPluginInit() {
-        onEvent<ImageAnalyzerEvent>(plugin) { (result, cluster, author) ->
+        onEvent<ImageAnalyzerEvent>(plugin) { (result, cluster, _, author) ->
             if (result.rating == ImageAnalyzer.Rating.UNSAFE &&
                 plugin.config.autoBan &&
                 author != null) {

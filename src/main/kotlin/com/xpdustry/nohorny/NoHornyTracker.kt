@@ -71,6 +71,15 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private val debug = IntSet()
 
     override fun onPluginInit() {
+        onEvent<EventType.ResetEvent>(plugin) {
+            processors.clear()
+            displays.clear()
+            displayProcessingQueue.clear()
+            canvases.clear()
+            canvasProcessingQueue.clear()
+            logger.trace("Reset tracker")
+        }
+
         onPlayerBuildEvent<CanvasBlock.CanvasBuild>(plugin) { canvas, breaking, player ->
             if (breaking) {
                 removeCanvas(canvas)
@@ -175,6 +184,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
             logger.trace("Begin processing of {} cluster {}", name, copy.identifier)
 
             schedule(plugin, async = true) {
+                val image = render(copy)
                 plugin.analyzer
                     .analyse(render(copy))
                     .orTimeout(10L, TimeUnit.SECONDS)
@@ -189,7 +199,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                         Core.app.post {
                             DistributorProvider.get()
                                 .eventBus
-                                .post(ImageAnalyzerEvent(result, copy))
+                                .post(ImageAnalyzerEvent(result, copy, image))
                         }
                     }
             }
