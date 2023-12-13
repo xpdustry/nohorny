@@ -25,6 +25,14 @@ Then, go to the created directory `config/mods/nohorny` and create a file named 
 
 Now you can set up the analyzer of your choice:
 
+- **[ModerateContent](https://moderatecontent.com/)**: Incredibly generous free tier with 10000 free requests per month.
+  Much thanks for the recommandation @osp54.
+
+  ```yaml
+  analyzer:
+    moderate-content-token: xxx
+  ```
+
 - **[SightEngine](https://sightengine.com/)**: Very nice service with a rather generous free tier
   (2000 operations per month). No credit card required.
  
