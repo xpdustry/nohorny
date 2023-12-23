@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
     kotlin("jvm") version "1.9.10"
+    id("org.jetbrains.dokka") version "1.9.10"
     id("com.diffplug.spotless") version "6.23.3"
     id("net.kyori.indra") version "3.1.3"
     id("net.kyori.indra.publishing") version "3.1.3"
@@ -211,4 +212,8 @@ val downloadKotlinRuntime =
 
 tasks.runMindustryServer {
     mods.setFrom(tasks.shadowJar, downloadDistributorCore, downloadKotlinRuntime)
+}
+
+tasks.javadocJar {
+    from(tasks.dokkaHtml)
 }
