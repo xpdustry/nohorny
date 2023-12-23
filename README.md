@@ -26,7 +26,6 @@ Then, go to the created directory `config/mods/nohorny` and create a file named 
 Now you can set up the analyzer of your choice:
 
 - **[ModerateContent](https://moderatecontent.com/)**: Incredibly generous free tier with 10000 free requests per month.
-  Much thanks for the recommandation @osp54.
 
   ```yaml
   analyzer:
@@ -57,9 +56,7 @@ Now you can set up the analyzer of your choice:
   analyzer: Debug
   ```
   
-  > For more detailed debugging, enable debug logging with the command `config debug true` 
-  and distributor trace logging with `config trace true`.
-  There is also the in-game command `nohorny-tracker-debug` that allows you to check 
+  > There is also the in-game command `nohorny-tracker-debug` that allows you to check 
   if displays and canvases are properly tracked.
   
 Once you chose your analyzer, load your changes using the command `nohorny-reload` in the console, and enjoy,
@@ -84,50 +81,8 @@ dependencies {
 ```
 
 Then you will be able to intercept `ImageAnalyzerEvent`, which 
-is posted every time a cluster of `NoHornyImage` is processed:
-
-```java
-import arc.Events;
-import arc.util.Log;
-import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent;
-import com.xpdustry.nohorny.NoHornyImage;
-import mindustry.Vars;
-import mindustry.gen.Groups;
-import mindustry.mod.Plugin;
-
-public final class MyPlugin extends Plugin {
-
-  @Override
-  public void init() {
-    Events.on(ImageAnalyzerEvent.class, event -> {
-      switch (event.getResult().getRating()) {
-        case WARNING -> {
-          Log.info("The @ cluster is kinda sus",
-            event.getCluster().getIdentifier());
-        }
-
-        case UNSAFE -> {
-          Log.info("That's it, to the horny jail",
-            event.getCluster().getIdentifier());
-          final NoHornyImage.Author author = event.getAuthor();
-
-          if (author == null) {
-            return;
-          }
-
-          Groups.player.forEach(player -> {
-            if (player.uuid().equals(author.getUuid()) ||
-              player.ip().equals(author.getAddress().getHostAddress())) {
-              Vars.netServer.admins.banPlayer(player.uuid());
-              player.kick("[scarlet]You have been banned for building a NSFW building.");
-            }
-          });
-        }
-      }
-    });
-  }
-}
-```
+is posted every time a cluster of `NoHornyImage` is processed,
+see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for an example.
 
 > If you handle the ban of the player yourself (like in the above example),
 > you should disable the auto ban of nohorny by adding the following in the config.
@@ -151,15 +106,11 @@ This plugin requires :
 
 - `./gradlew shadowJar` to compile the plugin into a usable jar (will be located at `builds/libs/nohorny.jar`).
 
-- `./gradlew jar` for a plain jar that contains only the plugin code.
-
 - `./gradlew runMindustryServer` to run the plugin in a local Mindustry server.
 
 - `./gradlew runMindustryClient` to start a local Mindustry client that will let you test the plugin.
 
 - `./gradlew spotlessApply` to apply the code formatting and the licence header.
-
-- `./gradlew dependencyUpdates` to check for dependency updates.
 
 ## Support
 

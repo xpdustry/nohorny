@@ -106,12 +106,12 @@ internal class ModerateContentAnalyzer(
                             ImageAnalyzer.Result(
                                 ImageAnalyzer.Rating.SAFE,
                                 mapOf(
-                                    ImageAnalyzer.Kind.NUDITY to
-                                        prediction[EVERYONE_LABEL]!! / 100F))
+                                    ImageAnalyzer.Kind.NUDITY to prediction[ADULT_LABEL]!! / 100F))
                         TEEN_LABEL ->
                             ImageAnalyzer.Result(
                                 ImageAnalyzer.Rating.WARNING,
-                                mapOf(ImageAnalyzer.Kind.NUDITY to prediction[TEEN_LABEL]!! / 100F))
+                                mapOf(
+                                    ImageAnalyzer.Kind.NUDITY to prediction[ADULT_LABEL]!! / 100F))
                         ADULT_LABEL ->
                             ImageAnalyzer.Result(
                                 ImageAnalyzer.Rating.UNSAFE,
