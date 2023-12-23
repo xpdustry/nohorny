@@ -33,8 +33,6 @@ import arc.util.CommandHandler
 import com.google.common.net.InetAddresses
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.extension.*
-import com.xpdustry.nohorny.extension.onPlayerBuildEvent
-import com.xpdustry.nohorny.extension.onPlayerConfigureEvent
 import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
 import com.xpdustry.nohorny.geometry.Cluster
@@ -56,9 +54,7 @@ import mindustry.logic.LExecutor
 import mindustry.logic.LExecutor.DrawFlushI
 import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
-import mindustry.world.blocks.logic.LogicBlock.LogicBuild
 import mindustry.world.blocks.logic.LogicDisplay
-import mindustry.world.blocks.logic.LogicDisplay.LogicDisplayBuild
 import org.slf4j.LoggerFactory
 
 internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListener {
@@ -71,6 +67,10 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private val debug = IntSet()
 
     override fun onPluginInit() {
+        onBuildingLifecycleEvent(plugin, ::addDisplay, ::removeDisplay)
+        onBuildingLifecycleEvent(plugin, ::addProcessor, ::removeProcessor)
+        onBuildingLifecycleEvent(plugin, ::addCanvas, ::removeCanvas)
+
         onEvent<EventType.ResetEvent>(plugin) {
             processors.clear()
             displays.clear()
@@ -80,42 +80,10 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
             logger.trace("Reset tracker")
         }
 
-        onPlayerBuildEvent<CanvasBlock.CanvasBuild>(plugin) { canvas, breaking, player ->
-            if (breaking) {
-                removeCanvas(canvas)
-            } else {
-                addCanvas(canvas, player)
-            }
-        }
-
-        onPlayerConfigureEvent<CanvasBlock.CanvasBuild>(plugin) { canvas, player ->
-            removeCanvas(canvas)
-            addCanvas(canvas, player)
-        }
-
-        onPlayerBuildEvent<LogicDisplay.LogicDisplayBuild>(plugin) { display, breaking, _ ->
-            if (breaking) {
-                removeDisplay(display)
-            } else {
-                addDisplay(display)
-            }
-        }
-
-        onPlayerBuildEvent<LogicBlock.LogicBuild>(plugin) { processor, breaking, player ->
-            if (breaking) {
-                removeProcessor(processor)
-            } else {
-                addProcessor(processor, player)
-            }
-        }
-
-        onPlayerConfigureEvent<LogicBlock.LogicBuild>(plugin) { processor, player ->
-            removeProcessor(processor)
-            addProcessor(processor, player)
-        }
+        startProcessing(displays, displayProcessingQueue, "display")
+        startProcessing(canvases, canvasProcessingQueue, "canvas")
 
         onEvent<EventType.PlayerLeave>(plugin) { event -> debug.remove(event.player.id) }
-
         schedule(plugin, async = false, repeat = 1.seconds) {
             debug.each { id ->
                 val player = Groups.player.getByID(id) ?: return@each
@@ -123,9 +91,6 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                 renderCluster(player, canvases, Color.orange)
             }
         }
-
-        startProcessing(displays, displayProcessingQueue, "display")
-        startProcessing(canvases, canvasProcessingQueue, "canvas")
     }
 
     private fun renderCluster(player: Player, manager: ClusterManager<*>, color: Color) {
@@ -205,7 +170,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
             }
         }
 
-    private fun addCanvas(canvas: CanvasBlock.CanvasBuild, player: Player) {
+    private fun addCanvas(canvas: CanvasBlock.CanvasBuild, player: Player?) {
         handleCanvasesModifications(
             canvases.addBlock(
                 Cluster.Block(
@@ -215,11 +180,11 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                     NoHornyImage.Canvas(
                         (canvas.block as CanvasBlock).canvasSize,
                         readCanvas(canvas),
-                        player.asAuthor()))))
+                        player?.asAuthor()))))
     }
 
-    private fun removeCanvas(canvas: CanvasBlock.CanvasBuild) {
-        handleCanvasesModifications(canvases.removeBlock(canvas.rx, canvas.ry))
+    private fun removeCanvas(x: Int, y: Int) {
+        handleCanvasesModifications(canvases.removeBlock(x, y))
     }
 
     private fun handleCanvasesModifications(modifications: Iterable<Int>) {
@@ -239,7 +204,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         }
     }
 
-    private fun addDisplay(display: LogicDisplay.LogicDisplayBuild) {
+    private fun addDisplay(display: LogicDisplay.LogicDisplayBuild, player: Player?) {
         val resolution = (display.block as LogicDisplay).displaySize
         val map = mutableMapOf<Point, NoHornyImage.Processor>()
         val block =
@@ -264,8 +229,8 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         handleDisplaysModifications(displays.addBlock(block))
     }
 
-    private fun removeDisplay(display: LogicDisplayBuild) {
-        handleDisplaysModifications(displays.removeBlock(display.rx, display.ry))
+    private fun removeDisplay(x: Int, y: Int) {
+        handleDisplaysModifications(displays.removeBlock(x, y))
     }
 
     private fun handleDisplaysModifications(modifications: Iterable<Int>) {
@@ -286,7 +251,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         }
     }
 
-    private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player) {
+    private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player?) {
         if (processor.executor.instructions.any { it is DrawFlushI }) {
             val instructions = readInstructions(processor.executor)
             val links =
@@ -297,22 +262,25 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
             if (instructions.size >= plugin.config.minimumInstructionCount && links.isNotEmpty()) {
                 val data =
                     ProcessorWithLinks(
-                        NoHornyImage.Processor(instructions, player.asAuthor()), links)
-                processors[processor.point] = data
+                        NoHornyImage.Processor(instructions, player?.asAuthor()), links)
+
+                val point = Point(processor.tileX(), processor.tileY())
+                processors[point] = data
                 for (link in links) {
                     val element = displays.getBlock(link.x, link.y) ?: continue
-                    element.payload.processors[processor.point] = data.first
+                    element.payload.processors[point] = data.first
                 }
             }
         }
     }
 
-    private fun removeProcessor(processor: LogicBuild) {
-        processors.remove(processor.point)
+    private fun removeProcessor(x: Int, y: Int) {
+        val point = Point(x, y)
+        processors.remove(point)
         val modified = mutableSetOf<Int>()
         for (cluster in displays.clusters) {
             for (block in cluster.blocks) {
-                if (block.payload.processors.remove(processor.point) != null) {
+                if (block.payload.processors.remove(point) != null) {
                     modified += cluster.identifier
                 }
             }

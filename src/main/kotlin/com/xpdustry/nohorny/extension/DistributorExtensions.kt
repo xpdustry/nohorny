@@ -39,42 +39,49 @@ import mindustry.gen.Building
 import mindustry.gen.Player
 import mindustry.world.blocks.ConstructBlock
 
-internal inline fun <reified T : Building> onPlayerBuildEvent(
+internal inline fun <reified T : Building> onBuildingLifecycleEvent(
     plugin: MindustryPlugin,
-    crossinline listener: (T, Boolean, Player) -> Unit
-): EventSubscription =
-    DistributorProvider.get().eventBus.subscribe(
-        EventType.BlockBuildEndEvent::class.java, Priority.LOW, plugin) { event ->
-            if (event.unit == null || !event.unit.isPlayer) {
-                return@subscribe
-            }
-
-            var buildings = listOf(event.tile.build)
-            if (event.breaking) {
-                val constructing = (buildings[0] as? ConstructBlock.ConstructBuild)
-                if (constructing?.prevBuild != null) {
-                    buildings = ArcCollections.immutableList(constructing.prevBuild)
-                }
-            }
-
-            for (building in buildings) {
-                if (building is T) {
-                    listener(building, event.breaking, event.unit.player)
-                }
+    crossinline insert: (T, Player?) -> Unit,
+    crossinline remove: (Int, Int) -> Unit
+) {
+    onEvent<EventType.BlockBuildEndEvent>(plugin) { event ->
+        var buildings = listOf(event.tile.build)
+        if (event.breaking) {
+            val constructing = (buildings[0] as? ConstructBlock.ConstructBuild)
+            if (constructing?.prevBuild != null) {
+                buildings = ArcCollections.immutableList(constructing.prevBuild)
             }
         }
 
-internal inline fun <reified T : Building> onPlayerConfigureEvent(
-    plugin: MindustryPlugin,
-    crossinline listener: (T, Player) -> Unit
-): EventSubscription =
-    DistributorProvider.get().eventBus.subscribe(
-        EventType.ConfigEvent::class.java, Priority.LOW, plugin) { event ->
-            val building = event.tile
-            if (event.player != null && building is T) {
-                listener(building, event.player)
+        for (building in buildings) {
+            if (building is T) {
+                insert(building, event.unit.player)
             }
         }
+    }
+
+    onEvent<EventType.ConfigEvent>(plugin) { event ->
+        val building = event.tile
+        if (event.player != null && building is T) {
+            remove(building.rx, building.ry)
+            insert(building, event.player)
+        }
+    }
+
+    onEvent<EventType.BlockDestroyEvent>(plugin) { event ->
+        val building = event.tile
+        if (building is T) {
+            remove(building.rx, building.ry)
+        }
+    }
+
+    onEvent<EventType.TileChangeEvent>(plugin) { event ->
+        val building = event.tile.build
+        if (building !is T) {
+            remove(event.tile.x.toInt(), event.tile.y.toInt())
+        }
+    }
+}
 
 internal fun schedule(
     plugin: MindustryPlugin,

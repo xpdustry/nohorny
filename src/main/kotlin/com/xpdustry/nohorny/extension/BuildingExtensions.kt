@@ -25,7 +25,6 @@
  */
 package com.xpdustry.nohorny.extension
 
-import java.awt.Point
 import mindustry.gen.Building
 
 internal val Building.rx: Int
@@ -33,6 +32,3 @@ internal val Building.rx: Int
 
 internal val Building.ry: Int
     get() = tileY() + block.sizeOffset
-
-internal val Building.point: Point
-    get() = Point(rx, ry)
