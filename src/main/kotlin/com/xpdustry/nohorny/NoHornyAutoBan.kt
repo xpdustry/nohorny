@@ -29,8 +29,8 @@ import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.extension.schedule
+import com.xpdustry.nohorny.geometry.ImmutablePoint
 import fr.xpdustry.distributor.api.plugin.PluginListener
-import java.awt.Point
 import java.util.ArrayDeque
 import java.util.Queue
 import kotlin.time.Duration.Companion.seconds
@@ -59,7 +59,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListene
                 }
                 queuedDestruction(
                     cluster.blocks.flatMapTo(ArrayDeque()) { block ->
-                        val points = mutableListOf(Point(block.x, block.y))
+                        val points = mutableListOf(ImmutablePoint(block.x, block.y))
                         if (block.payload is NoHornyImage.Display) {
                             points += block.payload.processors.keys
                         }
@@ -69,7 +69,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListene
         }
     }
 
-    private fun queuedDestruction(queue: Queue<Point>) {
+    private fun queuedDestruction(queue: Queue<ImmutablePoint>) {
         schedule(plugin, async = false, delay = 1.seconds) {
             var popped = 0
             while (queue.peek() != null && popped < 100) {

@@ -37,10 +37,10 @@ import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
 import com.xpdustry.nohorny.geometry.Cluster
 import com.xpdustry.nohorny.geometry.ClusterManager
+import com.xpdustry.nohorny.geometry.ImmutablePoint
 import fr.xpdustry.distributor.api.DistributorProvider
 import fr.xpdustry.distributor.api.plugin.PluginListener
 import fr.xpdustry.distributor.api.util.ArcCollections
-import java.awt.Point
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory
 
 internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListener {
 
-    private val processors = mutableMapOf<Point, ProcessorWithLinks>()
+    private val processors = mutableMapOf<ImmutablePoint, ProcessorWithLinks>()
     private val displays = ClusterManager.create<NoHornyImage.Display>()
     private val displayProcessingQueue = PriorityQueue<ProcessingTask>()
     private val canvases = ClusterManager.create<NoHornyImage.Canvas>()
@@ -206,7 +206,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
 
     private fun addDisplay(display: LogicDisplay.LogicDisplayBuild, player: Player?) {
         val resolution = (display.block as LogicDisplay).displaySize
-        val map = mutableMapOf<Point, NoHornyImage.Processor>()
+        val map = mutableMapOf<ImmutablePoint, NoHornyImage.Processor>()
         val block =
             Cluster.Block(
                 display.rx, display.ry, display.block.size, NoHornyImage.Display(resolution, map))
@@ -257,14 +257,14 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
             val links =
                 ArcCollections.immutableList(processor.links)
                     .filter { it.active }
-                    .map { Point(it.x, it.y) }
+                    .map { ImmutablePoint(it.x, it.y) }
 
             if (instructions.size >= plugin.config.minimumInstructionCount && links.isNotEmpty()) {
                 val data =
                     ProcessorWithLinks(
                         NoHornyImage.Processor(instructions, player?.asAuthor()), links)
 
-                val point = Point(processor.tileX(), processor.tileY())
+                val point = ImmutablePoint(processor.tileX(), processor.tileY())
                 processors[point] = data
                 for (link in links) {
                     val element = displays.getBlock(link.x, link.y) ?: continue
@@ -275,7 +275,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     }
 
     private fun removeProcessor(x: Int, y: Int) {
-        val point = Point(x, y)
+        val point = ImmutablePoint(x, y)
         processors.remove(point)
         val modified = mutableSetOf<Int>()
         for (cluster in displays.clusters) {
@@ -370,4 +370,4 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     }
 }
 
-private typealias ProcessorWithLinks = Pair<NoHornyImage.Processor, List<Point>>
+private typealias ProcessorWithLinks = Pair<NoHornyImage.Processor, List<ImmutablePoint>>

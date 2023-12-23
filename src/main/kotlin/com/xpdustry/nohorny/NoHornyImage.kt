@@ -26,7 +26,7 @@
 package com.xpdustry.nohorny
 
 import arc.struct.IntIntMap
-import java.awt.Point
+import com.xpdustry.nohorny.geometry.ImmutablePoint
 import java.net.InetAddress
 
 public sealed interface NoHornyImage {
@@ -44,7 +44,7 @@ public sealed interface NoHornyImage {
 
     public data class Display(
         override val resolution: Int,
-        public val processors: MutableMap<Point, Processor>
+        public val processors: MutableMap<ImmutablePoint, Processor>
     ) : NoHornyImage {
         override fun copy(): Display = Display(resolution, processors.toMutableMap())
     }
