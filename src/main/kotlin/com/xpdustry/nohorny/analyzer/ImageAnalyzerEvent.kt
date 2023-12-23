@@ -46,12 +46,16 @@ public data class ImageAnalyzerEvent(
                     }
                 }
                 .let { authors ->
+                    val safe = authors.filterNotNull()
+                    if (safe.size < authors.size / 2) {
+                        return@let null
+                    }
                     val max =
-                        authors
+                        safe
                             .groupingBy(NoHornyImage.Author::address)
                             .eachCount()
                             .maxByOrNull { it.value }
                             ?.key ?: return@let null
-                    return authors.firstOrNull { it.address == max }
+                    return safe.firstOrNull { it.address == max }
                 }
 }

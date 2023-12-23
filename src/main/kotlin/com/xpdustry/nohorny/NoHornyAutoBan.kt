@@ -35,6 +35,7 @@ import java.util.ArrayDeque
 import java.util.Queue
 import kotlin.time.Duration.Companion.seconds
 import mindustry.Vars
+import mindustry.content.Blocks
 import mindustry.gen.Call
 import mindustry.gen.Groups
 import mindustry.world.blocks.logic.CanvasBlock
@@ -77,7 +78,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListene
                 if (building is LogicDisplay.LogicDisplayBuild ||
                     building is LogicBlock.LogicBuild ||
                     building is CanvasBlock.CanvasBuild) {
-                    building.kill()
+                    Vars.world.tile(point.x, point.y)?.setNet(Blocks.air)
                 }
                 popped++
             }
