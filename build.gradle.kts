@@ -17,20 +17,7 @@ plugins {
     id("com.xpdustry.ksr") version "1.0.0"
 }
 
-val metadata =
-    ModMetadata(
-        name = "nohorny",
-        displayName = "NoHornyPlugin",
-        author = "Xpdustry",
-        description = "NO HORNY IN MY SERVER!",
-        version = "2.0.0",
-        minGameVersion = "146",
-        hidden = true,
-        java = true,
-        main = "com.xpdustry.nohorny.NoHornyPlugin",
-        repo = "xpdustry/nohorny",
-        dependencies = mutableListOf("distributor-core", "kotlin-runtime"),
-    )
+val metadata = ModMetadata.fromJson(file("plugin.json"))
 
 // Remove the following line if you don't want snapshot versions
 if (indraGit.headTag() == null) {
