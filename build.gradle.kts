@@ -158,11 +158,14 @@ tasks.shadowJar {
     kotlinRelocate("com.sksamuel.hoplite", "$relocationPackage.hoplite")
     relocate("com.google.gson", "$relocationPackage.gson")
     relocate("com.google.common", "$relocationPackage.common")
+    relocate("org.yaml.snakeyaml", "$relocationPackage.snakeyaml")
 
     mergeServiceFiles()
     minimize {
         exclude(dependency("com.sksamuel.hoplite:hoplite-.*:.*"))
     }
+
+    exclude("META-INF/proguard/**")
 
     doFirst {
         val temp = temporaryDir.resolve("plugin.json")
