@@ -36,6 +36,13 @@ jobs:
       - name: Build Artifact
         run: ./gradlew build
 
+      - name: Upload Test Summary
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          check_name: "test results"
+          junit_files: "**/build/test-results/test/TEST-*.xml"
+
       - name: Set up Artifact Upload
         id: upload
         run: echo "ARTIFACT_PATH=$(./gradlew getArtifactPath -q)" >> $GITHUB_ENV
