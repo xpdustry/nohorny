@@ -51,14 +51,14 @@ repositories {
 
 dependencies {
     mindustryDependencies()
-    compileOnly("fr.xpdustry:distributor-api:3.2.1")
+    compileOnly("fr.xpdustry:distributor-api:3.3.0")
     compileOnly(kotlin("stdlib-jdk8"))
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
     implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.google.guava:guava:32.1.3-jre")
+    implementation("com.google.guava:guava:33.0.0-jre")
 
     val junit = "5.10.1"
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junit")
@@ -187,7 +187,7 @@ val downloadDistributorCore =
     tasks.register<GithubArtifactDownload>("downloadDistributorCore") {
         user.set("xpdustry")
         repo.set("distributor")
-        version.set("v3.2.1")
+        version.set("v3.3.0")
         name.set("distributor-core.jar")
     }
 
