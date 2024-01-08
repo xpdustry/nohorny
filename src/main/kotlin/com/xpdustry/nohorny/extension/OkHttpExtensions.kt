@@ -42,7 +42,6 @@ internal fun Call.toCompletableFuture(): CompletableFuture<Response> {
             }
 
             override fun onFailure(call: Call, e: IOException) {
-                if (future.isCancelled) return
                 future.completeExceptionally(e)
             }
         })
