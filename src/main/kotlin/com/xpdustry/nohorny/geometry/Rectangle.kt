@@ -37,6 +37,12 @@ public interface Rectangle {
     public fun contains(x: Int, y: Int): Boolean =
         x in this.x until this.x + this.w && y in this.y until this.y + this.h
 
+    /**
+     * Returns whether the rectangle is adjacent or overlaps with the other.
+     *
+     * **Warning:** rectangles that only touch each other via a corner such as `(0, 0, 1, 1)` and
+     * `(1, 1, 1, 1)` are not considered adjacent.
+     */
     public fun isAdjacentOrContains(other: Rectangle): Boolean {
         val r1 = x + w + 1
         val l1 = x - 1
@@ -53,6 +59,9 @@ public interface Rectangle {
         val x2 = min(r1, r2)
         val y2 = min(t1, t2)
 
-        return max(0, x2 - x1) * max(0, y2 - y1) > 4
+        val dx = max(0, x2 - x1)
+        val dy = max(0, y2 - y1)
+
+        return dx > 1 && dy > 1 && dx * dy > 4
     }
 }
