@@ -15,6 +15,7 @@ plugins {
     id("fr.xpdustry.toxopid") version "3.2.0"
     id("com.github.ben-manes.versions") version "0.50.0"
     id("com.xpdustry.ksr") version "1.0.0"
+    id("org.jetbrains.dokka") version "1.9.10"
 }
 
 val metadata = ModMetadata.fromJson(file("plugin.json"))
@@ -181,6 +182,10 @@ tasks.shadowJar {
 tasks.build {
     // Make sure the shadow jar is built during the build task
     dependsOn(tasks.shadowJar)
+}
+
+tasks.javadocJar {
+    from(tasks.dokkaHtml)
 }
 
 val downloadDistributorCore =
