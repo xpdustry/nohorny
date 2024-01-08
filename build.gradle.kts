@@ -6,7 +6,7 @@ import fr.xpdustry.toxopid.task.GithubArtifactDownload
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
-    kotlin("jvm") version "1.9.10"
+    kotlin("jvm") version "1.9.22"
     id("com.diffplug.spotless") version "6.23.3"
     id("net.kyori.indra") version "3.1.3"
     id("net.kyori.indra.publishing") version "3.1.3"
@@ -76,7 +76,7 @@ configurations.runtimeClasspath {
 
 kotlin {
     jvmToolchain(17)
-    coreLibrariesVersion = "1.9.10"
+    coreLibrariesVersion = "1.9.22"
     explicitApi = ExplicitApiMode.Strict
     target {
         compilations.configureEach {
@@ -201,7 +201,7 @@ val downloadKotlinRuntime =
         user.set("xpdustry")
         repo.set("kotlin-runtime")
         name.set("kotlin-runtime.jar")
-        version.set("v3.1.0-k.1.9.10")
+        version.set("v3.1.1-k.1.9.22")
     }
 
 tasks.runMindustryServer {

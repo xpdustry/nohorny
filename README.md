@@ -1,9 +1,11 @@
 # nohorny
 
-[![Xpdustry latest](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny?color=00FFFF&name=nohorny&prefix=v)](https://github.com/xpdustry/nohorny/releases)
-[![Build status](https://github.com/xpdustry/nohorny/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/xpdustry/nohorny/actions/workflows/build.yml)
-[![Mindustry 7.0 ](https://img.shields.io/badge/Mindustry-7.0-ffd37f)](https://github.com/Anuken/Mindustry/releases)
-[![Discord](https://img.shields.io/discord/519293558599974912?color=00b0b3&label=Discord)](https://discord.xpdustry.com)
+[![Maven](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny?color=008080&name=nohorny&prefix=v)](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny)
+[![Downloads](https://img.shields.io/github/downloads/xpdustry/nohorny/total?color=008080)](https://github.com/xpdustry/nohorny/releases)
+[![Mindustry 7.0](https://img.shields.io/badge/Mindustry-7.0-008080)](https://github.com/Anuken/Mindustry/releases)
+[![Discord](https://img.shields.io/discord/519293558599974912?color=008080&label=Discord)](https://discord.xpdustry.com)
+
+
 
 ## Description
 
@@ -92,15 +94,15 @@ see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for
 
 ## Installation
 
-This plugin requires :
+This plugin requires at least :
 
-- Java 17 or above
+- Java 17
 
-- Mindustry v146 or above
+- Mindustry v146
 
-- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.1.0-k.1.9.10
+- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.1.1-k.1.9.22
 
-- [Distributor](https://github.com/xpdustry/distributor) v3.2.1
+- [Distributor](https://github.com/xpdustry/distributor) v3.3.0
 
 ## Building
 
