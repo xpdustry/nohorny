@@ -25,31 +25,25 @@
  */
 package com.xpdustry.nohorny.extension
 
-import fr.xpdustry.distributor.api.DistributorProvider
-import fr.xpdustry.distributor.api.event.EventSubscription
-import fr.xpdustry.distributor.api.plugin.MindustryPlugin
-import fr.xpdustry.distributor.api.scheduler.MindustryTimeUnit
-import fr.xpdustry.distributor.api.scheduler.PluginTask
-import fr.xpdustry.distributor.api.util.ArcCollections
-import fr.xpdustry.distributor.api.util.Priority
+import arc.Events
+import com.xpdustry.nohorny.NoHornyLogger
 import java.util.function.Consumer
-import kotlin.time.Duration
+import kotlin.reflect.jvm.jvmName
 import mindustry.game.EventType
 import mindustry.gen.Building
 import mindustry.gen.Player
 import mindustry.world.blocks.ConstructBlock
 
 internal inline fun <reified T : Building> onBuildingLifecycleEvent(
-    plugin: MindustryPlugin,
     crossinline insert: (T, Player?) -> Unit,
     crossinline remove: (Int, Int) -> Unit
 ) {
-    onEvent<EventType.BlockBuildEndEvent>(plugin) { event ->
+    onEvent<EventType.BlockBuildEndEvent> { event ->
         var buildings = listOf(event.tile.build)
         if (event.breaking) {
             val constructing = (buildings[0] as? ConstructBlock.ConstructBuild)
             if (constructing?.prevBuild != null) {
-                buildings = ArcCollections.immutableList(constructing.prevBuild)
+                buildings = constructing.prevBuild.list()
             }
         }
 
@@ -60,7 +54,7 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
         }
     }
 
-    onEvent<EventType.ConfigEvent>(plugin) { event ->
+    onEvent<EventType.ConfigEvent> { event ->
         val building = event.tile
         if (event.player != null && building is T) {
             remove(building.rx, building.ry)
@@ -68,14 +62,14 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
         }
     }
 
-    onEvent<EventType.BlockDestroyEvent>(plugin) { event ->
+    onEvent<EventType.BlockDestroyEvent> { event ->
         val building = event.tile
         if (building is T) {
             remove(building.rx, building.ry)
         }
     }
 
-    onEvent<EventType.TileChangeEvent>(plugin) { event ->
+    onEvent<EventType.TileChangeEvent> { event ->
         val building = event.tile.build
         if (building !is T) {
             remove(event.tile.x.toInt(), event.tile.y.toInt())
@@ -83,24 +77,12 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
     }
 }
 
-internal fun schedule(
-    plugin: MindustryPlugin,
-    async: Boolean,
-    delay: Duration? = null,
-    repeat: Duration? = null,
-    task: Runnable
-): PluginTask<Void> {
-    val builder =
-        if (async) DistributorProvider.get().pluginScheduler.scheduleAsync(plugin)
-        else DistributorProvider.get().pluginScheduler.scheduleSync(plugin)
-    if (delay != null) builder.delay(delay.inWholeMilliseconds, MindustryTimeUnit.MILLISECONDS)
-    if (repeat != null) builder.repeat(repeat.inWholeMilliseconds, MindustryTimeUnit.MILLISECONDS)
-    return builder.execute(task)
-}
-
-internal inline fun <reified T : Any> onEvent(
-    plugin: MindustryPlugin,
-    priority: Priority = Priority.NORMAL,
-    consumer: Consumer<T>
-): EventSubscription =
-    DistributorProvider.get().eventBus.subscribe(T::class.java, priority, plugin, consumer)
+internal inline fun <reified T : Any> onEvent(consumer: Consumer<T>) =
+    Events.on(T::class.java) { event ->
+        try {
+            consumer.accept(event)
+        } catch (e: Throwable) {
+            NoHornyLogger.error(
+                "An error occurred while handling event {}", event::class.jvmName, e)
+        }
+    }

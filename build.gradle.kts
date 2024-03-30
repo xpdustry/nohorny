@@ -6,16 +6,16 @@ import fr.xpdustry.toxopid.task.GithubArtifactDownload
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
-    kotlin("jvm") version "1.9.22"
-    id("com.diffplug.spotless") version "6.23.3"
+    kotlin("jvm") version "1.9.23"
+    id("com.diffplug.spotless") version "6.25.0"
     id("net.kyori.indra") version "3.1.3"
     id("net.kyori.indra.publishing") version "3.1.3"
     id("net.kyori.indra.git") version "3.1.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("fr.xpdustry.toxopid") version "3.2.0"
-    id("com.github.ben-manes.versions") version "0.50.0"
+    id("com.github.ben-manes.versions") version "0.51.0"
     id("com.xpdustry.ksr") version "1.0.0"
-    id("org.jetbrains.dokka") version "1.9.10"
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 val metadata = ModMetadata.fromJson(file("plugin.json"))
@@ -52,26 +52,23 @@ repositories {
 
 dependencies {
     mindustryDependencies()
-    compileOnly("fr.xpdustry:distributor-api:3.3.0")
     compileOnly(kotlin("stdlib-jdk8"))
 
+    compileOnly("org.slf4j:slf4j-api:2.0.12")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
     implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.google.guava:guava:33.0.0-jre")
 
-    val junit = "5.10.1"
+    val junit = "5.10.2"
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junit")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit")
 }
 
 configurations.runtimeClasspath {
-    exclude("org.jetbrains.kotlin", "kotlin-stdlib")
-    exclude("org.jetbrains.kotlin", "kotlin-stdlib-common")
-    exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk8")
-    exclude("org.jetbrains.kotlin", "kotlin-reflect")
+    exclude("org.jetbrains.kotlin")
+    exclude("org.jetbrains.kotlinx")
 }
 
 kotlin {
@@ -157,8 +154,6 @@ tasks.shadowJar {
     kotlinRelocate("okhttp3", "$relocationPackage.okhttp3")
     kotlinRelocate("okio", "$relocationPackage.okio")
     kotlinRelocate("com.sksamuel.hoplite", "$relocationPackage.hoplite")
-    relocate("com.google.gson", "$relocationPackage.gson")
-    relocate("com.google.common", "$relocationPackage.common")
     relocate("org.yaml.snakeyaml", "$relocationPackage.snakeyaml")
 
     mergeServiceFiles()
@@ -184,6 +179,18 @@ tasks.build {
     dependsOn(tasks.shadowJar)
 }
 
+tasks.dependencyUpdates {
+    fun isNonStable(version: String): Boolean {
+        val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+        val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+        val isStable = stableKeyword || regex.matches(version)
+        return isStable.not()
+    }
+    rejectVersionIf {
+        isNonStable(candidate.version) && !isNonStable(currentVersion)
+    }
+}
+
 tasks.javadocJar {
     from(tasks.dokkaHtml)
 }
@@ -201,9 +208,10 @@ val downloadKotlinRuntime =
         user.set("xpdustry")
         repo.set("kotlin-runtime")
         name.set("kotlin-runtime.jar")
-        version.set("v3.1.1-k.1.9.22")
+        version.set("v3.2.0-k.1.9.23")
     }
 
 tasks.runMindustryServer {
-    mods.setFrom(tasks.shadowJar, downloadDistributorCore, downloadKotlinRuntime)
+    mods.setFrom(tasks.shadowJar, downloadKotlinRuntime)
+    // mods.from(downloadDistributorCore)
 }

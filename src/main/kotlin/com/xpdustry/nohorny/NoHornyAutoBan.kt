@@ -30,7 +30,6 @@ import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.extension.schedule
 import com.xpdustry.nohorny.geometry.ImmutablePoint
-import fr.xpdustry.distributor.api.plugin.PluginListener
 import java.util.ArrayDeque
 import java.util.Queue
 import kotlin.time.Duration.Companion.seconds
@@ -42,10 +41,10 @@ import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 
-internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListener {
+internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener {
 
-    override fun onPluginInit() {
-        onEvent<ImageAnalyzerEvent>(plugin) { (result, cluster, _, author) ->
+    override fun onInit() {
+        onEvent<ImageAnalyzerEvent> { (result, cluster, _, author) ->
             if (result.rating == ImageAnalyzer.Rating.UNSAFE &&
                 plugin.config.autoBan &&
                 author != null) {
@@ -70,7 +69,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : PluginListene
     }
 
     private fun queuedDestruction(queue: Queue<ImmutablePoint>) {
-        schedule(plugin, async = false, delay = 1.seconds) {
+        schedule(async = false, delay = 1.seconds) {
             var popped = 0
             while (queue.peek() != null && popped < 100) {
                 val point = queue.poll()

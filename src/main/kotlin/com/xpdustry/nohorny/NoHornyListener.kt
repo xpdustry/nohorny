@@ -23,32 +23,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.extension
+package com.xpdustry.nohorny
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Response
+import arc.util.CommandHandler
 
-internal fun Call.toCompletableFuture(): CompletableFuture<Response> {
-    val future = CompletableFuture<Response>()
-    enqueue(
-        object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                future.complete(response)
-            }
+internal interface NoHornyListener {
 
-            override fun onFailure(call: Call, e: IOException) {
-                future.completeExceptionally(e)
-            }
-        })
-    return future
-}
+    fun onInit() = Unit
 
-internal fun Response.toJsonObject(): JsonObject = use {
-    Json.parseToJsonElement(it.body!!.string()).jsonObject
+    fun onServerCommandsRegistration(handler: CommandHandler) = Unit
+
+    fun onClientCommandsRegistration(handler: CommandHandler) = Unit
 }

@@ -26,11 +26,11 @@
 package com.xpdustry.nohorny
 
 import arc.Core
+import arc.Events
 import arc.graphics.Color
 import arc.struct.IntIntMap
 import arc.struct.IntSet
 import arc.util.CommandHandler
-import com.google.common.net.InetAddresses
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.extension.*
 import com.xpdustry.nohorny.extension.rx
@@ -38,9 +38,7 @@ import com.xpdustry.nohorny.extension.ry
 import com.xpdustry.nohorny.geometry.Cluster
 import com.xpdustry.nohorny.geometry.ClusterManager
 import com.xpdustry.nohorny.geometry.ImmutablePoint
-import fr.xpdustry.distributor.api.DistributorProvider
-import fr.xpdustry.distributor.api.plugin.PluginListener
-import fr.xpdustry.distributor.api.util.ArcCollections
+import java.net.InetAddress
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -55,9 +53,8 @@ import mindustry.logic.LExecutor.DrawFlushI
 import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
-import org.slf4j.LoggerFactory
 
-internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListener {
+internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
 
     private val processors = mutableMapOf<ImmutablePoint, ProcessorWithLinks>()
     private val displays = ClusterManager.create<NoHornyImage.Display>()
@@ -66,25 +63,25 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private val canvasProcessingQueue = PriorityQueue<ProcessingTask>()
     private val debug = IntSet()
 
-    override fun onPluginInit() {
-        onBuildingLifecycleEvent(plugin, ::addDisplay, ::removeDisplay)
-        onBuildingLifecycleEvent(plugin, ::addProcessor, ::removeProcessor)
-        onBuildingLifecycleEvent(plugin, ::addCanvas, ::removeCanvas)
+    override fun onInit() {
+        onBuildingLifecycleEvent(::addDisplay, ::removeDisplay)
+        onBuildingLifecycleEvent(::addProcessor, ::removeProcessor)
+        onBuildingLifecycleEvent(::addCanvas, ::removeCanvas)
 
-        onEvent<EventType.ResetEvent>(plugin) {
+        onEvent<EventType.ResetEvent> {
             processors.clear()
             displays.clear()
             displayProcessingQueue.clear()
             canvases.clear()
             canvasProcessingQueue.clear()
-            logger.trace("Reset tracker")
+            NoHornyLogger.trace("Reset tracker")
         }
 
         startProcessing(displays, displayProcessingQueue, "display")
         startProcessing(canvases, canvasProcessingQueue, "canvas")
 
-        onEvent<EventType.PlayerLeave>(plugin) { event -> debug.remove(event.player.id) }
-        schedule(plugin, async = false, repeat = 1.seconds) {
+        onEvent<EventType.PlayerLeave> { event -> debug.remove(event.player.id) }
+        schedule(async = false, repeat = 1.seconds) {
             debug.each { id ->
                 val player = Groups.player.getByID(id) ?: return@each
                 renderCluster(player, displays, Color.pink)
@@ -119,7 +116,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         }
     }
 
-    override fun onPluginClientCommandsRegistration(handler: CommandHandler) {
+    override fun onClientCommandsRegistration(handler: CommandHandler) {
         handler.register<Player>(
             "nohorny-tracker-debug", "Enable debug mode of the nohorny tracker.") { _, player ->
                 if (debug.add(player.id)) {
@@ -137,7 +134,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         queue: PriorityQueue<ProcessingTask>,
         name: String
     ) =
-        schedule(plugin, async = false, delay = 1.seconds, repeat = 1.seconds) {
+        schedule(async = false, delay = 1.seconds, repeat = 1.seconds) {
             val element = queue.peek()
             if (element == null || element.instant > Instant.now()) return@schedule
             queue.remove()
@@ -146,26 +143,23 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
                 cluster.copy(
                     blocks = cluster.blocks.map { it.copy(payload = it.payload.copy() as T) })
 
-            logger.trace("Begin processing of {} cluster {}", name, copy.identifier)
+            NoHornyLogger.trace("Begin processing of {} cluster {}", name, copy.identifier)
 
-            schedule(plugin, async = true) {
+            schedule(async = true) {
                 val image = render(copy)
                 plugin.analyzer
                     .analyse(render(copy))
                     .orTimeout(10L, TimeUnit.SECONDS)
                     .whenComplete { result, error ->
                         if (error != null) {
-                            logger.error("Failed to verify cluster {}", copy.identifier, error)
+                            NoHornyLogger.error(
+                                "Failed to verify cluster {}", copy.identifier, error)
                             return@whenComplete
                         }
 
-                        logger.trace(
+                        NoHornyLogger.trace(
                             "Processed {} cluster {}, posting event", name, copy.identifier)
-                        Core.app.post {
-                            DistributorProvider.get()
-                                .eventBus
-                                .post(ImageAnalyzerEvent(result, copy, image))
-                        }
+                        Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
                     }
             }
         }
@@ -190,11 +184,11 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private fun handleCanvasesModifications(modifications: Iterable<Int>) {
         for (modified in modifications) {
             if (canvasProcessingQueue.removeIf { it.identifier == modified }) {
-                logger.trace("Cancelled processing of canvas cluster {}", modified)
+                NoHornyLogger.trace("Cancelled processing of canvas cluster {}", modified)
             }
             val cluster = canvases.getClusterByIdentifier(modified) ?: return
             if (cluster.blocks.size >= plugin.config.minimumCanvasClusterSize) {
-                logger.trace("Scheduled processing of canvas cluster {}", modified)
+                NoHornyLogger.trace("Scheduled processing of canvas cluster {}", modified)
                 canvasProcessingQueue.add(
                     ProcessingTask(
                         modified,
@@ -236,12 +230,12 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private fun handleDisplaysModifications(modifications: Iterable<Int>) {
         for (modified in modifications) {
             if (displayProcessingQueue.removeIf { it.identifier == modified }) {
-                logger.trace("Cancelled processing of display cluster {}", modified)
+                NoHornyLogger.trace("Cancelled processing of display cluster {}", modified)
             }
             val cluster = displays.getClusterByIdentifier(modified) ?: return
             if (cluster.blocks.sumOf { it.payload.processors.size } >=
                 plugin.config.minimumProcessorCount) {
-                logger.trace("Scheduled processing of display cluster {}", modified)
+                NoHornyLogger.trace("Scheduled processing of display cluster {}", modified)
                 displayProcessingQueue.add(
                     ProcessingTask(
                         modified,
@@ -254,15 +248,12 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
     private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player?) {
         if (processor.executor.instructions.any { it is DrawFlushI }) {
             val instructions = readInstructions(processor.executor)
-            val links =
-                ArcCollections.immutableList(processor.links)
-                    .filter { it.active }
-                    .map { ImmutablePoint(it.x, it.y) }
+            val links = processor.links.select { it.active }.map { ImmutablePoint(it.x, it.y) }
 
-            if (instructions.size >= plugin.config.minimumInstructionCount && links.isNotEmpty()) {
+            if (instructions.size >= plugin.config.minimumInstructionCount && !links.isEmpty) {
                 val data =
                     ProcessorWithLinks(
-                        NoHornyImage.Processor(instructions, player?.asAuthor()), links)
+                        NoHornyImage.Processor(instructions, player?.asAuthor()), links.list())
 
                 val point = ImmutablePoint(processor.tileX(), processor.tileY())
                 processors[point] = data
@@ -358,15 +349,11 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : PluginListene
         return result
     }
 
-    private fun Player.asAuthor() = NoHornyImage.Author(uuid(), InetAddresses.forString(ip()))
+    private fun Player.asAuthor() = NoHornyImage.Author(uuid(), InetAddress.getByName(ip()))
 
     data class ProcessingTask(val identifier: Int, val instant: Instant) :
         Comparable<ProcessingTask> {
         override fun compareTo(other: ProcessingTask): Int = instant.compareTo(other.instant)
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(NoHornyTracker::class.java)
     }
 }
 

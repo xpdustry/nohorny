@@ -26,19 +26,22 @@
 package com.xpdustry.nohorny.analyzer
 
 import com.xpdustry.nohorny.NoHornyConfig
+import com.xpdustry.nohorny.NoHornyLogger
 import com.xpdustry.nohorny.extension.toCompletableFuture
 import com.xpdustry.nohorny.extension.toJpgByteArray
 import com.xpdustry.nohorny.extension.toJsonObject
 import java.awt.image.BufferedImage
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import org.slf4j.LoggerFactory
 
 internal class SightEngineAnalyzer(
     private val config: NoHornyConfig.Analyzer.SightEngine,
@@ -73,9 +76,9 @@ internal class SightEngineAnalyzer(
             .toCompletableFuture()
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
-                logger.debug("API response: {}", json)
+                NoHornyLogger.debug("API response: {}", json)
 
-                if (json["status"].asString != "success") {
+                if (json["status"]!!.jsonPrimitive.content != "success") {
                     return@thenCompose CompletableFuture.failedFuture(
                         IOException("SightEngine API returned error: ${json["error"]}"))
                 }
@@ -84,12 +87,14 @@ internal class SightEngineAnalyzer(
 
                 if (ImageAnalyzer.Kind.NUDITY in config.kinds) {
                     val percent =
-                        EXPLICIT_NUDITY_FIELDS.maxOf { json["nudity"].asJsonObject[it].asFloat }
+                        EXPLICIT_NUDITY_FIELDS.maxOf {
+                            json["nudity"]!!.jsonObject[it]!!.jsonPrimitive.float
+                        }
                     results[ImageAnalyzer.Kind.NUDITY] = percent
                 }
 
                 if (ImageAnalyzer.Kind.GORE in config.kinds) {
-                    val percent = json["gore"].asJsonObject["prob"].asFloat
+                    val percent = json["gore"]!!.jsonObject["prob"]!!.jsonPrimitive.float
                     results[ImageAnalyzer.Kind.GORE] = percent
                 }
 
@@ -107,7 +112,6 @@ internal class SightEngineAnalyzer(
     }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(SightEngineAnalyzer::class.java)
         private val EXPLICIT_NUDITY_FIELDS =
             listOf("sexual_activity", "sexual_display", "sextoy", "erotica")
     }

@@ -26,17 +26,18 @@
 package com.xpdustry.nohorny.analyzer
 
 import com.xpdustry.nohorny.NoHornyConfig
+import com.xpdustry.nohorny.NoHornyLogger
 import com.xpdustry.nohorny.extension.toCompletableFuture
 import com.xpdustry.nohorny.extension.toJpgByteArray
 import com.xpdustry.nohorny.extension.toJsonObject
 import java.awt.image.BufferedImage
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
+import kotlinx.serialization.json.*
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.slf4j.LoggerFactory
 
 internal class ModerateContentAnalyzer(
     private val config: NoHornyConfig.Analyzer.ModerateContent,
@@ -60,7 +61,7 @@ internal class ModerateContentAnalyzer(
                     .build())
             .toCompletableFuture()
             .thenCompose { response ->
-                logger.trace("tmpfiles.org reponse: {}", response)
+                NoHornyLogger.trace("tmpfiles.org reponse: {}", response)
 
                 val json = response.toJsonObject()
                 if (response.code != 200) {
@@ -68,7 +69,13 @@ internal class ModerateContentAnalyzer(
                         IOException("Failed to upload the image: $json"))
                 }
 
-                val path = json["data"].asJsonObject["url"].asString.toHttpUrl().pathSegments
+                val path =
+                    json["data"]!!
+                        .jsonObject["url"]!!
+                        .jsonPrimitive
+                        .content
+                        .toHttpUrl()
+                        .pathSegments
 
                 return@thenCompose http
                     .newCall(
@@ -88,20 +95,20 @@ internal class ModerateContentAnalyzer(
             }
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
-                logger.debug("API response: {}", json)
+                NoHornyLogger.debug("API response: {}", json)
 
-                val code = json["error_code"].asInt
+                val code = json["error_code"]!!.jsonPrimitive.int
                 if (code != 0) {
                     return@thenCompose CompletableFuture.failedFuture(
                         IOException(
-                            "ModerateContent API returned an error: ${json["error"].asString} ($code)"))
+                            "ModerateContent API returned an error: ${json["error"]!!.jsonPrimitive.content} ($code)"))
                 }
 
                 val prediction =
-                    json["predictions"].asJsonObject.asMap().mapValues { it.value.asFloat }
+                    json["predictions"]!!.jsonObject.mapValues { it.value.jsonPrimitive.float }
 
                 val result =
-                    when (val label = json["rating_label"].asString) {
+                    when (val label = json["rating_label"]!!.jsonPrimitive.content) {
                         EVERYONE_LABEL ->
                             ImageAnalyzer.Result(
                                 ImageAnalyzer.Rating.SAFE,
@@ -127,7 +134,6 @@ internal class ModerateContentAnalyzer(
             }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(ModerateContentAnalyzer::class.java)
         private const val EVERYONE_LABEL = "everyone"
         private const val TEEN_LABEL = "teen"
         private const val ADULT_LABEL = "adult"

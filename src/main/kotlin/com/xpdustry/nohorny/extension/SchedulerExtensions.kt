@@ -25,30 +25,26 @@
  */
 package com.xpdustry.nohorny.extension
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Response
+import arc.Core
+import com.xpdustry.nohorny.NoHornyPlugin
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
-internal fun Call.toCompletableFuture(): CompletableFuture<Response> {
-    val future = CompletableFuture<Response>()
-    enqueue(
-        object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                future.complete(response)
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                future.completeExceptionally(e)
-            }
-        })
-    return future
-}
-
-internal fun Response.toJsonObject(): JsonObject = use {
-    Json.parseToJsonElement(it.body!!.string()).jsonObject
+internal fun schedule(
+    async: Boolean,
+    delay: Duration? = null,
+    repeat: Duration? = null,
+    task: Runnable
+) {
+    val runnable = Runnable { if (async) task.run() else Core.app.post(task) }
+    if (repeat != null) {
+        NoHornyPlugin.EXECUTOR.scheduleWithFixedDelay(
+            runnable,
+            delay?.inWholeMilliseconds ?: 0L,
+            repeat.inWholeMilliseconds,
+            TimeUnit.MILLISECONDS)
+    } else {
+        NoHornyPlugin.EXECUTOR.schedule(
+            runnable, delay?.inWholeMilliseconds ?: 0L, TimeUnit.MILLISECONDS)
+    }
 }

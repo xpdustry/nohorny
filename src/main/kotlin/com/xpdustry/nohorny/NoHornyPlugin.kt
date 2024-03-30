@@ -25,8 +25,9 @@
  */
 package com.xpdustry.nohorny
 
+import arc.ApplicationListener
+import arc.Core
 import arc.util.CommandHandler
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addPathSource
@@ -34,15 +35,23 @@ import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ModerateContentAnalyzer
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
-import fr.xpdustry.distributor.api.plugin.AbstractMindustryPlugin
+import java.nio.file.Path
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.notExists
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
+import mindustry.Vars
+import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 
-public class NoHornyPlugin : AbstractMindustryPlugin() {
+public class NoHornyPlugin : Plugin() {
+
+    private val directory: Path
+        get() = Vars.modDirectory.child("nohorny").file().toPath()
 
     private val file = directory.resolve("config.yaml")
 
@@ -62,37 +71,50 @@ public class NoHornyPlugin : AbstractMindustryPlugin() {
             .connectTimeout(10.seconds.toJavaDuration())
             .readTimeout(10.seconds.toJavaDuration())
             .writeTimeout(10.seconds.toJavaDuration())
-            .dispatcher(
-                Dispatcher(
-                    Executors.newFixedThreadPool(
-                        2,
-                        ThreadFactoryBuilder()
-                            .setDaemon(true)
-                            .setNameFormat("nohorny-worker-http-%d")
-                            .build())))
+            .dispatcher(Dispatcher(EXECUTOR))
             .build()
 
+    private var listeners = mutableListOf<NoHornyListener>()
     internal var config = NoHornyConfig()
     internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
 
-    override fun onInit() {
-        reload()
-        addListener(NoHornyTracker(this))
-        addListener(NoHornyAutoBan(this))
-        logger.info("Initialized nohorny, to the horny jail we go.")
+    init {
+        listeners += NoHornyTracker(this)
+        listeners += NoHornyAutoBan(this)
     }
 
-    override fun onServerCommandsRegistration(handler: CommandHandler) {
+    override fun init() {
+        reload()
+        listeners.forEach(NoHornyListener::onInit)
+        NoHornyLogger.info("Initialized nohorny, to the horny jail we go.")
+
+        Core.app.addListener(
+            object : ApplicationListener {
+                override fun dispose() {
+                    EXECUTOR.shutdown()
+                    if (!EXECUTOR.awaitTermination(10L, TimeUnit.SECONDS)) {
+                        EXECUTOR.shutdownNow()
+                    }
+                }
+            })
+    }
+
+    override fun registerServerCommands(handler: CommandHandler) {
+        listeners.forEach { it.onServerCommandsRegistration(handler) }
         handler.register<Unit>("nohorny-reload", "Reload nohorny config.") { _, _ ->
             try {
                 reload()
-                logger.info("Reloaded config")
+                NoHornyLogger.info("Reloaded config")
             } catch (e: ConfigException) {
-                logger.error(e.message)
+                NoHornyLogger.error(e.message!!)
             } catch (e: Exception) {
-                logger.error("Failed to reload config", e)
+                NoHornyLogger.error("Failed to reload config", e)
             }
         }
+    }
+
+    override fun registerClientCommands(handler: CommandHandler) {
+        listeners.forEach { it.onClientCommandsRegistration(handler) }
     }
 
     private fun reload() {
@@ -113,5 +135,16 @@ public class NoHornyPlugin : AbstractMindustryPlugin() {
 
         this.config = config
         this.analyzer = analyzer
+    }
+
+    private object NoHornyThreadFactory : ThreadFactory {
+        private val count = AtomicInteger(0)
+
+        override fun newThread(runnable: Runnable) =
+            Thread(runnable, "nohorny-worker-${count.incrementAndGet()}").apply { isDaemon = true }
+    }
+
+    internal companion object {
+        internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
     }
 }
