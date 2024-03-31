@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v2.1.0 - 2024-01-24
+
+### Changes
+
+- Misc improvements in the internals.
+- Bumped kotlin version.
+
+### Bugfixes
+
+- Add un-relocated lib (snakeyaml).
+- Fix bug where blocks on same axis spaced by 1 are in same cluster.
+
+### Chores
+
+- Added tests and test upload.
+
 ## v2.0.0 - 2023-12-23
 
 ### Changes
