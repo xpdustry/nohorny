@@ -39,7 +39,7 @@ public interface ImageAnalyzer {
 
     public data class Result(val rating: Rating, val details: Map<Kind, Float>) {
         public companion object {
-            public val EMPTY: Result = Result(Rating.SAFE, emptyMap())
+            @JvmField public val EMPTY: Result = Result(Rating.SAFE, emptyMap())
         }
     }
 
