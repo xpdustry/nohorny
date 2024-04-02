@@ -34,8 +34,7 @@ Now you can set up the analyzer of your choice:
     moderate-content-token: xxx
   ```
 
-- **[SightEngine](https://sightengine.com/)**: Very nice service with a rather generous free tier
-  (2000 operations per month). No credit card required.
+- **[SightEngine](https://sightengine.com/)**: Very nice service with 2000 free operations per month. Also supports gore detection.
  
   ```yaml
   analyzer:
@@ -100,9 +99,9 @@ This plugin requires at least :
 
 - Mindustry v146
 
-- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.1.1-k.1.9.22
+- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.2.0-k.1.9.23
 
-- [Distributor](https://github.com/xpdustry/distributor) v3.3.0
+- For better logging, you can add [Distributor](https://github.com/xpdustry/distributor) v3 or v4.
 
 ## Building
 

@@ -5,6 +5,10 @@ pluginManagement {
             name = "xpdustry-releases"
             mavenContent { releasesOnly() }
         }
+        maven("https://maven.xpdustry.com/snapshots") {
+            name = "xpdustry-snapshots"
+            mavenContent { snapshotsOnly() }
+        }
     }
 }
 

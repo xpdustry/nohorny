@@ -14,7 +14,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("fr.xpdustry.toxopid") version "3.2.0"
     id("com.github.ben-manes.versions") version "0.51.0"
-    id("com.xpdustry.ksr") version "1.0.0"
+    id("com.xpdustry.ksr") version "2.0.0-SNAPSHOT"
     id("org.jetbrains.dokka") version "1.9.20"
 }
 
