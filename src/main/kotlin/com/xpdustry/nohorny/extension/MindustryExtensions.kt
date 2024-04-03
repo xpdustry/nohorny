@@ -34,6 +34,12 @@ import mindustry.gen.Building
 import mindustry.gen.Player
 import mindustry.world.blocks.ConstructBlock
 
+internal val Building.rx: Int
+    get() = tileX() + block.sizeOffset
+
+internal val Building.ry: Int
+    get() = tileY() + block.sizeOffset
+
 internal inline fun <reified T : Building> onBuildingLifecycleEvent(
     crossinline insert: (T, Player?) -> Unit,
     crossinline remove: (Int, Int) -> Unit
