@@ -10,5 +10,5 @@
   "hidden": true,
   "minGameVersion": "146",
   "dependencies": [ "kotlin-runtime" ],
-  "softDependencies": [ "distributor-core", "distributor-common" ]
+  "softDependencies": [ "distributor-core", "distributor-logging" ]
 }
