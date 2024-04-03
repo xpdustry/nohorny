@@ -47,6 +47,7 @@ import mindustry.Vars
 import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import java.nio.file.Files
 
 public class NoHornyPlugin : Plugin() {
 
@@ -79,6 +80,7 @@ public class NoHornyPlugin : Plugin() {
     internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
 
     init {
+        Files.createDirectories(directory)
         listeners += NoHornyTracker(this)
         listeners += NoHornyAutoBan(this)
     }
