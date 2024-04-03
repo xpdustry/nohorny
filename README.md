@@ -5,8 +5,6 @@
 [![Mindustry 7.0](https://img.shields.io/badge/Mindustry-7.0-008080)](https://github.com/Anuken/Mindustry/releases)
 [![Discord](https://img.shields.io/discord/519293558599974912?color=008080&label=Discord)](https://discord.xpdustry.com)
 
-
-
 ## Description
 
 Are you sick of players turning your awesome server into a NSFW gallery ?
@@ -18,6 +16,16 @@ This mindustry plugin automatically tracks logic displays and canvases and proce
 with the anti-nsfw API of your choice.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
+
+## Installation
+
+This plugin requires at least :
+
+- Java 17
+
+- Mindustry v146
+
+- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.2.0-k.1.9.23
 
 ## Usage
 
@@ -45,8 +53,7 @@ Now you can set up the analyzer of your choice:
     warning-threshold: 0.4
     kinds:
       - "NUDITY"
-      # SightEngine also support gore detection, but is very uncommon in mindustry
-      # That's why it's not enabled by default
+      # Since gore is very uncommon, it's not enabled by default
       - "GORE"
   ```
 
@@ -81,27 +88,31 @@ dependencies {
 }
 ```
 
-Then you will be able to intercept `ImageAnalyzerEvent`, which 
-is posted every time a cluster of `NoHornyImage` is processed,
+Then you will be able to intercept `ImageAnalyzerEvent`, which is posted every time a cluster of `NoHornyImage` is processed,
 see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for an example.
 
-> If you handle the ban of the player yourself (like in the above example),
-> you should disable the auto ban of nohorny by adding the following in the config.
-> ```yaml
-> auto-ban: false
-> ```
+## Advanced Configuration
 
-## Installation
+In `config.yaml`:
 
-This plugin requires at least :
-
-- Java 17
-
-- Mindustry v146
-
-- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) v3.2.0-k.1.9.23
-
-- For better logging, you can add [Distributor](https://github.com/xpdustry/distributor) v3 or v4.
+```yaml
+# Whether nohorny should automatically ban players when nsfw is detected,
+# set to false if you want to handle that yourself
+auto-ban: true
+# The minimum number of draw instructions in a logic processor to be part of a cluster
+minimum-instruction-count: 100
+# The delay between the last logic or canvas block built and the analysis step,
+# lower it on servers with fast build time such as sandbox
+processing-delay: 5s
+# The minimum number of canvases in a cluster to be eligible for processing,
+# relatively high since you a lot of canvases are needed for a clear picture
+minimum-canvas-cluster-size: 9
+# The minimum number of logic processors in a cluster to be eligible for processing
+minimum-processor-count: 5
+# The search radius of linked logic processors around a cluster of logic displays,
+# tweak depending on the average size of your server maps
+processor-search-radius: 10
+```
 
 ## Building
 
