@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v2.2.0 - 2024-04-03
+
+### Features
+
+- nohorny is no longer hard dependent on [distributor](https://github.com/xpdustry/distributor).
+
+### Bugfixes
+
+- Fix `ImageAnalyzer.Result.EMPTY` not being really static.
+
+### Chores
+
+- Bumped dependencies, including kotlin to `v1.9.23`, make sure to update [kotlin-runtime](https://github.com/xpdustry/kotlin-runtime) accordingly.
+
 ## v2.1.0 - 2024-01-24
 
 ### Changes
