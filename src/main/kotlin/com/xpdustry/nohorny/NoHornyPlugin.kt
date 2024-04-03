@@ -35,6 +35,7 @@ import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ModerateContentAnalyzer
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
@@ -47,7 +48,6 @@ import mindustry.Vars
 import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
-import java.nio.file.Files
 
 public class NoHornyPlugin : Plugin() {
 
@@ -147,6 +147,6 @@ public class NoHornyPlugin : Plugin() {
     }
 
     internal companion object {
-        internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
+        @JvmStatic internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
     }
 }
