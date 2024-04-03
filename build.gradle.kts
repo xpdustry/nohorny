@@ -13,7 +13,6 @@ plugins {
     id("net.kyori.indra.git") version "3.1.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("fr.xpdustry.toxopid") version "3.2.0"
-    id("com.github.ben-manes.versions") version "0.51.0"
     id("com.xpdustry.ksr") version "2.0.0-SNAPSHOT"
     id("org.jetbrains.dokka") version "1.9.20"
 }
@@ -73,7 +72,6 @@ configurations.runtimeClasspath {
 
 kotlin {
     jvmToolchain(17)
-    coreLibrariesVersion = "1.9.22"
     explicitApi = ExplicitApiMode.Strict
     target {
         compilations.configureEach {
@@ -177,18 +175,6 @@ tasks.shadowJar {
 tasks.build {
     // Make sure the shadow jar is built during the build task
     dependsOn(tasks.shadowJar)
-}
-
-tasks.dependencyUpdates {
-    fun isNonStable(version: String): Boolean {
-        val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
-        val regex = "^[0-9,.v-]+(-r)?$".toRegex()
-        val isStable = stableKeyword || regex.matches(version)
-        return isStable.not()
-    }
-    rejectVersionIf {
-        isNonStable(candidate.version) && !isNonStable(currentVersion)
-    }
 }
 
 tasks.javadocJar {
