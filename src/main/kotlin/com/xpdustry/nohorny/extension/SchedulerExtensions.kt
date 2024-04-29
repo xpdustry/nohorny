@@ -26,6 +26,7 @@
 package com.xpdustry.nohorny.extension
 
 import arc.Core
+import com.xpdustry.nohorny.NoHornyLogger
 import com.xpdustry.nohorny.NoHornyPlugin
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
@@ -36,7 +37,14 @@ internal fun schedule(
     repeat: Duration? = null,
     task: Runnable
 ) {
-    val runnable = Runnable { if (async) task.run() else Core.app.post(task) }
+    val wrapper = Runnable {
+        try {
+            task.run()
+        } catch (throwable: Throwable) {
+            NoHornyLogger.error("An error occurred while executing a scheduled task", throwable)
+        }
+    }
+    val runnable = Runnable { if (async) wrapper.run() else Core.app.post(wrapper) }
     if (repeat != null) {
         NoHornyPlugin.EXECUTOR.scheduleWithFixedDelay(
             runnable,
