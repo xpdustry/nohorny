@@ -49,7 +49,7 @@ import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 
-public class NoHornyPlugin : Plugin() {
+public class NoHornyPlugin : Plugin(), NoHornyAPI {
 
     private val directory: Path
         get() = Vars.modDirectory.child("nohorny").file().toPath()
@@ -78,8 +78,10 @@ public class NoHornyPlugin : Plugin() {
     private var listeners = mutableListOf<NoHornyListener>()
     internal var config = NoHornyConfig()
     internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
+    internal var cache: NoHornyCache = NoHornyCache.None
 
     init {
+        INSTANCE = this
         Files.createDirectories(directory)
         listeners += NoHornyTracker(this)
         listeners += NoHornyAutoBan(this)
@@ -139,6 +141,11 @@ public class NoHornyPlugin : Plugin() {
         this.analyzer = analyzer
     }
 
+    override fun setCache(cache: NoHornyCache) {
+        this.cache = cache
+        NoHornyLogger.debug("Set cache to $cache")
+    }
+
     private object NoHornyThreadFactory : ThreadFactory {
         private val count = AtomicInteger(0)
 
@@ -147,6 +154,7 @@ public class NoHornyPlugin : Plugin() {
     }
 
     internal companion object {
+        @JvmStatic internal lateinit var INSTANCE: NoHornyPlugin
         @JvmStatic internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
     }
 }

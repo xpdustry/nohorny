@@ -41,6 +41,7 @@ import com.xpdustry.nohorny.geometry.ImmutablePoint
 import java.net.InetAddress
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import mindustry.Vars
@@ -147,18 +148,31 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
 
             schedule(async = true) {
                 val image = render(copy)
-                plugin.analyzer.analyse(image).orTimeout(10L, TimeUnit.SECONDS).whenComplete {
-                    result,
-                    error ->
-                    if (error != null) {
-                        NoHornyLogger.error("Failed to verify cluster {}", copy.identifier, error)
-                        return@whenComplete
+                plugin.cache
+                    .getResult(copy, image)
+                    .thenCompose { cached ->
+                        if (cached != null) {
+                            CompletableFuture.completedFuture(cached to true)
+                        } else {
+                            plugin.analyzer.analyse(image).thenApply { it to false }
+                        }
                     }
+                    .orTimeout(10L, TimeUnit.SECONDS)
+                    .whenComplete { (result, cached), error ->
+                        if (error != null) {
+                            NoHornyLogger.error(
+                                "Failed to verify cluster {}", copy.identifier, error)
+                            return@whenComplete
+                        }
 
-                    NoHornyLogger.trace(
-                        "Processed {} cluster {}, posting event", name, copy.identifier)
-                    Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
-                }
+                        if (!cached) {
+                            plugin.cache.putResult(copy, image, result)
+                        }
+
+                        NoHornyLogger.trace(
+                            "Processed {} cluster {}, posting event", name, copy.identifier)
+                        Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
+                    }
             }
         }
 
