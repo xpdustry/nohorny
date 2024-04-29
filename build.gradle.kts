@@ -1,8 +1,7 @@
 import com.xpdustry.ksr.kotlinRelocate
-import fr.xpdustry.toxopid.dsl.mindustryDependencies
-import fr.xpdustry.toxopid.spec.ModMetadata
-import fr.xpdustry.toxopid.spec.ModPlatform
-import fr.xpdustry.toxopid.task.GithubArtifactDownload
+import com.xpdustry.toxopid.spec.ModMetadata
+import com.xpdustry.toxopid.spec.ModPlatform
+import com.xpdustry.toxopid.task.GithubAssetDownload
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
@@ -12,7 +11,7 @@ plugins {
     id("net.kyori.indra.publishing") version "3.1.3"
     id("net.kyori.indra.git") version "3.1.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("fr.xpdustry.toxopid") version "3.2.0"
+    id("com.xpdustry.toxopid") version "4.0.0-SNAPSHOT"
     id("com.xpdustry.ksr") version "2.0.0-SNAPSHOT"
     id("org.jetbrains.dokka") version "1.9.20"
 }
@@ -30,7 +29,7 @@ description = metadata.description
 
 toxopid {
     compileVersion.set("v${metadata.minGameVersion}")
-    platforms.set(setOf(ModPlatform.HEADLESS))
+    platforms.add(ModPlatform.SERVER)
 }
 
 repositories {
@@ -50,7 +49,11 @@ repositories {
 }
 
 dependencies {
-    mindustryDependencies()
+    compileOnly(toxopid.dependencies.mindustryCore)
+    compileOnly(toxopid.dependencies.arcCore)
+    compileOnly(toxopid.dependencies.mindustryHeadless)
+    compileOnly(toxopid.dependencies.arcHeadless)
+
     compileOnly(kotlin("stdlib-jdk8"))
 
     compileOnly("org.slf4j:slf4j-api:2.0.12")
@@ -94,8 +97,8 @@ indra {
 
     mitLicense()
 
-    if (metadata.repo.isNotBlank()) {
-        val repo = metadata.repo.split("/")
+    if (metadata.repository.isNotBlank()) {
+        val repo = metadata.repository.split("/")
         github(repo[0], repo[1]) {
             ci(true)
             issues(true)
@@ -163,7 +166,7 @@ tasks.shadowJar {
 
     doFirst {
         val temp = temporaryDir.resolve("plugin.json")
-        temp.writeText(metadata.toJson(true))
+        temp.writeText(metadata.toJson())
         from(temp)
     }
 
@@ -173,7 +176,6 @@ tasks.shadowJar {
 }
 
 tasks.build {
-    // Make sure the shadow jar is built during the build task
     dependsOn(tasks.shadowJar)
 }
 
@@ -182,22 +184,21 @@ tasks.javadocJar {
 }
 
 val downloadDistributorCore =
-    tasks.register<GithubArtifactDownload>("downloadDistributorCore") {
-        user.set("xpdustry")
+    tasks.register<GithubAssetDownload>("downloadDistributorCore") {
+        owner.set("xpdustry")
         repo.set("distributor")
+        asset.set("distributor-core.jar")
         version.set("v3.3.0")
-        name.set("distributor-core.jar")
     }
 
 val downloadKotlinRuntime =
-    tasks.register<GithubArtifactDownload>("downloadKotlinRuntime") {
-        user.set("xpdustry")
+    tasks.register<GithubAssetDownload>("downloadKotlinRuntime") {
+        owner.set("xpdustry")
         repo.set("kotlin-runtime")
-        name.set("kotlin-runtime.jar")
+        asset.set("kotlin-runtime.jar")
         version.set("v3.2.0-k.1.9.23")
     }
 
 tasks.runMindustryServer {
-    mods.setFrom(tasks.shadowJar, downloadKotlinRuntime)
-    // mods.from(downloadDistributorCore)
+    mods.from(downloadKotlinRuntime)
 }
