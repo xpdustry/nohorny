@@ -147,20 +147,18 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
 
             schedule(async = true) {
                 val image = render(copy)
-                plugin.analyzer
-                    .analyse(render(copy))
-                    .orTimeout(10L, TimeUnit.SECONDS)
-                    .whenComplete { result, error ->
-                        if (error != null) {
-                            NoHornyLogger.error(
-                                "Failed to verify cluster {}", copy.identifier, error)
-                            return@whenComplete
-                        }
-
-                        NoHornyLogger.trace(
-                            "Processed {} cluster {}, posting event", name, copy.identifier)
-                        Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
+                plugin.analyzer.analyse(image).orTimeout(10L, TimeUnit.SECONDS).whenComplete {
+                    result,
+                    error ->
+                    if (error != null) {
+                        NoHornyLogger.error("Failed to verify cluster {}", copy.identifier, error)
+                        return@whenComplete
                     }
+
+                    NoHornyLogger.trace(
+                        "Processed {} cluster {}, posting event", name, copy.identifier)
+                    Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
+                }
             }
         }
 
