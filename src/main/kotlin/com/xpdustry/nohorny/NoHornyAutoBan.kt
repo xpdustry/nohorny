@@ -28,11 +28,7 @@ package com.xpdustry.nohorny
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.extension.onEvent
-import com.xpdustry.nohorny.extension.schedule
 import com.xpdustry.nohorny.geometry.ImmutablePoint
-import java.util.ArrayDeque
-import java.util.Queue
-import kotlin.time.Duration.Companion.seconds
 import mindustry.Vars
 import mindustry.content.Blocks
 import mindustry.gen.Call
@@ -56,33 +52,23 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListen
                             "[pink]NoHorny: [white]${player.plainName()} has been banned for building a NSFW building.")
                     }
                 }
-                queuedDestruction(
-                    cluster.blocks.flatMapTo(ArrayDeque()) { block ->
+                cluster.blocks
+                    .asSequence()
+                    .flatMap { block ->
                         val points = mutableListOf(ImmutablePoint(block.x, block.y))
                         if (block.payload is NoHornyImage.Display) {
                             points += block.payload.processors.keys
                         }
-                        points
-                    })
-            }
-        }
-    }
-
-    private fun queuedDestruction(queue: Queue<ImmutablePoint>) {
-        schedule(async = false, delay = 1.seconds) {
-            var popped = 0
-            while (queue.peek() != null && popped < 100) {
-                val point = queue.poll()
-                val building = Vars.world.build(point.x, point.y)
-                if (building is LogicDisplay.LogicDisplayBuild ||
-                    building is LogicBlock.LogicBuild ||
-                    building is CanvasBlock.CanvasBuild) {
-                    Vars.world.tile(point.x, point.y)?.setNet(Blocks.air)
-                }
-                popped++
-            }
-            if (queue.isNotEmpty()) {
-                queuedDestruction(queue)
+                        points.asSequence()
+                    }
+                    .forEach { point ->
+                        val building = Vars.world.build(point.x, point.y)
+                        if (building is LogicDisplay.LogicDisplayBuild ||
+                            building is LogicBlock.LogicBuild ||
+                            building is CanvasBlock.CanvasBuild) {
+                            Vars.world.tile(point.x, point.y)?.setNet(Blocks.air)
+                        }
+                    }
             }
         }
     }
