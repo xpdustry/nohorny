@@ -55,7 +55,7 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
 
         for (building in buildings) {
             if (building is T) {
-                insert(building, event.unit.player)
+                insert(building, event.unit?.player)
             }
         }
     }
