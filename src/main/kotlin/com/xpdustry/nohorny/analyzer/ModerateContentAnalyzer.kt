@@ -35,7 +35,6 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.json.*
 import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -47,10 +46,11 @@ internal class ModerateContentAnalyzer(
         http
             .newCall(
                 Request.Builder()
-                    .url("https://tmpfiles.org/api/v1/upload")
+                    .url("https://api.moderatecontent.com/moderate/")
                     .post(
                         MultipartBody.Builder()
                             .setType(MultipartBody.FORM)
+                            .addFormDataPart("key", config.moderateContentToken.value)
                             .addFormDataPart(
                                 "file",
                                 "image.jpg",
@@ -60,42 +60,9 @@ internal class ModerateContentAnalyzer(
                             .build())
                     .build())
             .toCompletableFuture()
-            .thenCompose { response ->
-                NoHornyLogger.trace("tmpfiles.org reponse: {}", response)
-
-                val json = response.toJsonObject()
-                if (response.code != 200) {
-                    return@thenCompose CompletableFuture.failedFuture(
-                        IOException("Failed to upload the image: $json"))
-                }
-
-                val path =
-                    json["data"]!!
-                        .jsonObject["url"]!!
-                        .jsonPrimitive
-                        .content
-                        .toHttpUrl()
-                        .pathSegments
-
-                return@thenCompose http
-                    .newCall(
-                        Request.Builder()
-                            .url(
-                                "https://api.moderatecontent.com/moderate/"
-                                    .toHttpUrl()
-                                    .newBuilder()
-                                    .addQueryParameter("key", config.moderateContentToken.value)
-                                    .addQueryParameter(
-                                        "url", "https://tmpfiles.org/dl/${path[0]}/${path[1]}")
-                                    .build())
-                            .post(byteArrayOf().toRequestBody())
-                            .header("Content-Length", "0")
-                            .build())
-                    .toCompletableFuture()
-            }
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
-                NoHornyLogger.debug("API response: {}", json)
+                NoHornyLogger.debug("ModerateContent response: {}", json)
 
                 val code = json["error_code"]!!.jsonPrimitive.int
                 if (code != 0) {
@@ -104,33 +71,24 @@ internal class ModerateContentAnalyzer(
                             "ModerateContent API returned an error: ${json["error"]!!.jsonPrimitive.content} ($code)"))
                 }
 
-                val prediction =
+                val predictions =
                     json["predictions"]!!.jsonObject.mapValues { it.value.jsonPrimitive.float }
 
-                val result =
+                val rating =
                     when (val label = json["rating_label"]!!.jsonPrimitive.content) {
-                        EVERYONE_LABEL ->
-                            ImageAnalyzer.Result(
-                                ImageAnalyzer.Rating.SAFE,
-                                mapOf(
-                                    ImageAnalyzer.Kind.NUDITY to prediction[ADULT_LABEL]!! / 100F))
-                        TEEN_LABEL ->
-                            ImageAnalyzer.Result(
-                                ImageAnalyzer.Rating.WARNING,
-                                mapOf(
-                                    ImageAnalyzer.Kind.NUDITY to prediction[ADULT_LABEL]!! / 100F))
-                        ADULT_LABEL ->
-                            ImageAnalyzer.Result(
-                                ImageAnalyzer.Rating.UNSAFE,
-                                mapOf(
-                                    ImageAnalyzer.Kind.NUDITY to prediction[ADULT_LABEL]!! / 100F))
+                        EVERYONE_LABEL -> ImageAnalyzer.Rating.SAFE
+                        TEEN_LABEL -> ImageAnalyzer.Rating.WARNING
+                        ADULT_LABEL -> ImageAnalyzer.Rating.UNSAFE
                         else -> {
                             return@thenCompose CompletableFuture.failedFuture(
                                 IOException("Unknown label: $label"))
                         }
                     }
 
-                return@thenCompose CompletableFuture.completedFuture(result)
+                return@thenCompose CompletableFuture.completedFuture(
+                    ImageAnalyzer.Result(
+                        rating,
+                        mapOf(ImageAnalyzer.Kind.NUDITY to predictions[ADULT_LABEL]!! / 100F)))
             }
 
     companion object {
