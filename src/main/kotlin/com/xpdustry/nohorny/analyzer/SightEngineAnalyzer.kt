@@ -76,7 +76,7 @@ internal class SightEngineAnalyzer(
             .toCompletableFuture()
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
-                NoHornyLogger.debug("API response: {}", json)
+                NoHornyLogger.debug("SightEngine response: {}", json)
 
                 if (json["status"]!!.jsonPrimitive.content != "success") {
                     return@thenCompose CompletableFuture.failedFuture(
