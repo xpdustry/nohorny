@@ -41,7 +41,7 @@ internal val Building.ry: Int
     get() = tileY() + block.sizeOffset
 
 internal inline fun <reified T : Building> onBuildingLifecycleEvent(
-    crossinline insert: (T, Player?) -> Unit,
+    crossinline insert: (T, Player?, new: Boolean) -> Unit,
     crossinline remove: (Int, Int) -> Unit
 ) {
     onEvent<EventType.BlockBuildEndEvent> { event ->
@@ -55,7 +55,7 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
 
         for (building in buildings) {
             if (building is T) {
-                insert(building, event.unit?.player)
+                insert(building, event.unit?.player, true)
             }
         }
     }
@@ -64,7 +64,7 @@ internal inline fun <reified T : Building> onBuildingLifecycleEvent(
         val building = event.tile
         if (event.player != null && building is T) {
             remove(building.rx, building.ry)
-            insert(building, event.player)
+            insert(building, event.player, false)
         }
     }
 

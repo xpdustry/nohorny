@@ -176,7 +176,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
             }
         }
 
-    private fun addCanvas(canvas: CanvasBlock.CanvasBuild, player: Player?) {
+    private fun addCanvas(canvas: CanvasBlock.CanvasBuild, player: Player?, new: Boolean) {
         handleCanvasesModifications(
             canvases.addBlock(
                 Cluster.Block(
@@ -186,20 +186,25 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
                     NoHornyImage.Canvas(
                         (canvas.block as CanvasBlock).canvasSize,
                         readCanvas(canvas),
-                        player?.asAuthor()))))
+                        player?.asAuthor()))),
+            shouldReschedule = new)
     }
 
     private fun removeCanvas(x: Int, y: Int) {
-        handleCanvasesModifications(canvases.removeBlock(x, y))
+        handleCanvasesModifications(canvases.removeBlock(x, y), true)
     }
 
-    private fun handleCanvasesModifications(modifications: Iterable<Int>) {
+    private fun handleCanvasesModifications(
+        modifications: Iterable<Int>,
+        shouldReschedule: Boolean
+    ) {
         for (modified in modifications) {
             if (canvasProcessingQueue.removeIf { it.identifier == modified }) {
                 NoHornyLogger.trace("Cancelled processing of canvas cluster {}", modified)
             }
             val cluster = canvases.getClusterByIdentifier(modified) ?: return
-            if (cluster.blocks.size >= plugin.config.minimumCanvasClusterSize) {
+            if (cluster.blocks.size >= plugin.config.minimumCanvasClusterSize &&
+                (plugin.config.alwaysProcess || shouldReschedule)) {
                 NoHornyLogger.trace("Scheduled processing of canvas cluster {}", modified)
                 canvasProcessingQueue.add(
                     ProcessingTask(
@@ -210,7 +215,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
         }
     }
 
-    private fun addDisplay(display: LogicDisplay.LogicDisplayBuild, player: Player?) {
+    private fun addDisplay(display: LogicDisplay.LogicDisplayBuild, player: Player?, new: Boolean) {
         val resolution = (display.block as LogicDisplay).displaySize
         val map = mutableMapOf<ImmutablePoint, NoHornyImage.Processor>()
         val block =
@@ -257,7 +262,7 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
         }
     }
 
-    private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player?) {
+    private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player?, new: Boolean) {
         if (processor.executor.instructions.any { it is DrawFlushI }) {
             val instructions = readInstructions(processor.executor)
             val links = processor.links.select { it.active }.map { ImmutablePoint(it.x, it.y) }

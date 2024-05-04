@@ -38,6 +38,7 @@ internal data class NoHornyConfig(
     val minimumCanvasClusterSize: Int = 9,
     val minimumProcessorCount: Int = 5,
     val processorSearchRadius: Int = 10,
+    val alwaysProcess: Boolean = false
 ) {
     init {
         require(minimumInstructionCount >= 1) { "minimumInstructionCount cannot be lower than 1" }
