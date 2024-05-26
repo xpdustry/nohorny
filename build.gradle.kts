@@ -124,15 +124,14 @@ signing {
 
 spotless {
     kotlin {
-        fun toLongComment(text: String) =
+        ktfmt().dropboxStyle()
+        licenseHeader(
             buildString {
                 appendLine("/*")
-                text.lines().forEach { appendLine(" * ${it.trim()}") }
+                rootProject.file("HEADER.md").readText().lines().forEach { appendLine(" * ${it.trim()}") }
                 appendLine(" */")
-            }
-
-        ktfmt().dropboxStyle()
-        licenseHeader(toLongComment(rootProject.file("LICENSE_HEADER.md").readText()))
+            },
+        )
         indentWithSpaces(4)
         trimTrailingWhitespace()
         endWithNewline()

@@ -1,8 +1,8 @@
-This file is part of NoHorny. The plugin securing your server against nsfw.
+This file is part of NoHorny. The plugin securing your server against nsfw builds.
 
 MIT License
 
-Copyright (c) 2023 Xpdustry
+Copyright (c) 2024 Xpdustry
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
