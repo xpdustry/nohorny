@@ -68,5 +68,7 @@ internal data class NoHornyConfig(
         }
 
         data class ModerateContent(val moderateContentToken: Secret) : Analyzer
+
+        data class Fallback(val primary: Analyzer, val secondary: Analyzer) : Analyzer
     }
 }

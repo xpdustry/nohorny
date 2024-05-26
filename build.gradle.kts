@@ -166,7 +166,7 @@ tasks.shadowJar {
 
     doFirst {
         val temp = temporaryDir.resolve("plugin.json")
-        temp.writeText(metadata.toJson())
+        temp.writeText(ModMetadata.toJson(metadata))
         from(temp)
     }
 

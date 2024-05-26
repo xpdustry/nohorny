@@ -32,6 +32,7 @@ import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addPathSource
 import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
+import com.xpdustry.nohorny.analyzer.FallbackAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ModerateContentAnalyzer
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
@@ -128,14 +129,7 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
         }
 
         val config = loader.loadConfigOrThrow<NoHornyConfig>()
-        val analyzer =
-            when (config.analyzer) {
-                is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
-                is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
-                is NoHornyConfig.Analyzer.ModerateContent ->
-                    ModerateContentAnalyzer(config.analyzer, http)
-                is NoHornyConfig.Analyzer.SightEngine -> SightEngineAnalyzer(config.analyzer, http)
-            }
+        val analyzer = createAnalyzer(config.analyzer)
 
         this.config = config
         this.analyzer = analyzer
@@ -145,6 +139,16 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
         this.cache = cache
         NoHornyLogger.debug("Set cache to $cache")
     }
+
+    private fun createAnalyzer(config: NoHornyConfig.Analyzer): ImageAnalyzer =
+        when (config) {
+            is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
+            is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
+            is NoHornyConfig.Analyzer.ModerateContent -> ModerateContentAnalyzer(config, http)
+            is NoHornyConfig.Analyzer.SightEngine -> SightEngineAnalyzer(config, http)
+            is NoHornyConfig.Analyzer.Fallback ->
+                FallbackAnalyzer(createAnalyzer(config.primary), createAnalyzer(config.secondary))
+        }
 
     private object NoHornyThreadFactory : ThreadFactory {
         private val count = AtomicInteger(0)
