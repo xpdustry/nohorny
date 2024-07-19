@@ -5,7 +5,7 @@ import com.xpdustry.toxopid.task.GithubAssetDownload
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
-    kotlin("jvm") version "1.9.23"
+    kotlin("jvm") version "1.9.25"
     id("com.diffplug.spotless") version "6.25.0"
     id("net.kyori.indra") version "3.1.3"
     id("net.kyori.indra.publishing") version "3.1.3"
