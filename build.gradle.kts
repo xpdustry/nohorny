@@ -57,7 +57,7 @@ dependencies {
     compileOnly(kotlin("stdlib-jdk8"))
 
     compileOnly("org.slf4j:slf4j-api:2.0.12")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
     implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
