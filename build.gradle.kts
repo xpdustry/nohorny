@@ -59,7 +59,7 @@ dependencies {
     compileOnly("org.slf4j:slf4j-api:2.0.12")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
+    implementation("com.sksamuel.hoplite:hoplite-core:2.8.2")
     implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
 
     val junit = "5.10.2"
