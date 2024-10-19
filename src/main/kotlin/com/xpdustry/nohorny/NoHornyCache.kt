@@ -33,25 +33,25 @@ import java.util.concurrent.CompletableFuture
 public interface NoHornyCache {
     public fun getResult(
         cluster: Cluster<out NoHornyImage>,
-        image: BufferedImage
+        image: BufferedImage,
     ): CompletableFuture<ImageAnalyzer.Result?>
 
     public fun putResult(
         cluster: Cluster<out NoHornyImage>,
         image: BufferedImage,
-        result: ImageAnalyzer.Result
+        result: ImageAnalyzer.Result,
     )
 
     public data object None : NoHornyCache {
         override fun getResult(
             cluster: Cluster<out NoHornyImage>,
-            image: BufferedImage
+            image: BufferedImage,
         ): CompletableFuture<ImageAnalyzer.Result?> = CompletableFuture.completedFuture(null)
 
         override fun putResult(
             cluster: Cluster<out NoHornyImage>,
             image: BufferedImage,
-            result: ImageAnalyzer.Result
+            result: ImageAnalyzer.Result,
         ): Unit = Unit
     }
 }

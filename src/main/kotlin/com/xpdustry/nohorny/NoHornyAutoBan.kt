@@ -38,18 +38,19 @@ import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 
 internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener {
-
     override fun onInit() {
         onEvent<ImageAnalyzerEvent> { (result, cluster, _, author) ->
             if (result.rating == ImageAnalyzer.Rating.UNSAFE &&
                 plugin.config.autoBan &&
-                author != null) {
+                author != null
+            ) {
                 for (player in Groups.player) {
                     if (player.uuid() == author.uuid || player.ip() == author.address.hostAddress) {
                         Vars.netServer.admins.banPlayer(player.uuid())
                         player.kick("[scarlet]You have been banned for building a NSFW building.")
                         Call.sendMessage(
-                            "[pink]NoHorny: [white]${player.plainName()} has been banned for building a NSFW building.")
+                            "[pink]NoHorny: [white]${player.plainName()} has been banned for building a NSFW building.",
+                        )
                     }
                 }
                 cluster.blocks
@@ -65,7 +66,8 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListen
                         val building = Vars.world.build(point.x, point.y)
                         if (building is LogicDisplay.LogicDisplayBuild ||
                             building is LogicBlock.LogicBuild ||
-                            building is CanvasBlock.CanvasBuild) {
+                            building is CanvasBlock.CanvasBuild
+                        ) {
                             Vars.world.tile(point.x, point.y)?.setNet(Blocks.air)
                         }
                     }

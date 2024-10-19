@@ -30,9 +30,6 @@ import com.xpdustry.nohorny.NoHornyLogger
 import com.xpdustry.nohorny.extension.toCompletableFuture
 import com.xpdustry.nohorny.extension.toJpgByteArray
 import com.xpdustry.nohorny.extension.toJsonObject
-import java.awt.image.BufferedImage
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.json.float
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -42,10 +39,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import java.awt.image.BufferedImage
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 internal class SightEngineAnalyzer(
     private val config: NoHornyConfig.Analyzer.SightEngine,
-    private val http: OkHttpClient
+    private val http: OkHttpClient,
 ) : ImageAnalyzer {
     override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> {
         val request =
@@ -60,11 +60,13 @@ internal class SightEngineAnalyzer(
                             ImageAnalyzer.Kind.NUDITY -> "nudity-2.0"
                             ImageAnalyzer.Kind.GORE -> "gore"
                         }
-                    })
+                    },
+                )
                 .addFormDataPart(
                     "media",
                     "image.jpg",
-                    image.toJpgByteArray().toRequestBody("image/jpeg".toMediaTypeOrNull(), 0))
+                    image.toJpgByteArray().toRequestBody("image/jpeg".toMediaTypeOrNull(), 0),
+                )
                 .build()
 
         return http
@@ -72,7 +74,8 @@ internal class SightEngineAnalyzer(
                 Request.Builder()
                     .url("https://api.sightengine.com/1.0/check.json")
                     .post(request)
-                    .build())
+                    .build(),
+            )
             .toCompletableFuture()
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
@@ -80,7 +83,8 @@ internal class SightEngineAnalyzer(
 
                 if (json["status"]!!.jsonPrimitive.content != "success") {
                     return@thenCompose CompletableFuture.failedFuture(
-                        IOException("SightEngine API returned error: ${json["error"]}"))
+                        IOException("SightEngine API returned error: ${json["error"]}"),
+                    )
                 }
 
                 val results = mutableMapOf<ImageAnalyzer.Kind, Float>()
@@ -107,7 +111,8 @@ internal class SightEngineAnalyzer(
                     }
 
                 return@thenCompose CompletableFuture.completedFuture(
-                    ImageAnalyzer.Result(rating, results))
+                    ImageAnalyzer.Result(rating, results),
+                )
             }
     }
 

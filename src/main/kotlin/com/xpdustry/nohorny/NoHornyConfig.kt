@@ -38,7 +38,7 @@ internal data class NoHornyConfig(
     val minimumCanvasClusterSize: Int = 9,
     val minimumProcessorCount: Int = 5,
     val processorSearchRadius: Int = 10,
-    val alwaysProcess: Boolean = false
+    val alwaysProcess: Boolean = false,
 ) {
     init {
         require(minimumInstructionCount >= 1) { "minimumInstructionCount cannot be lower than 1" }
@@ -58,7 +58,7 @@ internal data class NoHornyConfig(
             val sightEngineSecret: Secret,
             val unsafeThreshold: Float = 0.55F,
             val warningThreshold: Float = 0.4F,
-            val kinds: List<ImageAnalyzer.Kind> = listOf(ImageAnalyzer.Kind.NUDITY)
+            val kinds: List<ImageAnalyzer.Kind> = listOf(ImageAnalyzer.Kind.NUDITY),
         ) : Analyzer {
             init {
                 require(unsafeThreshold >= 0) { "unsafeThreshold cannot be lower than 0" }
@@ -66,8 +66,6 @@ internal data class NoHornyConfig(
                 require(kinds.isNotEmpty()) { "models cannot be empty" }
             }
         }
-
-        data class ModerateContent(val moderateContentToken: Secret) : Analyzer
 
         data class Fallback(val primary: Analyzer, val secondary: Analyzer) : Analyzer
     }

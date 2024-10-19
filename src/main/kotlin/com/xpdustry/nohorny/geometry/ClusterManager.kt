@@ -25,22 +25,30 @@
  */
 package com.xpdustry.nohorny.geometry
 
-import java.util.*
+import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicInteger
 
 internal interface ClusterManager<T : Any> {
-
     val clusters: List<Cluster<T>>
 
     fun getClusterByIdentifier(identifier: Int): Cluster<T>?
 
-    fun getCluster(x: Int, y: Int): Cluster<T>?
+    fun getCluster(
+        x: Int,
+        y: Int,
+    ): Cluster<T>?
 
-    fun getBlock(x: Int, y: Int): Cluster.Block<T>?
+    fun getBlock(
+        x: Int,
+        y: Int,
+    ): Cluster.Block<T>?
 
     fun addBlock(block: Cluster.Block<T>): List<Int>
 
-    fun removeBlock(x: Int, y: Int): List<Int>
+    fun removeBlock(
+        x: Int,
+        y: Int,
+    ): List<Int>
 
     fun clear()
 
@@ -50,21 +58,25 @@ internal interface ClusterManager<T : Any> {
 }
 
 private class SimpleClusterManager<T : Any> : ClusterManager<T> {
-
     private val generator = AtomicInteger(0)
     private val _clusters = mutableListOf<Cluster<T>>()
     override val clusters: List<Cluster<T>>
         get() = _clusters
 
-    override fun getClusterByIdentifier(identifier: Int): Cluster<T>? =
-        _clusters.firstOrNull { it.identifier == identifier }
+    override fun getClusterByIdentifier(identifier: Int): Cluster<T>? = _clusters.firstOrNull { it.identifier == identifier }
 
-    override fun getCluster(x: Int, y: Int): Cluster<T>? =
+    override fun getCluster(
+        x: Int,
+        y: Int,
+    ): Cluster<T>? =
         _clusters.firstOrNull { cluster ->
             cluster.contains(x, y) && cluster.blocks.any { block -> block.contains(x, y) }
         }
 
-    override fun getBlock(x: Int, y: Int): Cluster.Block<T>? {
+    override fun getBlock(
+        x: Int,
+        y: Int,
+    ): Cluster.Block<T>? {
         for (cluster in _clusters) {
             if (cluster.contains(x, y)) {
                 for (block in cluster.blocks) {
@@ -81,7 +93,8 @@ private class SimpleClusterManager<T : Any> : ClusterManager<T> {
         val existing = getCluster(block.x, block.y)
         if (existing != null) {
             error(
-                "The location is occupied by the cluster (x=${existing.x}, y=${existing.y}, w=${existing.w}, h=${existing.h})")
+                "The location is occupied by the cluster (x=${existing.x}, y=${existing.y}, w=${existing.w}, h=${existing.h})",
+            )
         }
 
         val candidates = mutableListOf<Int>()
@@ -114,7 +127,10 @@ private class SimpleClusterManager<T : Any> : ClusterManager<T> {
         }
     }
 
-    override fun removeBlock(x: Int, y: Int): List<Int> {
+    override fun removeBlock(
+        x: Int,
+        y: Int,
+    ): List<Int> {
         var cIndex = -1
         var bIndex = -1
         for (i in _clusters.indices) {

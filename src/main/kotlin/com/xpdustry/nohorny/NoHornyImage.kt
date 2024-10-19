@@ -37,14 +37,14 @@ public sealed interface NoHornyImage {
     public data class Canvas(
         override val resolution: Int,
         public val pixels: IntIntMap,
-        public val author: Author?
+        public val author: Author?,
     ) : NoHornyImage {
         override fun copy(): Canvas = Canvas(resolution, IntIntMap(pixels), author)
     }
 
     public data class Display(
         override val resolution: Int,
-        public val processors: MutableMap<ImmutablePoint, Processor>
+        public val processors: MutableMap<ImmutablePoint, Processor>,
     ) : NoHornyImage {
         override fun copy(): Display = Display(resolution, processors.toMutableMap())
     }
@@ -62,7 +62,7 @@ public sealed interface NoHornyImage {
             val x2: Int,
             val y2: Int,
             val x3: Int,
-            val y3: Int
+            val y3: Int,
         ) : Instruction
     }
 

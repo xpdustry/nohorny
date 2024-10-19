@@ -26,7 +26,6 @@
 package com.xpdustry.nohorny.geometry
 
 public data class Cluster<T : Any>(val identifier: Int, val blocks: List<Block<T>>) : Rectangle {
-
     override val x: Int = (blocks.minOfOrNull { it.x } ?: 0)
     override val y: Int = (blocks.minOfOrNull { it.y } ?: 0)
     override val w: Int = (blocks.maxOfOrNull { it.x + it.size } ?: 0) - x
@@ -36,7 +35,7 @@ public data class Cluster<T : Any>(val identifier: Int, val blocks: List<Block<T
         override var x: Int,
         override var y: Int,
         val size: Int,
-        val payload: T
+        val payload: T,
     ) : Rectangle {
         override val w: Int
             get() = size

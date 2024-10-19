@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class ClusterManagerTest {
-
     @Test
     fun `test blocks that share a side`() {
         val manager = createManager()
@@ -160,5 +159,9 @@ class ClusterManagerTest {
 
     private fun createManager() = ClusterManager.create<Unit>()
 
-    private fun createBlock(x: Int, y: Int, size: Int) = Cluster.Block(x, y, size, Unit)
+    private fun createBlock(
+        x: Int,
+        y: Int,
+        size: Int,
+    ) = Cluster.Block(x, y, size, Unit)
 }

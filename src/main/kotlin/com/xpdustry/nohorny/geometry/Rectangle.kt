@@ -34,8 +34,10 @@ public interface Rectangle {
     public val w: Int
     public val h: Int
 
-    public fun contains(x: Int, y: Int): Boolean =
-        x in this.x until this.x + this.w && y in this.y until this.y + this.h
+    public fun contains(
+        x: Int,
+        y: Int,
+    ): Boolean = x in this.x until this.x + this.w && y in this.y until this.y + this.h
 
     /**
      * Returns whether the rectangle is adjacent or overlaps with the other.

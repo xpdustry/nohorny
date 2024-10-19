@@ -25,30 +25,38 @@
  */
 package com.xpdustry.nohorny.extension
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Response
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 internal fun Call.toCompletableFuture(): CompletableFuture<Response> {
     val future = CompletableFuture<Response>()
     enqueue(
         object : Callback {
-            override fun onResponse(call: Call, response: Response) {
+            override fun onResponse(
+                call: Call,
+                response: Response,
+            ) {
                 future.complete(response)
             }
 
-            override fun onFailure(call: Call, e: IOException) {
+            override fun onFailure(
+                call: Call,
+                e: IOException,
+            ) {
                 future.completeExceptionally(e)
             }
-        })
+        },
+    )
     return future
 }
 
-internal fun Response.toJsonObject(): JsonObject = use {
-    Json.parseToJsonElement(it.body!!.string()).jsonObject
-}
+internal fun Response.toJsonObject(): JsonObject =
+    use {
+        Json.parseToJsonElement(it.body!!.string()).jsonObject
+    }

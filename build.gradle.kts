@@ -93,7 +93,7 @@ indra {
 spotless {
     kotlin {
         ktlint()
-        licenseHeaderFile(rootProject.file("HEADER.md"))
+        licenseHeaderFile(rootProject.file("HEADER.txt"))
     }
     kotlinGradle {
         ktlint()

@@ -34,8 +34,11 @@ import com.sksamuel.hoplite.addPathSource
 import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
 import com.xpdustry.nohorny.analyzer.FallbackAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
-import com.xpdustry.nohorny.analyzer.ModerateContentAnalyzer
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
+import mindustry.Vars
+import mindustry.mod.Plugin
+import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -45,13 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.notExists
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
-import mindustry.Vars
-import mindustry.mod.Plugin
-import okhttp3.Dispatcher
-import okhttp3.OkHttpClient
 
 public class NoHornyPlugin : Plugin(), NoHornyAPI {
-
     private val directory: Path
         get() = Vars.modDirectory.child("nohorny").file().toPath()
 
@@ -82,7 +80,6 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
     internal var cache: NoHornyCache = NoHornyCache.None
 
     init {
-        INSTANCE = this
         Files.createDirectories(directory)
         listeners += NoHornyTracker(this)
         listeners += NoHornyAutoBan(this)
@@ -101,7 +98,8 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
                         EXECUTOR.shutdownNow()
                     }
                 }
-            })
+            },
+        )
     }
 
     override fun registerServerCommands(handler: CommandHandler) {
@@ -144,7 +142,6 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
         when (config) {
             is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
             is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
-            is NoHornyConfig.Analyzer.ModerateContent -> ModerateContentAnalyzer(config, http)
             is NoHornyConfig.Analyzer.SightEngine -> SightEngineAnalyzer(config, http)
             is NoHornyConfig.Analyzer.Fallback ->
                 FallbackAnalyzer(createAnalyzer(config.primary), createAnalyzer(config.secondary))
@@ -153,12 +150,10 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
     private object NoHornyThreadFactory : ThreadFactory {
         private val count = AtomicInteger(0)
 
-        override fun newThread(runnable: Runnable) =
-            Thread(runnable, "nohorny-worker-${count.incrementAndGet()}").apply { isDaemon = true }
+        override fun newThread(runnable: Runnable) = Thread(runnable, "nohorny-worker-${count.incrementAndGet()}").apply { isDaemon = true }
     }
 
     internal companion object {
-        @JvmStatic internal lateinit var INSTANCE: NoHornyPlugin
         @JvmStatic internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
     }
 }

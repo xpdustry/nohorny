@@ -30,28 +30,54 @@ import mindustry.Vars
 import org.slf4j.LoggerFactory
 
 internal interface NoHornyLogger {
+    fun error(
+        text: String,
+        vararg args: Any = emptyArray(),
+    )
 
-    fun error(text: String, vararg args: Any = emptyArray())
+    fun info(
+        text: String,
+        vararg args: Any = emptyArray(),
+    )
 
-    fun info(text: String, vararg args: Any = emptyArray())
+    fun debug(
+        text: String,
+        vararg args: Any = emptyArray(),
+    )
 
-    fun debug(text: String, vararg args: Any = emptyArray())
-
-    fun trace(text: String, vararg args: Any = emptyArray())
+    fun trace(
+        text: String,
+        vararg args: Any = emptyArray(),
+    )
 
     companion object : NoHornyLogger by findImplementation()
 
     object ARC : NoHornyLogger {
+        override fun error(
+            text: String,
+            vararg args: Any,
+        ) = log(Log.LogLevel.err, text, args)
 
-        override fun error(text: String, vararg args: Any) = log(Log.LogLevel.err, text, args)
+        override fun info(
+            text: String,
+            vararg args: Any,
+        ) = log(Log.LogLevel.info, text, args)
 
-        override fun info(text: String, vararg args: Any) = log(Log.LogLevel.info, text, args)
+        override fun debug(
+            text: String,
+            vararg args: Any,
+        ) = log(Log.LogLevel.debug, text, args)
 
-        override fun debug(text: String, vararg args: Any) = log(Log.LogLevel.debug, text, args)
+        override fun trace(
+            text: String,
+            vararg args: Any,
+        ) = log(Log.LogLevel.debug, text, args)
 
-        override fun trace(text: String, vararg args: Any) = log(Log.LogLevel.debug, text, args)
-
-        private fun log(level: Log.LogLevel, text: String, args: Array<out Any>) {
+        private fun log(
+            level: Log.LogLevel,
+            text: String,
+            args: Array<out Any>,
+        ) {
             val throwable: Throwable?
             val arguments: Array<out Any>
             if (args.lastOrNull() is Throwable) {
@@ -69,21 +95,35 @@ internal interface NoHornyLogger {
     }
 
     object SLF4J : NoHornyLogger {
-
         private val logger = LoggerFactory.getLogger(NoHornyPlugin::class.java)
 
-        override fun error(text: String, vararg args: Any) = logger.error(text, *args)
+        override fun error(
+            text: String,
+            vararg args: Any,
+        ) = logger.error(text, *args)
 
-        override fun info(text: String, vararg args: Any) = logger.info(text, *args)
+        override fun info(
+            text: String,
+            vararg args: Any,
+        ) = logger.info(text, *args)
 
-        override fun debug(text: String, vararg args: Any) = logger.debug(text, *args)
+        override fun debug(
+            text: String,
+            vararg args: Any,
+        ) = logger.debug(text, *args)
 
-        override fun trace(text: String, vararg args: Any) = logger.trace(text, *args)
+        override fun trace(
+            text: String,
+            vararg args: Any,
+        ) = logger.trace(text, *args)
     }
 }
 
 private fun findImplementation() =
     if (Vars.mods.getMod("distributor-core") != null ||
-        Vars.mods.getMod("distributor-logging") != null)
+        Vars.mods.getMod("distributor-logging") != null
+    ) {
         NoHornyLogger.SLF4J
-    else NoHornyLogger.ARC
+    } else {
+        NoHornyLogger.ARC
+    }

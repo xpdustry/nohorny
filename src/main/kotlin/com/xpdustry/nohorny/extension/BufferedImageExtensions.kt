@@ -46,7 +46,10 @@ internal fun BufferedImage.toJpgByteArray(): ByteArray {
 internal fun render(cluster: Cluster<out NoHornyImage>): BufferedImage {
     val image =
         BufferedImage(
-            cluster.w * RES_PER_BLOCK, cluster.h * RES_PER_BLOCK, BufferedImage.TYPE_INT_ARGB)
+            cluster.w * RES_PER_BLOCK,
+            cluster.h * RES_PER_BLOCK,
+            BufferedImage.TYPE_INT_ARGB,
+        )
     val graphics = image.graphics
     graphics.color = Color(0, 0, 0, 0)
     graphics.fillRect(0, 0, image.width, image.height)
@@ -78,7 +81,10 @@ private fun createImage(image: NoHornyImage): BufferedImage {
         is NoHornyImage.Canvas -> {
             for (pixel in image.pixels) {
                 output.setRGB(
-                    pixel.key % image.resolution, pixel.key / image.resolution, pixel.value)
+                    pixel.key % image.resolution,
+                    pixel.key / image.resolution,
+                    pixel.value,
+                )
             }
             output = invertYAxis(output)
         }
@@ -95,7 +101,11 @@ private fun createImage(image: NoHornyImage): BufferedImage {
                                 output.setRGB(instruction.x, instruction.y, graphics.color.rgb)
                             } else {
                                 graphics.fillRect(
-                                    instruction.x, instruction.y, instruction.w, instruction.h)
+                                    instruction.x,
+                                    instruction.y,
+                                    instruction.w,
+                                    instruction.h,
+                                )
                             }
                         }
                         is NoHornyImage.Instruction.Triangle -> {

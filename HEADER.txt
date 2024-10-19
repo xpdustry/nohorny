@@ -23,14 +23,3 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
-
-import arc.util.CommandHandler
-
-internal interface NoHornyListener {
-    fun onInit() = Unit
-
-    fun onServerCommandsRegistration(handler: CommandHandler) = Unit
-
-    fun onClientCommandsRegistration(handler: CommandHandler) = Unit
-}

@@ -32,18 +32,15 @@ import arc.struct.IntIntMap
 import arc.struct.IntSet
 import arc.util.CommandHandler
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
-import com.xpdustry.nohorny.extension.*
+import com.xpdustry.nohorny.extension.onBuildingLifecycleEvent
+import com.xpdustry.nohorny.extension.onEvent
+import com.xpdustry.nohorny.extension.render
 import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
+import com.xpdustry.nohorny.extension.schedule
 import com.xpdustry.nohorny.geometry.Cluster
 import com.xpdustry.nohorny.geometry.ClusterManager
 import com.xpdustry.nohorny.geometry.ImmutablePoint
-import java.net.InetAddress
-import java.time.Instant
-import java.util.*
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration.Companion.seconds
 import mindustry.Vars
 import mindustry.game.EventType
 import mindustry.gen.Call
@@ -54,9 +51,14 @@ import mindustry.logic.LExecutor.DrawFlushI
 import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
+import java.net.InetAddress
+import java.time.Instant
+import java.util.PriorityQueue
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
-
     private val processors = mutableMapOf<ImmutablePoint, ProcessorWithLinks>()
     private val displays = ClusterManager.create<NoHornyImage.Display>()
     private val displayProcessingQueue = PriorityQueue<ProcessingTask>()
@@ -91,7 +93,11 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
         }
     }
 
-    private fun renderCluster(player: Player, manager: ClusterManager<*>, color: Color) {
+    private fun renderCluster(
+        player: Player,
+        manager: ClusterManager<*>,
+        color: Color,
+    ) {
         for (cluster in manager.clusters) {
             for (block in cluster.blocks) {
                 Call.label(
@@ -119,64 +125,76 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
 
     override fun onClientCommandsRegistration(handler: CommandHandler) {
         handler.register<Player>(
-            "nohorny-tracker-debug", "Enable debug mode of the nohorny tracker.") { _, player ->
-                if (debug.add(player.id)) {
-                    player.sendMessage("Tracker debug mode is now enabled")
-                } else {
-                    debug.remove(player.id)
-                    player.sendMessage("Tracker debug mode is now disabled")
-                }
+            "nohorny-tracker-debug",
+            "Enable debug mode of the nohorny tracker.",
+        ) { _, player ->
+            if (debug.add(player.id)) {
+                player.sendMessage("Tracker debug mode is now enabled")
+            } else {
+                debug.remove(player.id)
+                player.sendMessage("Tracker debug mode is now disabled")
             }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun <T : NoHornyImage> startProcessing(
         manager: ClusterManager<T>,
         queue: PriorityQueue<ProcessingTask>,
-        name: String
-    ) =
-        schedule(async = false, delay = 1.seconds, repeat = 1.seconds) {
-            val element = queue.peek()
-            if (element == null || element.instant > Instant.now()) return@schedule
-            queue.remove()
-            val cluster = manager.getClusterByIdentifier(element.identifier) ?: return@schedule
-            val copy =
-                cluster.copy(
-                    blocks = cluster.blocks.map { it.copy(payload = it.payload.copy() as T) })
+        name: String,
+    ) = schedule(async = false, delay = 1.seconds, repeat = 1.seconds) {
+        val element = queue.peek()
+        if (element == null || element.instant > Instant.now()) return@schedule
+        queue.remove()
+        val cluster = manager.getClusterByIdentifier(element.identifier) ?: return@schedule
+        val copy =
+            cluster.copy(
+                blocks = cluster.blocks.map { it.copy(payload = it.payload.copy() as T) },
+            )
 
-            NoHornyLogger.trace("Begin processing of {} cluster {}", name, copy.identifier)
+        NoHornyLogger.trace("Begin processing of {} cluster {}", name, copy.identifier)
 
-            schedule(async = true) {
-                val image = render(copy)
-                plugin.cache
-                    .getResult(copy, image)
-                    .thenCompose { cached ->
-                        if (cached != null) {
-                            CompletableFuture.completedFuture(cached to true)
-                        } else {
-                            plugin.analyzer.analyse(image).thenApply { it to false }
-                        }
+        schedule(async = true) {
+            val image = render(copy)
+            plugin.cache
+                .getResult(copy, image)
+                .thenCompose { cached ->
+                    if (cached != null) {
+                        CompletableFuture.completedFuture(cached to true)
+                    } else {
+                        plugin.analyzer.analyse(image).thenApply { it to false }
                     }
-                    .orTimeout(10L, TimeUnit.SECONDS)
-                    .whenComplete { (result, cached), error ->
-                        if (error != null) {
-                            NoHornyLogger.error(
-                                "Failed to verify cluster {}", copy.identifier, error)
-                            return@whenComplete
-                        }
-
-                        if (!cached) {
-                            plugin.cache.putResult(copy, image, result)
-                        }
-
-                        NoHornyLogger.trace(
-                            "Processed {} cluster {}, posting event", name, copy.identifier)
-                        Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
+                }
+                .orTimeout(10L, TimeUnit.SECONDS)
+                .whenComplete { (result, cached), error ->
+                    if (error != null) {
+                        NoHornyLogger.error(
+                            "Failed to verify cluster {}",
+                            copy.identifier,
+                            error,
+                        )
+                        return@whenComplete
                     }
-            }
+
+                    if (!cached) {
+                        plugin.cache.putResult(copy, image, result)
+                    }
+
+                    NoHornyLogger.trace(
+                        "Processed {} cluster {}, posting event",
+                        name,
+                        copy.identifier,
+                    )
+                    Core.app.post { Events.fire(ImageAnalyzerEvent(result, copy, image)) }
+                }
         }
+    }
 
-    private fun addCanvas(canvas: CanvasBlock.CanvasBuild, player: Player?, new: Boolean) {
+    private fun addCanvas(
+        canvas: CanvasBlock.CanvasBuild,
+        player: Player?,
+        new: Boolean,
+    ) {
         handleCanvasesModifications(
             canvases.addBlock(
                 Cluster.Block(
@@ -186,17 +204,24 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
                     NoHornyImage.Canvas(
                         (canvas.block as CanvasBlock).canvasSize,
                         readCanvas(canvas),
-                        player?.asAuthor()))),
-            shouldReschedule = new)
+                        player?.asAuthor(),
+                    ),
+                ),
+            ),
+            shouldReschedule = new,
+        )
     }
 
-    private fun removeCanvas(x: Int, y: Int) {
+    private fun removeCanvas(
+        x: Int,
+        y: Int,
+    ) {
         handleCanvasesModifications(canvases.removeBlock(x, y), true)
     }
 
     private fun handleCanvasesModifications(
         modifications: Iterable<Int>,
-        shouldReschedule: Boolean
+        shouldReschedule: Boolean,
     ) {
         for (modified in modifications) {
             if (canvasProcessingQueue.removeIf { it.identifier == modified }) {
@@ -204,30 +229,42 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
             }
             val cluster = canvases.getClusterByIdentifier(modified) ?: return
             if (cluster.blocks.size >= plugin.config.minimumCanvasClusterSize &&
-                (plugin.config.alwaysProcess || shouldReschedule)) {
+                (plugin.config.alwaysProcess || shouldReschedule)
+            ) {
                 NoHornyLogger.trace("Scheduled processing of canvas cluster {}", modified)
                 canvasProcessingQueue.add(
                     ProcessingTask(
                         modified,
                         Instant.now()
-                            .plusMillis(plugin.config.processingDelay.inWholeMilliseconds)))
+                            .plusMillis(plugin.config.processingDelay.inWholeMilliseconds),
+                    ),
+                )
             }
         }
     }
 
-    private fun addDisplay(display: LogicDisplay.LogicDisplayBuild, player: Player?, new: Boolean) {
+    private fun addDisplay(
+        display: LogicDisplay.LogicDisplayBuild,
+        player: Player?,
+        new: Boolean,
+    ) {
         val resolution = (display.block as LogicDisplay).displaySize
         val map = mutableMapOf<ImmutablePoint, NoHornyImage.Processor>()
         val block =
             Cluster.Block(
-                display.rx, display.ry, display.block.size, NoHornyImage.Display(resolution, map))
+                display.rx,
+                display.ry,
+                display.block.size,
+                NoHornyImage.Display(resolution, map),
+            )
 
         for ((position, data) in processors) {
             if (display.within(
-                position.x.toFloat() * Vars.tilesize,
-                position.y.toFloat() * Vars.tilesize,
-                plugin.config.processorSearchRadius.toFloat() * Vars.tilesize)) {
-
+                    position.x.toFloat() * Vars.tilesize,
+                    position.y.toFloat() * Vars.tilesize,
+                    plugin.config.processorSearchRadius.toFloat() * Vars.tilesize,
+                )
+            ) {
                 val (processor, links) = data
                 for (link in links) {
                     if (block.contains(link.x, link.y)) {
@@ -240,7 +277,10 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
         handleDisplaysModifications(displays.addBlock(block))
     }
 
-    private fun removeDisplay(x: Int, y: Int) {
+    private fun removeDisplay(
+        x: Int,
+        y: Int,
+    ) {
         handleDisplaysModifications(displays.removeBlock(x, y))
     }
 
@@ -251,18 +291,25 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
             }
             val cluster = displays.getClusterByIdentifier(modified) ?: return
             if (cluster.blocks.sumOf { it.payload.processors.size } >=
-                plugin.config.minimumProcessorCount) {
+                plugin.config.minimumProcessorCount
+            ) {
                 NoHornyLogger.trace("Scheduled processing of display cluster {}", modified)
                 displayProcessingQueue.add(
                     ProcessingTask(
                         modified,
                         Instant.now()
-                            .plusMillis(plugin.config.processingDelay.inWholeMilliseconds)))
+                            .plusMillis(plugin.config.processingDelay.inWholeMilliseconds),
+                    ),
+                )
             }
         }
     }
 
-    private fun addProcessor(processor: LogicBlock.LogicBuild, player: Player?, new: Boolean) {
+    private fun addProcessor(
+        processor: LogicBlock.LogicBuild,
+        player: Player?,
+        new: Boolean,
+    ) {
         if (processor.executor.instructions.any { it is DrawFlushI }) {
             val instructions = readInstructions(processor.executor)
             val links = processor.links.select { it.active }.map { ImmutablePoint(it.x, it.y) }
@@ -270,7 +317,9 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
             if (instructions.size >= plugin.config.minimumInstructionCount && !links.isEmpty) {
                 val data =
                     ProcessorWithLinks(
-                        NoHornyImage.Processor(instructions, player?.asAuthor()), links.list())
+                        NoHornyImage.Processor(instructions, player?.asAuthor()),
+                        links.list(),
+                    )
 
                 val point = ImmutablePoint(processor.tileX(), processor.tileY())
                 processors[point] = data
@@ -282,7 +331,10 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
         }
     }
 
-    private fun removeProcessor(x: Int, y: Int) {
+    private fun removeProcessor(
+        x: Int,
+        y: Int,
+    ) {
         val point = ImmutablePoint(x, y)
         processors.remove(point)
         val modified = mutableSetOf<Int>()
@@ -354,14 +406,20 @@ internal class NoHornyTracker(private val plugin: NoHornyPlugin) : NoHornyListen
     }
 
     // Anuke black magic
-    private fun getByte(block: CanvasBlock, data: ByteArray, bitOffset: Int): Int {
+    private fun getByte(
+        block: CanvasBlock,
+        data: ByteArray,
+        bitOffset: Int,
+    ): Int {
         var result = 0
         for (i in 0 until block.bitsPerPixel) {
             val word = i + bitOffset ushr 3
             result =
                 result or
-                    ((if (data[word].toInt() and (1 shl (i + bitOffset and 7)) == 0) 0 else 1) shl
-                        i)
+                (
+                    (if (data[word].toInt() and (1 shl (i + bitOffset and 7)) == 0) 0 else 1) shl
+                        i
+                )
         }
         return result
     }

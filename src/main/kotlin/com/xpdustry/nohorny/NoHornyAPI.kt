@@ -25,10 +25,12 @@
  */
 package com.xpdustry.nohorny
 
+import mindustry.Vars
+
 public interface NoHornyAPI {
     public fun setCache(cache: NoHornyCache)
 
     public companion object {
-        @JvmStatic public fun get(): NoHornyAPI = NoHornyPlugin.INSTANCE
+        @JvmStatic public fun get(): NoHornyAPI = Vars.mods.getMod(NoHornyPlugin::class.java).main as NoHornyAPI
     }
 }

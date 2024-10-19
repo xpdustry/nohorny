@@ -32,7 +32,7 @@ import java.awt.image.BufferedImage
 public data class ImageAnalyzerEvent(
     val result: ImageAnalyzer.Result,
     val cluster: Cluster<out NoHornyImage>,
-    val image: BufferedImage
+    val image: BufferedImage,
 ) {
     public operator fun component4(): NoHornyImage.Author? = author
 

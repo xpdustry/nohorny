@@ -35,24 +35,29 @@ internal fun schedule(
     async: Boolean,
     delay: Duration? = null,
     repeat: Duration? = null,
-    task: Runnable
+    task: Runnable,
 ) {
-    val wrapper = Runnable {
-        try {
-            task.run()
-        } catch (throwable: Throwable) {
-            NoHornyLogger.error("An error occurred while executing a scheduled task", throwable)
+    val wrapper =
+        Runnable {
+            try {
+                task.run()
+            } catch (throwable: Throwable) {
+                NoHornyLogger.error("An error occurred while executing a scheduled task", throwable)
+            }
         }
-    }
     val runnable = Runnable { if (async) wrapper.run() else Core.app.post(wrapper) }
     if (repeat != null) {
         NoHornyPlugin.EXECUTOR.scheduleWithFixedDelay(
             runnable,
             delay?.inWholeMilliseconds ?: 0L,
             repeat.inWholeMilliseconds,
-            TimeUnit.MILLISECONDS)
+            TimeUnit.MILLISECONDS,
+        )
     } else {
         NoHornyPlugin.EXECUTOR.schedule(
-            runnable, delay?.inWholeMilliseconds ?: 0L, TimeUnit.MILLISECONDS)
+            runnable,
+            delay?.inWholeMilliseconds ?: 0L,
+            TimeUnit.MILLISECONDS,
+        )
     }
 }
