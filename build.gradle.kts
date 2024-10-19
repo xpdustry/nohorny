@@ -43,13 +43,20 @@ dependencies {
     compileOnly(libs.kotlinx.coroutines.core)
     compileOnly(libs.kotlinx.coroutines.jdk8)
     compileOnly(libs.kotlinx.serialization.json)
+
     compileOnly(toxopid.dependencies.arcCore)
+    testImplementation(toxopid.dependencies.arcCore)
     compileOnly(toxopid.dependencies.mindustryCore)
+    testImplementation(toxopid.dependencies.mindustryCore)
+
     compileOnly(libs.slf4j.api)
     testImplementation(libs.slf4j.simple)
-    compileOnly(libs.okhttp)
+
+    implementation(libs.okhttp)
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
+    implementation(libs.guava)
+
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.junit.engine)
 }
@@ -119,11 +126,17 @@ val generateMetadataFile by tasks.registering {
 tasks.shadowJar {
     archiveFileName = "${metadata.name}.jar"
     archiveClassifier = "plugin"
+
     from(generateMetadataFile)
     from(rootProject.file("LICENSE.md")) { into("META-INF") }
+
     val shadowPackage = "$rootPackage.shadow"
     kotlinRelocate("com.sksamuel.hoplite", "$shadowPackage.hoplite")
+    kotlinRelocate("okhttp3", "$shadowPackage.okhttp3")
+    kotlinRelocate("okio", "$shadowPackage.okio")
     relocate("org.yaml.snakeyaml", "$shadowPackage.snakeyaml")
+    relocate("com.google.common", "$shadowPackage.guava")
+
     mergeServiceFiles()
     minimize {
         exclude(dependency("com.sksamuel.hoplite:hoplite-.*:.*"))

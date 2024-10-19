@@ -29,6 +29,7 @@ import arc.util.Log
 import mindustry.Vars
 import org.slf4j.LoggerFactory
 
+@Deprecated("no")
 internal interface NoHornyLogger {
     fun error(
         text: String,
