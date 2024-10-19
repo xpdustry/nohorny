@@ -1,47 +1,37 @@
 import com.xpdustry.ksr.kotlinRelocate
+import com.xpdustry.toxopid.extension.anukeXpdustry
 import com.xpdustry.toxopid.spec.ModMetadata
 import com.xpdustry.toxopid.spec.ModPlatform
 import com.xpdustry.toxopid.task.GithubAssetDownload
-import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 
 plugins {
-    kotlin("jvm") version "1.9.23"
-    id("com.diffplug.spotless") version "6.25.0"
-    id("net.kyori.indra") version "3.1.3"
-    id("net.kyori.indra.publishing") version "3.1.3"
-    id("net.kyori.indra.git") version "3.1.3"
-    id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("com.xpdustry.toxopid") version "4.0.0-SNAPSHOT"
-    id("com.xpdustry.ksr") version "2.0.0-SNAPSHOT"
-    id("org.jetbrains.dokka") version "1.9.20"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.indra.common)
+    alias(libs.plugins.indra.git)
+    alias(libs.plugins.indra.publishing)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.toxopid)
+    alias(libs.plugins.ksr)
+    alias(libs.plugins.dokka)
 }
 
-val metadata = ModMetadata.fromJson(file("plugin.json"))
-
-// Remove the following line if you don't want snapshot versions
-if (indraGit.headTag() == null) {
-    metadata.version += "-SNAPSHOT"
-}
-
+val metadata = ModMetadata.fromJson(rootProject.file("plugin.json"))
+if (indraGit.headTag() == null) metadata.version += "-SNAPSHOT"
 group = "com.xpdustry"
+val rootPackage = "com.xpdustry.nohorny"
 version = metadata.version
 description = metadata.description
 
 toxopid {
-    compileVersion.set("v${metadata.minGameVersion}")
-    platforms.add(ModPlatform.SERVER)
+    compileVersion = "v${metadata.minGameVersion}"
+    platforms = setOf(ModPlatform.SERVER)
 }
 
 repositories {
     mavenCentral()
-
-    // This repository provides mindustry artifacts built by xpdustry
-    maven("https://maven.xpdustry.com/mindustry") {
-        name = "xpdustry-mindustry"
-        mavenContent { releasesOnly() }
-    }
-
-    // This repository provides xpdustry libraries, such as the distributor-api
+    anukeXpdustry()
     maven("https://maven.xpdustry.com/releases") {
         name = "xpdustry-releases"
         mavenContent { releasesOnly() }
@@ -49,41 +39,25 @@ repositories {
 }
 
 dependencies {
-    compileOnly(toxopid.dependencies.mindustryCore)
-    compileOnly(toxopid.dependencies.arcCore)
-    compileOnly(toxopid.dependencies.mindustryHeadless)
-    compileOnly(toxopid.dependencies.arcHeadless)
-
     compileOnly(kotlin("stdlib-jdk8"))
-
-    compileOnly("org.slf4j:slf4j-api:2.0.12")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
-    implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
-
-    val junit = "5.10.2"
-    testImplementation("org.junit.jupiter:junit-jupiter-params:$junit")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:$junit")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit")
+    compileOnly(libs.kotlinx.coroutines.core)
+    compileOnly(libs.kotlinx.coroutines.jdk8)
+    compileOnly(libs.kotlinx.serialization.json)
+    compileOnly(toxopid.dependencies.arcCore)
+    compileOnly(toxopid.dependencies.mindustryCore)
+    compileOnly(libs.slf4j.api)
+    testImplementation(libs.slf4j.simple)
+    compileOnly(libs.okhttp)
+    implementation(libs.hoplite.core)
+    implementation(libs.hoplite.yaml)
+    testImplementation(libs.junit.api)
+    testRuntimeOnly(libs.junit.engine)
 }
 
-configurations.runtimeClasspath {
-    exclude("org.jetbrains.kotlin")
-    exclude("org.jetbrains.kotlinx")
-}
-
-kotlin {
-    jvmToolchain(17)
-    explicitApi = ExplicitApiMode.Strict
-    target {
-        compilations.configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-                apiVersion = "1.9"
-            }
-        }
-    }
+signing {
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKey, signingPassword)
 }
 
 indra {
@@ -109,95 +83,73 @@ indra {
     configurePublications {
         pom {
             organization {
-                name.set("xpdustry")
-                url.set("https://www.xpdustry.com")
+                name = "xpdustry"
+                url = "https://www.xpdustry.com"
             }
         }
     }
 }
 
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKey, signingPassword)
-}
-
 spotless {
     kotlin {
-        ktfmt().dropboxStyle()
-        licenseHeader(
-            buildString {
-                appendLine("/*")
-                rootProject.file("HEADER.md").readText().lines().forEach { appendLine(" * ${it.trim()}") }
-                appendLine(" */")
-            },
-        )
-        indentWithSpaces(4)
-        trimTrailingWhitespace()
-        endWithNewline()
+        ktlint()
+        licenseHeaderFile(rootProject.file("HEADER.md"))
     }
     kotlinGradle {
         ktlint()
     }
 }
 
-// Required for the GitHub actions
-tasks.register("getArtifactPath") {
-    doLast { println(tasks.shadowJar.get().archiveFile.get().toString()) }
+kotlin {
+    explicitApi()
+}
+
+configurations.runtimeClasspath {
+    exclude("org.jetbrains.kotlin")
+    exclude("org.jetbrains.kotlinx")
+}
+
+val generateMetadataFile by tasks.registering {
+    inputs.property("metadata", metadata)
+    val output = temporaryDir.resolve("plugin.json")
+    outputs.file(output)
+    doLast { output.writeText(ModMetadata.toJson(metadata)) }
 }
 
 tasks.shadowJar {
-    archiveFileName.set("${metadata.name}.jar")
-    archiveClassifier.set("plugin")
-
-    val relocationPackage = "com.xpdustry.nohorny.shadow"
-    kotlinRelocate("okhttp3", "$relocationPackage.okhttp3")
-    kotlinRelocate("okio", "$relocationPackage.okio")
-    kotlinRelocate("com.sksamuel.hoplite", "$relocationPackage.hoplite")
-    relocate("org.yaml.snakeyaml", "$relocationPackage.snakeyaml")
-
+    archiveFileName = "${metadata.name}.jar"
+    archiveClassifier = "plugin"
+    from(generateMetadataFile)
+    from(rootProject.file("LICENSE.md")) { into("META-INF") }
+    val shadowPackage = "$rootPackage.shadow"
+    kotlinRelocate("com.sksamuel.hoplite", "$shadowPackage.hoplite")
+    relocate("org.yaml.snakeyaml", "$shadowPackage.snakeyaml")
     mergeServiceFiles()
     minimize {
         exclude(dependency("com.sksamuel.hoplite:hoplite-.*:.*"))
     }
-
-    exclude("META-INF/proguard/**")
-
-    doFirst {
-        val temp = temporaryDir.resolve("plugin.json")
-        temp.writeText(ModMetadata.toJson(metadata))
-        from(temp)
-    }
-
-    from(rootProject.file("LICENSE.md")) {
-        into("META-INF")
-    }
 }
 
-tasks.build {
-    dependsOn(tasks.shadowJar)
+tasks.register<Copy>("release") {
+    dependsOn(tasks.build)
+    from(tasks.shadowJar)
+    destinationDir = temporaryDir
 }
 
-tasks.javadocJar {
-    from(tasks.dokkaHtml)
+val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
+    owner = "xpdustry"
+    repo = "slf4md"
+    asset = "slf4md-simple.jar"
+    version = "v${libs.versions.slf4md.get()}"
 }
 
-val downloadDistributorCore =
-    tasks.register<GithubAssetDownload>("downloadDistributorCore") {
-        owner.set("xpdustry")
-        repo.set("distributor")
-        asset.set("distributor-core.jar")
-        version.set("v3.3.0")
-    }
-
-val downloadKotlinRuntime =
-    tasks.register<GithubAssetDownload>("downloadKotlinRuntime") {
-        owner.set("xpdustry")
-        repo.set("kotlin-runtime")
-        asset.set("kotlin-runtime.jar")
-        version.set("v3.2.0-k.1.9.23")
-    }
+val downloadKotlinRuntime by tasks.registering(GithubAssetDownload::class) {
+    owner = "xpdustry"
+    repo = "kotlin-runtime"
+    asset = "kotlin-runtime.jar"
+    version = "v${libs.versions.kotlin.runtime.get()}-k.${libs.versions.kotlin.core.get()}"
+}
 
 tasks.runMindustryServer {
-    mods.from(downloadKotlinRuntime)
+    mods.from(downloadSlf4md, downloadKotlinRuntime)
 }

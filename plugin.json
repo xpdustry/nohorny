@@ -9,6 +9,5 @@
   "java": true,
   "hidden": true,
   "minGameVersion": "146",
-  "dependencies": [ "kotlin-runtime" ],
-  "softDependencies": [ "distributor-common" ]
+  "dependencies": [ "kotlin-runtime", "slf4md" ]
 }
