@@ -26,7 +26,6 @@
 package com.xpdustry.nohorny.analyzer
 
 import com.xpdustry.nohorny.NoHornyConfig
-import com.xpdustry.nohorny.NoHornyLogger
 import com.xpdustry.nohorny.extension.toCompletableFuture
 import com.xpdustry.nohorny.extension.toJpgByteArray
 import com.xpdustry.nohorny.extension.toJsonObject
@@ -39,6 +38,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
@@ -79,7 +79,7 @@ internal class SightEngineAnalyzer(
             .toCompletableFuture()
             .thenApply(Response::toJsonObject)
             .thenCompose { json ->
-                NoHornyLogger.debug("SightEngine response: {}", json)
+                LOGGER.debug("SightEngine response: {}", json)
 
                 if (json["status"]!!.jsonPrimitive.content != "success") {
                     return@thenCompose CompletableFuture.failedFuture(
@@ -117,6 +117,7 @@ internal class SightEngineAnalyzer(
     }
 
     companion object {
+        private val LOGGER = LoggerFactory.getLogger(SightEngineAnalyzer::class.java)
         private val EXPLICIT_NUDITY_FIELDS =
             listOf("sexual_activity", "sexual_display", "sextoy", "erotica")
     }

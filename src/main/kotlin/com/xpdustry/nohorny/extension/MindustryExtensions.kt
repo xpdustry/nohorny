@@ -26,11 +26,14 @@
 package com.xpdustry.nohorny.extension
 
 import arc.Events
-import com.xpdustry.nohorny.NoHornyLogger
+import com.google.common.net.InetAddresses
+import com.xpdustry.nohorny.NoHornyImage
+import com.xpdustry.nohorny.NoHornyPlugin
 import mindustry.game.EventType
 import mindustry.gen.Building
 import mindustry.gen.Player
 import mindustry.world.blocks.ConstructBlock
+import org.slf4j.LoggerFactory
 import java.util.function.Consumer
 import kotlin.reflect.jvm.jvmName
 
@@ -41,8 +44,8 @@ internal val Building.ry: Int
     get() = tileY() + block.sizeOffset
 
 internal inline fun <reified T : Building> onBuildingLifecycleEvent(
-    crossinline insert: (T, Player?, new: Boolean) -> Unit,
-    crossinline remove: (Int, Int) -> Unit,
+    crossinline insert: (data: T, player: Player?, isNew: Boolean) -> Unit,
+    crossinline remove: (x: Int, y: Int) -> Unit,
 ) {
     onEvent<EventType.BlockBuildEndEvent> { event ->
         var buildings = listOf(event.tile.build)
@@ -88,10 +91,12 @@ internal inline fun <reified T : Any> onEvent(consumer: Consumer<T>) =
         try {
             consumer.accept(event)
         } catch (e: Throwable) {
-            NoHornyLogger.error(
+            LoggerFactory.getLogger(NoHornyPlugin::class.java).error(
                 "An error occurred while handling event {}",
                 event::class.jvmName,
                 e,
             )
         }
     }
+
+internal fun Player.asAuthor() = NoHornyImage.Author(uuid(), InetAddresses.forString(ip()))

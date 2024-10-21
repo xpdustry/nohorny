@@ -27,25 +27,20 @@ package com.xpdustry.nohorny
 
 import com.sksamuel.hoplite.Secret
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
+import com.xpdustry.nohorny.tracker.CanvasesConfig
+import com.xpdustry.nohorny.tracker.DisplaysConfig
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 internal data class NoHornyConfig(
     val analyzer: Analyzer = Analyzer.None,
     val autoBan: Boolean = true,
-    val minimumInstructionCount: Int = 100,
     val processingDelay: Duration = 5.seconds,
-    val minimumCanvasClusterSize: Int = 9,
-    val minimumProcessorCount: Int = 5,
-    val processorSearchRadius: Int = 10,
-    val alwaysProcess: Boolean = false,
+    val displays: DisplaysConfig = DisplaysConfig(),
+    val canvases: CanvasesConfig = CanvasesConfig(),
 ) {
     init {
-        require(minimumInstructionCount >= 1) { "minimumInstructionCount cannot be lower than 1" }
         require(processingDelay >= Duration.ZERO) { "processingDelay cannot be lower than 0" }
-        require(minimumCanvasClusterSize >= 1) { "minimumCanvasClusterSize cannot be lower than 1" }
-        require(minimumProcessorCount >= 1) { "minimumProcessorCount cannot be lower than 1" }
-        require(processorSearchRadius >= 1) { "processorSearchRadius cannot be lower than 1" }
     }
 
     sealed interface Analyzer {

@@ -57,8 +57,8 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListen
                     .asSequence()
                     .flatMap { block ->
                         val points = mutableListOf(ImmutablePoint(block.x, block.y))
-                        if (block.payload is NoHornyImage.Display) {
-                            points += block.payload.processors.keys
+                        if (block.data is NoHornyImage.Display) {
+                            points += block.data.processors.keys
                         }
                         points.asSequence()
                     }

@@ -25,7 +25,7 @@
  */
 package com.xpdustry.nohorny.analyzer
 
-import com.xpdustry.nohorny.NoHornyLogger
+import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
@@ -33,7 +33,11 @@ internal class FallbackAnalyzer(val primary: ImageAnalyzer, val secondary: Image
     ImageAnalyzer {
     override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> =
         primary.analyse(image).exceptionallyCompose { throwable ->
-            NoHornyLogger.debug("Primary analyzer failed, switching to secondary", throwable)
+            LOGGER.debug("Primary analyzer failed, switching to secondary", throwable)
             secondary.analyse(image)
         }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(FallbackAnalyzer::class.java)
+    }
 }

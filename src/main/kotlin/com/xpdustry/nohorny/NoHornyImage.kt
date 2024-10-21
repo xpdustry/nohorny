@@ -32,24 +32,22 @@ import java.net.InetAddress
 public sealed interface NoHornyImage {
     public val resolution: Int
 
-    public fun copy(): NoHornyImage
-
     public data class Canvas(
         override val resolution: Int,
         public val pixels: IntIntMap,
         public val author: Author?,
-    ) : NoHornyImage {
-        override fun copy(): Canvas = Canvas(resolution, IntIntMap(pixels), author)
-    }
+    ) : NoHornyImage
 
     public data class Display(
         override val resolution: Int,
-        public val processors: MutableMap<ImmutablePoint, Processor>,
-    ) : NoHornyImage {
-        override fun copy(): Display = Display(resolution, processors.toMutableMap())
-    }
+        public val processors: Map<ImmutablePoint, Processor>,
+    ) : NoHornyImage
 
-    public data class Processor(val instructions: List<Instruction>, val author: Author?)
+    public data class Processor(
+        val instructions: List<Instruction>,
+        val author: Author?,
+        val links: List<ImmutablePoint>,
+    )
 
     public sealed interface Instruction {
         public data class Color(val r: Int, val g: Int, val b: Int, val a: Int) : Instruction

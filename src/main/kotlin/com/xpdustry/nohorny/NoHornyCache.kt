@@ -26,30 +26,30 @@
 package com.xpdustry.nohorny
 
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
-import com.xpdustry.nohorny.geometry.Cluster
+import com.xpdustry.nohorny.geometry.BlockGroup
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
 public interface NoHornyCache {
     public fun getResult(
-        cluster: Cluster<out NoHornyImage>,
+        group: BlockGroup<out NoHornyImage>,
         image: BufferedImage,
     ): CompletableFuture<ImageAnalyzer.Result?>
 
     public fun putResult(
-        cluster: Cluster<out NoHornyImage>,
+        group: BlockGroup<out NoHornyImage>,
         image: BufferedImage,
         result: ImageAnalyzer.Result,
     )
 
     public data object None : NoHornyCache {
         override fun getResult(
-            cluster: Cluster<out NoHornyImage>,
+            group: BlockGroup<out NoHornyImage>,
             image: BufferedImage,
         ): CompletableFuture<ImageAnalyzer.Result?> = CompletableFuture.completedFuture(null)
 
         override fun putResult(
-            cluster: Cluster<out NoHornyImage>,
+            group: BlockGroup<out NoHornyImage>,
             image: BufferedImage,
             result: ImageAnalyzer.Result,
         ): Unit = Unit

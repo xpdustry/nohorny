@@ -27,6 +27,7 @@ package com.xpdustry.nohorny
 
 import arc.ApplicationListener
 import arc.Core
+import arc.Events
 import arc.util.CommandHandler
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
@@ -34,11 +35,20 @@ import com.sksamuel.hoplite.addPathSource
 import com.xpdustry.nohorny.analyzer.DebugImageAnalyzer
 import com.xpdustry.nohorny.analyzer.FallbackAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
+import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
+import com.xpdustry.nohorny.geometry.BlockGroup
+import com.xpdustry.nohorny.tracker.CanvasesTracker
+import com.xpdustry.nohorny.tracker.DisplaysTracker
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import mindustry.Vars
 import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import org.slf4j.LoggerFactory
+import java.lang.Runnable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -50,10 +60,12 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 public class NoHornyPlugin : Plugin(), NoHornyAPI {
-    private val directory: Path
-        get() = Vars.modDirectory.child("nohorny").file().toPath()
-
+    private val directory: Path = Vars.modDirectory.child("nohorny").file().toPath()
     private val file = directory.resolve("config.yaml")
+    private val listeners = mutableListOf<NoHornyListener>()
+    private val executor = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
+    private val logger = LoggerFactory.getLogger(NoHornyPlugin::class.java)
+    private val renderer: NoHornyImageRenderer = SimpleImageRenderer
 
     private val loader =
         ConfigLoaderBuilder.empty()
@@ -71,32 +83,35 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
             .connectTimeout(10.seconds.toJavaDuration())
             .readTimeout(10.seconds.toJavaDuration())
             .writeTimeout(10.seconds.toJavaDuration())
-            .dispatcher(Dispatcher(EXECUTOR))
+            .dispatcher(Dispatcher(executor))
             .build()
 
-    private var listeners = mutableListOf<NoHornyListener>()
+    internal val coroutines = NoHornyCoroutines(executor)
     internal var config = NoHornyConfig()
     internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
     internal var cache: NoHornyCache = NoHornyCache.None
 
     init {
         Files.createDirectories(directory)
-        listeners += NoHornyTracker(this)
+        listeners += CanvasesTracker(this)
+        listeners += DisplaysTracker(this)
         listeners += NoHornyAutoBan(this)
     }
 
     override fun init() {
         reload()
         listeners.forEach(NoHornyListener::onInit)
-        NoHornyLogger.info("Initialized nohorny, to the horny jail we go.")
+        logger.info("Initialized no-horny, to the horny jail we go.")
 
         Core.app.addListener(
             object : ApplicationListener {
                 override fun dispose() {
-                    EXECUTOR.shutdown()
-                    if (!EXECUTOR.awaitTermination(10L, TimeUnit.SECONDS)) {
-                        EXECUTOR.shutdownNow()
+                    executor.shutdown()
+                    if (!executor.awaitTermination(10L, TimeUnit.SECONDS)) {
+                        executor.shutdownNow()
                     }
+                    coroutines.job.complete()
+                    runBlocking { coroutines.job.join() }
                 }
             },
         )
@@ -107,11 +122,11 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
         handler.register<Unit>("nohorny-reload", "Reload nohorny config.") { _, _ ->
             try {
                 reload()
-                NoHornyLogger.info("Reloaded config")
+                logger.info("Reloaded config")
             } catch (e: ConfigException) {
-                NoHornyLogger.error(e.message!!)
+                logger.error(e.message!!)
             } catch (e: Exception) {
-                NoHornyLogger.error("Failed to reload config", e)
+                logger.error("Failed to reload config", e)
             }
         }
     }
@@ -135,7 +150,7 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
 
     override fun setCache(cache: NoHornyCache) {
         this.cache = cache
-        NoHornyLogger.debug("Set cache to $cache")
+        logger.debug("Set cache to {}", cache)
     }
 
     private fun createAnalyzer(config: NoHornyConfig.Analyzer): ImageAnalyzer =
@@ -143,17 +158,29 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
             is NoHornyConfig.Analyzer.None -> ImageAnalyzer.None
             is NoHornyConfig.Analyzer.Debug -> DebugImageAnalyzer(directory.resolve("debug"))
             is NoHornyConfig.Analyzer.SightEngine -> SightEngineAnalyzer(config, http)
-            is NoHornyConfig.Analyzer.Fallback ->
-                FallbackAnalyzer(createAnalyzer(config.primary), createAnalyzer(config.secondary))
+            is NoHornyConfig.Analyzer.Fallback -> FallbackAnalyzer(createAnalyzer(config.primary), createAnalyzer(config.secondary))
+        }
+
+    internal fun process(group: BlockGroup<out NoHornyImage>) =
+        coroutines.global.launch {
+            val image = renderer.render(group)
+            var store = false
+            val result =
+                cache.getResult(group, image).await() ?: run {
+                    store = true
+                    analyzer.analyse(image).await()
+                }
+            if (store) {
+                cache.putResult(group, image, result)
+            }
+            Core.app.post {
+                Events.fire(ImageAnalyzerEvent(result, group, image))
+            }
         }
 
     private object NoHornyThreadFactory : ThreadFactory {
         private val count = AtomicInteger(0)
 
         override fun newThread(runnable: Runnable) = Thread(runnable, "nohorny-worker-${count.incrementAndGet()}").apply { isDaemon = true }
-    }
-
-    internal companion object {
-        @JvmStatic internal val EXECUTOR = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
     }
 }

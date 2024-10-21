@@ -26,23 +26,23 @@
 package com.xpdustry.nohorny.analyzer
 
 import com.xpdustry.nohorny.NoHornyImage
-import com.xpdustry.nohorny.geometry.Cluster
+import com.xpdustry.nohorny.geometry.BlockGroup
 import java.awt.image.BufferedImage
 
 public data class ImageAnalyzerEvent(
     val result: ImageAnalyzer.Result,
-    val cluster: Cluster<out NoHornyImage>,
+    val group: BlockGroup<out NoHornyImage>,
     val image: BufferedImage,
 ) {
     public operator fun component4(): NoHornyImage.Author? = author
 
     public val author: NoHornyImage.Author?
         get() =
-            cluster.blocks
+            group.blocks
                 .flatMap { block ->
-                    when (block.payload) {
-                        is NoHornyImage.Canvas -> listOf(block.payload.author)
-                        is NoHornyImage.Display -> block.payload.processors.values.map { it.author }
+                    when (block.data) {
+                        is NoHornyImage.Canvas -> listOf(block.data.author)
+                        is NoHornyImage.Display -> block.data.processors.values.map { it.author }
                     }
                 }
                 .let { authors ->

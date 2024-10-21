@@ -23,41 +23,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.extension
+package com.xpdustry.nohorny
 
-import arc.Core
-import com.xpdustry.nohorny.NoHornyLogger
-import com.xpdustry.nohorny.NoHornyPlugin
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.ExecutorService
 
-internal fun schedule(
-    async: Boolean,
-    delay: Duration? = null,
-    repeat: Duration? = null,
-    task: Runnable,
-) {
-    val wrapper =
-        Runnable {
-            try {
-                task.run()
-            } catch (throwable: Throwable) {
-                NoHornyLogger.error("An error occurred while executing a scheduled task", throwable)
-            }
-        }
-    val runnable = Runnable { if (async) wrapper.run() else Core.app.post(wrapper) }
-    if (repeat != null) {
-        NoHornyPlugin.EXECUTOR.scheduleWithFixedDelay(
-            runnable,
-            delay?.inWholeMilliseconds ?: 0L,
-            repeat.inWholeMilliseconds,
-            TimeUnit.MILLISECONDS,
-        )
-    } else {
-        NoHornyPlugin.EXECUTOR.schedule(
-            runnable,
-            delay?.inWholeMilliseconds ?: 0L,
-            TimeUnit.MILLISECONDS,
-        )
-    }
+internal class NoHornyCoroutines(executor: ExecutorService) {
+    val dispatcher = executor.asCoroutineDispatcher()
+    val job = SupervisorJob()
+    val displays = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Displays Scope"))
+    val canvases = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Canvases Scope"))
+    val global = CoroutineScope(dispatcher + job + CoroutineName("Global Nohorny Scope"))
 }
