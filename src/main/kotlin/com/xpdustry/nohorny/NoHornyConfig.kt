@@ -40,7 +40,7 @@ internal data class NoHornyConfig(
     val canvases: CanvasesConfig = CanvasesConfig(),
 ) {
     init {
-        require(processingDelay >= Duration.ZERO) { "processingDelay cannot be lower than 0" }
+        require(processingDelay > Duration.ZERO) { "processingDelay must be above 0" }
     }
 
     sealed interface Analyzer {

@@ -25,9 +25,8 @@
  */
 package com.xpdustry.nohorny.tracker
 
-import arc.graphics.Color
 import arc.math.geom.Point2
-import arc.struct.IntSet
+import arc.struct.IntMap
 import com.google.common.collect.ImmutableMap
 import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.NoHornyListener
@@ -50,7 +49,7 @@ import mindustry.logic.LExecutor
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.toJavaDuration
+import kotlin.time.Duration.Companion.milliseconds
 
 internal data class DisplaysConfig(
     val processorSearchRadius: Int = 10,
@@ -67,7 +66,7 @@ internal data class DisplaysConfig(
 internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
     private val processors = GroupingBlockIndex.create<NoHornyImage.Processor>(GroupingFunction.single())
     private val displays = GroupingBlockIndex.create<NoHornyImage.Display>()
-    private val marked = IntSet()
+    private val marked = IntMap<Long>()
     private val groups: AtomicReference<List<BlockGroup<NoHornyImage.Display>>> = AtomicReference(emptyList())
 
     override fun onInit() {
@@ -106,7 +105,7 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
 
                 plugin.coroutines.displays.launch {
                     displays.upsert(x, y, size, NoHornyImage.Display(resolution, map.build()))
-                    marked.add(Point2.pack(display.rx, display.ry))
+                    marked.put(Point2.pack(display.rx, display.ry), System.currentTimeMillis())
                 }
             },
             remove = { x, y ->
@@ -148,7 +147,7 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                                         .build(),
                             ),
                         )
-                        marked.add(Point2.pack(element.x, element.y))
+                        marked.put(Point2.pack(element.x, element.y), System.currentTimeMillis())
                     }
                 }
             },
@@ -161,12 +160,12 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                         displays.upsert(
                             element.x,
                             element.y,
-                            element.w,
+                            element.size,
                             element.data.copy(
                                 processors = ImmutableMap.copyOf(element.data.processors - point),
                             ),
                         )
-                        marked.add(Point2.pack(element.x, element.y))
+                        marked.put(Point2.pack(element.x, element.y), System.currentTimeMillis())
                     }
                 }
             },
@@ -182,11 +181,18 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
 
         plugin.coroutines.global.launch {
             while (isActive) {
-                delay(plugin.config.processingDelay.toJavaDuration().toMillis())
+                delay(plugin.config.processingDelay)
                 plugin.coroutines.displays.launch {
                     groups.set(displays.groups().toList())
                     for (group in groups.get()) {
-                        if (group.blocks.any { marked.contains(Point2.pack(it.x, it.y)) } &&
+                        val now = System.currentTimeMillis()
+                        val lastMod =
+                            group.blocks.asSequence()
+                                .mapNotNull { marked.get(Point2.pack(it.x, it.y)) }
+                                .maxOrNull()
+                                ?: now
+                        val elapsed = (now - lastMod).milliseconds
+                        if (elapsed > (plugin.config.processingDelay / 2) &&
                             group.blocks.sumOf { it.data.processors.size } >= plugin.config.displays.minimumProcessorCount
                         ) {
                             plugin.process(group)

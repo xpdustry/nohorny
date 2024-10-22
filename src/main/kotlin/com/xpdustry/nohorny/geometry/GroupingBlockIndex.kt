@@ -34,83 +34,83 @@ import com.google.common.graph.GraphBuilder
 import kotlin.math.max
 import kotlin.math.min
 
-internal interface GroupingBlockIndex<T : Any> {
-    fun select(
+public interface GroupingBlockIndex<T : Any> {
+    public fun select(
         x: Int,
         y: Int,
     ): IndexBlock<T>?
 
-    fun select(
+    public fun select(
         x: Int,
         y: Int,
         w: Int,
         h: Int,
     ): Collection<IndexBlock<T>>
 
-    fun upsert(
+    public fun selectAll(): Collection<IndexBlock<T>>
+
+    public fun upsert(
         x: Int,
         y: Int,
         size: Int,
         data: T,
     ): IndexBlock<T>?
 
-    fun remove(
+    public fun remove(
         x: Int,
         y: Int,
     ): IndexBlock<T>?
 
-    fun removeAll()
+    public fun removeAll()
 
-    fun neighbors(
+    public fun neighbors(
         x: Int,
         y: Int,
     ): Collection<IndexBlock<T>>
 
-    fun groups(): Collection<BlockGroup<T>>
+    public fun groups(): Collection<BlockGroup<T>>
 
-    companion object {
+    public companion object {
         @JvmStatic
-        fun <T : Any> create(group: GroupingFunction<T> = GroupingFunction.always()): GroupingBlockIndex<T> = GroupingBlockIndexImpl(group)
+        public fun <T : Any> create(group: GroupingFunction<T> = GroupingFunction.always()): GroupingBlockIndex<T> =
+            GroupingBlockIndexImpl(group)
     }
 }
 
 public data class IndexBlock<T : Any>(
-    override val x: Int,
-    override val y: Int,
+    val x: Int,
+    val y: Int,
     val size: Int,
     val data: T,
-) : Rectangle {
-    override val w: Int get() = size
-    override val h: Int get() = size
-
-    internal data class WithLinks<T : Any>(
+) {
+    public data class WithLinks<T : Any>(
         val block: IndexBlock<T>,
         val links: Collection<IndexBlock<T>>,
     )
 }
 
 public data class BlockGroup<T : Any>(
-    override val x: Int,
-    override val y: Int,
-    override val w: Int,
-    override val h: Int,
+    val x: Int,
+    val y: Int,
+    val w: Int,
+    val h: Int,
     val blocks: List<IndexBlock<T>>,
-) : Rectangle
+)
 
-internal fun interface GroupingFunction<T : Any> {
-    fun group(
+public fun interface GroupingFunction<T : Any> {
+    public fun group(
         a: IndexBlock.WithLinks<T>,
         b: IndexBlock.WithLinks<T>,
     ): Boolean
 
-    companion object {
+    public companion object {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        fun <T : Any> always(): GroupingFunction<T> = Always as GroupingFunction<T>
+        public fun <T : Any> always(): GroupingFunction<T> = Always as GroupingFunction<T>
 
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        fun <T : Any> single(): GroupingFunction<T> = Single as GroupingFunction<T>
+        public fun <T : Any> single(): GroupingFunction<T> = Single as GroupingFunction<T>
     }
 
     private object Always : GroupingFunction<Any> {
@@ -150,6 +150,8 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
         index.values()
             .filter { it.x in x until x + w && it.y in y until y + h }
             .fold(mutableSetOf()) { set, block -> set.apply { add(block) } }
+
+    override fun selectAll() = index.values().toSet()
 
     override fun upsert(
         x: Int,

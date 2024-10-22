@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
-internal class FallbackAnalyzer(val primary: ImageAnalyzer, val secondary: ImageAnalyzer) :
+internal class FallbackAnalyzer(private val primary: ImageAnalyzer, private val secondary: ImageAnalyzer) :
     ImageAnalyzer {
     override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> =
         primary.analyse(image).exceptionallyCompose { throwable ->

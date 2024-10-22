@@ -28,8 +28,7 @@ package com.xpdustry.nohorny.tracker
 import arc.graphics.Color
 import arc.math.geom.Point2
 import arc.struct.IntIntMap
-import arc.struct.IntSet
-import arc.util.CommandHandler
+import arc.struct.IntMap
 import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.NoHornyListener
 import com.xpdustry.nohorny.NoHornyPlugin
@@ -46,6 +45,7 @@ import kotlinx.coroutines.launch
 import mindustry.game.EventType
 import mindustry.world.blocks.logic.CanvasBlock
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.toJavaDuration
 
 internal data class CanvasesConfig(
@@ -58,7 +58,7 @@ internal data class CanvasesConfig(
 
 internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
     private val canvases = GroupingBlockIndex.create<NoHornyImage.Canvas>()
-    private val marked = IntSet()
+    private val marked = IntMap<Long>()
     private val groups: AtomicReference<List<BlockGroup<NoHornyImage.Canvas>>> = AtomicReference(emptyList())
 
     override fun onInit() {
@@ -77,7 +77,7 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                         NoHornyImage.Canvas(resolution, pixels, player?.asAuthor()),
                     )
                     if (new) {
-                        marked.add(Point2.pack(x, y))
+                        marked.put(Point2.pack(x, y), System.currentTimeMillis())
                     }
                 }
             },
@@ -102,7 +102,15 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 plugin.coroutines.canvases.launch {
                     groups.set(canvases.groups().toList())
                     for (group in groups.get()) {
-                        if (group.blocks.any { marked.contains(Point2.pack(it.x, it.y)) } &&
+                        val now = System.currentTimeMillis()
+                        val lastMod =
+                            group.blocks.asSequence()
+                                .mapNotNull { marked.get(Point2.pack(it.x, it.y)) }
+                                .maxOrNull()
+                                ?: now
+                        val elapsed = (now - lastMod).milliseconds
+                        if (
+                            elapsed > plugin.config.processingDelay / 2 &&
                             group.blocks.size >= plugin.config.canvases.minimumGroupSize
                         ) {
                             plugin.process(group)
@@ -112,10 +120,6 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 }
             }
         }
-    }
-
-    override fun onClientCommandsRegistration(handler: CommandHandler) {
-        super.onClientCommandsRegistration(handler)
     }
 
     private fun readCanvas(canvas: CanvasBlock.CanvasBuild): IntIntMap {
