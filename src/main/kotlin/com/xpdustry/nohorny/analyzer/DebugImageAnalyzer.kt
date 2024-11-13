@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture
 import kotlin.io.path.writeBytes
 
 internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> {
+    override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> {
         try {
             directory.toFile().mkdirs()
             directory
@@ -42,6 +42,6 @@ internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
         } catch (error: IOException) {
             return CompletableFuture.failedFuture(error)
         }
-        return CompletableFuture.completedFuture(ImageAnalyzer.Result.EMPTY)
+        return CompletableFuture.completedFuture(ImageInformation.EMPTY)
     }
 }

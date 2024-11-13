@@ -23,15 +23,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.analyzer
 
-import com.xpdustry.nohorny.cache.NoHornyCache
-import mindustry.Vars
+import kotlinx.serialization.Serializable
 
-public interface NoHornyAPI {
-    public fun setCache(cache: NoHornyCache)
+@Serializable
+public data class ImageInformation(val rating: Rating, val details: Map<Kind, Float>) {
+    @Serializable
+    public enum class Kind {
+        NUDITY,
+        GORE,
+    }
+
+    @Serializable
+    public enum class Rating {
+        SAFE,
+        WARNING,
+        UNSAFE,
+    }
 
     public companion object {
-        @JvmStatic public fun get(): NoHornyAPI = Vars.mods.getMod(NoHornyPlugin::class.java).main as NoHornyAPI
+        @JvmField public val EMPTY: ImageInformation = ImageInformation(Rating.SAFE, emptyMap())
     }
 }

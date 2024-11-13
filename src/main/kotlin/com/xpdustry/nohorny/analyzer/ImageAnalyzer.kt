@@ -29,26 +29,12 @@ import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
 public interface ImageAnalyzer {
-    public fun analyse(image: BufferedImage): CompletableFuture<Result>
+    public fun analyse(image: BufferedImage): CompletableFuture<ImageInformation>
 
     public object None : ImageAnalyzer {
-        override fun analyse(image: BufferedImage): CompletableFuture<Result> = CompletableFuture.completedFuture(Result.EMPTY)
-    }
-
-    public data class Result(val rating: Rating, val details: Map<Kind, Float>) {
-        public companion object {
-            @JvmField public val EMPTY: Result = Result(Rating.SAFE, emptyMap())
-        }
-    }
-
-    public enum class Kind {
-        NUDITY,
-        GORE,
-    }
-
-    public enum class Rating {
-        SAFE,
-        WARNING,
-        UNSAFE,
+        override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> =
+            CompletableFuture.completedFuture(
+                ImageInformation.EMPTY,
+            )
     }
 }

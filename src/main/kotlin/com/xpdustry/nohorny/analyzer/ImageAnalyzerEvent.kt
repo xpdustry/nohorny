@@ -30,7 +30,7 @@ import com.xpdustry.nohorny.geometry.BlockGroup
 import java.awt.image.BufferedImage
 
 public data class ImageAnalyzerEvent(
-    val result: ImageAnalyzer.Result,
+    val result: ImageInformation,
     val group: BlockGroup<out NoHornyImage>,
     val image: BufferedImage,
 ) {

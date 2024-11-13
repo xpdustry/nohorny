@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture
 
 internal class FallbackAnalyzer(private val primary: ImageAnalyzer, private val secondary: ImageAnalyzer) :
     ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> =
+    override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> =
         primary.analyse(image).exceptionallyCompose { throwable ->
             LOGGER.debug("Primary analyzer failed, switching to secondary", throwable)
             secondary.analyse(image)

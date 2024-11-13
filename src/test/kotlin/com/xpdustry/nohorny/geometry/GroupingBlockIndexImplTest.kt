@@ -146,7 +146,6 @@ class GroupingBlockIndexImplTest {
         index.upsert(0, 0, 1, Unit)
         assertThrows<IllegalStateException> { index.upsert(createBlock(0, 0, 1)) }
     }
-
      */
 
     @Test

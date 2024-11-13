@@ -25,8 +25,8 @@
  */
 package com.xpdustry.nohorny
 
-import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
+import com.xpdustry.nohorny.analyzer.ImageInformation
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.geometry.ImmutablePoint
 import mindustry.Vars
@@ -40,7 +40,7 @@ import mindustry.world.blocks.logic.LogicDisplay
 internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener {
     override fun onInit() {
         onEvent<ImageAnalyzerEvent> { (result, cluster, _, author) ->
-            if (result.rating == ImageAnalyzer.Rating.UNSAFE &&
+            if (result.rating == ImageInformation.Rating.UNSAFE &&
                 plugin.config.autoBan &&
                 author != null
             ) {

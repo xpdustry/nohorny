@@ -23,9 +23,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.cache
 
-import com.xpdustry.nohorny.analyzer.ImageAnalyzer
+import com.xpdustry.nohorny.NoHornyImage
+import com.xpdustry.nohorny.analyzer.ImageInformation
 import com.xpdustry.nohorny.geometry.BlockGroup
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
@@ -34,24 +35,24 @@ public interface NoHornyCache {
     public fun getResult(
         group: BlockGroup<out NoHornyImage>,
         image: BufferedImage,
-    ): CompletableFuture<ImageAnalyzer.Result?>
+    ): CompletableFuture<ImageInformation?>
 
     public fun putResult(
         group: BlockGroup<out NoHornyImage>,
         image: BufferedImage,
-        result: ImageAnalyzer.Result,
+        result: ImageInformation,
     )
 
     public data object None : NoHornyCache {
         override fun getResult(
             group: BlockGroup<out NoHornyImage>,
             image: BufferedImage,
-        ): CompletableFuture<ImageAnalyzer.Result?> = CompletableFuture.completedFuture(null)
+        ): CompletableFuture<ImageInformation?> = CompletableFuture.completedFuture(null)
 
         override fun putResult(
             group: BlockGroup<out NoHornyImage>,
             image: BufferedImage,
-            result: ImageAnalyzer.Result,
+            result: ImageInformation,
         ): Unit = Unit
     }
 }

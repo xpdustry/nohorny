@@ -15,10 +15,12 @@ dokka = "1.9.20"
 
 # utilities
 slf4md = "1.0.1"
+sql4md = "1.1.0"
 slf4j = "2.0.16"
 hoplite = "2.8.2"
 okhttp = "4.12.0"
 guava = "33.3.1-jre"
+hikari = "6.1.0"
 
 # testing
 junit = "5.11.2"
@@ -36,6 +38,7 @@ hoplite-core = { module = "com.sksamuel.hoplite:hoplite-core", version.ref = "ho
 hoplite-yaml = { module = "com.sksamuel.hoplite:hoplite-yaml", version.ref = "hoplite" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 
 # testing
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }

@@ -25,9 +25,23 @@
  */
 package com.xpdustry.nohorny.extension
 
+import java.awt.Color
+import java.awt.Graphics2D
+import java.awt.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
+
+internal inline fun BufferedImage.withGraphics(block: (Graphics2D) -> Unit): BufferedImage {
+    val image = BufferedImage(width, height, type)
+    val graphics = image.createGraphics()
+    try {
+        block(graphics)
+    } finally {
+        graphics.dispose()
+    }
+    return image
+}
 
 internal fun BufferedImage.toJpgByteArray(): ByteArray {
     var image = this
@@ -38,4 +52,24 @@ internal fun BufferedImage.toJpgByteArray(): ByteArray {
     return ByteArrayOutputStream()
         .also { ImageIO.write(image, "jpg", it) }
         .toByteArray()
+}
+
+internal fun BufferedImage.resize(
+    w: Int,
+    h: Int,
+    fill: Color? = null,
+): BufferedImage {
+    val source =
+        if (fill == null) {
+            getScaledInstance(w, h, Image.SCALE_SMOOTH)
+        } else {
+            this
+        }
+    return BufferedImage(w, h, type).withGraphics {
+        if (fill != null) {
+            it.color = fill
+            it.fillRect(0, 0, w, h)
+        }
+        it.drawImage(source, 0, 0, w, h, null)
+    }
 }

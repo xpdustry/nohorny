@@ -2,12 +2,12 @@
   "name": "nohorny",
   "displayName": "NoHorny",
   "description": "NO HORNY IN MY SERVER!",
-  "version": "3.0.0",
+  "version": "3.0.0-beta.1",
   "author": "Xpdustry",
   "repo": "xpdustry/nohorny",
   "main": "com.xpdustry.nohorny.NoHornyPlugin",
   "java": true,
   "hidden": true,
   "minGameVersion": "146",
-  "dependencies": [ "kotlin-runtime", "slf4md" ]
+  "dependencies": [ "kotlin-runtime", "slf4md", "sql4md" ]
 }

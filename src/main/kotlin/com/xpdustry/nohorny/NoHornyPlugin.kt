@@ -37,12 +37,15 @@ import com.xpdustry.nohorny.analyzer.FallbackAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
 import com.xpdustry.nohorny.analyzer.SightEngineAnalyzer
+import com.xpdustry.nohorny.cache.NoHornyCache
+import com.xpdustry.nohorny.cache.SQLCache
 import com.xpdustry.nohorny.geometry.BlockGroup
 import com.xpdustry.nohorny.tracker.CanvasesTracker
 import com.xpdustry.nohorny.tracker.DisplaysTracker
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import mindustry.Vars
 import mindustry.mod.Plugin
 import okhttp3.Dispatcher
@@ -50,17 +53,17 @@ import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 import java.lang.Runnable
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.notExists
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 public class NoHornyPlugin : Plugin(), NoHornyAPI {
-    private val directory: Path = Vars.modDirectory.child("nohorny").file().toPath()
+    private val directory = Vars.modDirectory.child("nohorny").file().toPath()
     private val file = directory.resolve("config.yaml")
     private val listeners = mutableListOf<NoHornyListener>()
     private val executor = Executors.newScheduledThreadPool(4, NoHornyThreadFactory)
@@ -89,10 +92,12 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
     internal val coroutines = NoHornyCoroutines(executor)
     internal var config = NoHornyConfig()
     internal var analyzer: ImageAnalyzer = ImageAnalyzer.None
-    internal var cache: NoHornyCache = NoHornyCache.None
+    private lateinit var hikari: HikariDataSource
+    private var cache: NoHornyCache = SQLCache({ hikari }, coroutines)
 
     init {
         Files.createDirectories(directory)
+        listeners += cache as NoHornyListener
         listeners += CanvasesTracker(this)
         listeners += DisplaysTracker(this)
         listeners += NoHornyAutoBan(this)
@@ -100,6 +105,17 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
 
     override fun init() {
         reload()
+
+        hikari =
+            HikariDataSource(
+                HikariConfig().apply {
+                    jdbcUrl = "jdbc:h2:${directory.resolve("database.h2").absolutePathString()};MODE=MYSQL"
+                    poolName = "no-horny-jdbc-pool"
+                    maximumPoolSize = 4
+                    minimumIdle = 1
+                },
+            )
+
         listeners.forEach(NoHornyListener::onInit)
         logger.info("Initialized no-horny, to the horny jail we go.")
 
@@ -110,8 +126,7 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
                     if (!executor.awaitTermination(10L, TimeUnit.SECONDS)) {
                         executor.shutdownNow()
                     }
-                    coroutines.job.complete()
-                    runBlocking { coroutines.job.join() }
+                    hikari.close()
                 }
             },
         )
@@ -163,14 +178,32 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
 
     internal fun process(group: BlockGroup<out NoHornyImage>) =
         coroutines.global.launch {
+            logger.trace("Processing group at ({}, {})", group.x, group.y)
             val image = renderer.render(group)
             var store = false
-            val result =
-                cache.getResult(group, image).await() ?: run {
-                    store = true
-                    analyzer.analyse(image).await()
+            var result =
+                try {
+                    cache.getResult(group, image).await()
+                } catch (e: Exception) {
+                    logger.error("Failed to get cached result for group at (${group.x}, ${group.y})", e)
+                    null
                 }
+            if (result == null) {
+                logger.trace("Cache miss for group at ({}, {})", group.x, group.y)
+                store = true
+                try {
+                    result = analyzer.analyse(image).await()!!
+                } catch (e: Exception) {
+                    logger.error("Failed to analyse image for group at (${group.x}, ${group.y})", e)
+                    return@launch
+                }
+            } else {
+                logger.trace("Cache hit for group at ({}, {})", group.x, group.y)
+            }
+
+            logger.trace("Result for group at ({}, {}): {}", group.x, group.y, result)
             if (store) {
+                logger.trace("Storing result for group at ({}, {})", group.x, group.y)
                 cache.putResult(group, image, result)
             }
             Core.app.post {

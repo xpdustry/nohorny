@@ -26,7 +26,7 @@
 package com.xpdustry.nohorny
 
 import com.sksamuel.hoplite.Secret
-import com.xpdustry.nohorny.analyzer.ImageAnalyzer
+import com.xpdustry.nohorny.analyzer.ImageInformation
 import com.xpdustry.nohorny.tracker.CanvasesConfig
 import com.xpdustry.nohorny.tracker.DisplaysConfig
 import kotlin.time.Duration
@@ -53,7 +53,7 @@ internal data class NoHornyConfig(
             val sightEngineSecret: Secret,
             val unsafeThreshold: Float = 0.55F,
             val warningThreshold: Float = 0.4F,
-            val kinds: List<ImageAnalyzer.Kind> = listOf(ImageAnalyzer.Kind.NUDITY),
+            val kinds: List<ImageInformation.Kind> = listOf(ImageInformation.Kind.NUDITY),
         ) : Analyzer {
             init {
                 require(unsafeThreshold >= 0) { "unsafeThreshold cannot be lower than 0" }

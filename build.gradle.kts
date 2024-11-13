@@ -56,6 +56,9 @@ dependencies {
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.guava)
+    implementation(libs.hikari) {
+        exclude("org.slf4j")
+    }
 
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.junit.engine)
@@ -156,6 +159,13 @@ val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
     version = "v${libs.versions.slf4md.get()}"
 }
 
+val downloadSql4md by tasks.registering(GithubAssetDownload::class) {
+    owner = "xpdustry"
+    repo = "sql4md"
+    asset = "sql4md.jar"
+    version = "v${libs.versions.sql4md.get()}"
+}
+
 val downloadKotlinRuntime by tasks.registering(GithubAssetDownload::class) {
     owner = "xpdustry"
     repo = "kotlin-runtime"
@@ -164,5 +174,5 @@ val downloadKotlinRuntime by tasks.registering(GithubAssetDownload::class) {
 }
 
 tasks.runMindustryServer {
-    mods.from(downloadSlf4md, downloadKotlinRuntime)
+    mods.from(downloadSlf4md, downloadSql4md, downloadKotlinRuntime)
 }

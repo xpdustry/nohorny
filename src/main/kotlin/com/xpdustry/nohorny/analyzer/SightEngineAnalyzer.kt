@@ -47,7 +47,7 @@ internal class SightEngineAnalyzer(
     private val config: NoHornyConfig.Analyzer.SightEngine,
     private val http: OkHttpClient,
 ) : ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<ImageAnalyzer.Result> {
+    override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> {
         val request =
             MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
@@ -57,8 +57,8 @@ internal class SightEngineAnalyzer(
                     "models",
                     config.kinds.joinToString(",") {
                         when (it) {
-                            ImageAnalyzer.Kind.NUDITY -> "nudity-2.0"
-                            ImageAnalyzer.Kind.GORE -> "gore"
+                            ImageInformation.Kind.NUDITY -> "nudity-2.0"
+                            ImageInformation.Kind.GORE -> "gore"
                         }
                     },
                 )
@@ -87,31 +87,31 @@ internal class SightEngineAnalyzer(
                     )
                 }
 
-                val results = mutableMapOf<ImageAnalyzer.Kind, Float>()
+                val results = mutableMapOf<ImageInformation.Kind, Float>()
 
-                if (ImageAnalyzer.Kind.NUDITY in config.kinds) {
+                if (ImageInformation.Kind.NUDITY in config.kinds) {
                     val percent =
                         EXPLICIT_NUDITY_FIELDS.maxOf {
                             json["nudity"]!!.jsonObject[it]!!.jsonPrimitive.float
                         }
-                    results[ImageAnalyzer.Kind.NUDITY] = percent
+                    results[ImageInformation.Kind.NUDITY] = percent
                 }
 
-                if (ImageAnalyzer.Kind.GORE in config.kinds) {
+                if (ImageInformation.Kind.GORE in config.kinds) {
                     val percent = json["gore"]!!.jsonObject["prob"]!!.jsonPrimitive.float
-                    results[ImageAnalyzer.Kind.GORE] = percent
+                    results[ImageInformation.Kind.GORE] = percent
                 }
 
                 val result = results.maxOfOrNull { it.value } ?: 0F
                 val rating =
                     when {
-                        result > config.unsafeThreshold -> ImageAnalyzer.Rating.UNSAFE
-                        result > config.warningThreshold -> ImageAnalyzer.Rating.WARNING
-                        else -> ImageAnalyzer.Rating.SAFE
+                        result > config.unsafeThreshold -> ImageInformation.Rating.UNSAFE
+                        result > config.warningThreshold -> ImageInformation.Rating.WARNING
+                        else -> ImageInformation.Rating.SAFE
                     }
 
                 return@thenCompose CompletableFuture.completedFuture(
-                    ImageAnalyzer.Result(rating, results),
+                    ImageInformation(rating, results),
                 )
             }
     }

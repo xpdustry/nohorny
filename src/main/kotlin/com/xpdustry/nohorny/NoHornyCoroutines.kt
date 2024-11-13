@@ -32,7 +32,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.ExecutorService
 
 internal class NoHornyCoroutines(executor: ExecutorService) {
-    val dispatcher = executor.asCoroutineDispatcher()
+    private val dispatcher = executor.asCoroutineDispatcher()
     val job = SupervisorJob()
     val displays = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Displays Scope"))
     val canvases = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Canvases Scope"))
