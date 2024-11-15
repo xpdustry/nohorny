@@ -77,6 +77,8 @@ public class NoHornyPlugin : Plugin(), NoHornyAPI {
             .addDefaultParamMappers()
             .addDefaultParsers()
             .addPathSource(file)
+            .withReport()
+            .withReportPrintFn(logger::debug)
             .strict()
             .build()
 

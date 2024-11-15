@@ -20,7 +20,6 @@ plugins {
 val metadata = ModMetadata.fromJson(rootProject.file("plugin.json"))
 if (indraGit.headTag() == null) metadata.version += "-SNAPSHOT"
 group = "com.xpdustry"
-val rootPackage = "com.xpdustry.nohorny"
 version = metadata.version
 description = metadata.description
 
@@ -133,7 +132,7 @@ tasks.shadowJar {
     from(generateMetadataFile)
     from(rootProject.file("LICENSE.md")) { into("META-INF") }
 
-    val shadowPackage = "$rootPackage.shadow"
+    val shadowPackage = "com.xpdustry.nohorny.shadow"
     kotlinRelocate("com.sksamuel.hoplite", "$shadowPackage.hoplite")
     kotlinRelocate("okhttp3", "$shadowPackage.okhttp3")
     kotlinRelocate("okio", "$shadowPackage.okio")
