@@ -21,11 +21,15 @@ Enjoy this family friendly factory building game as the [cat](https://github.com
 
 This plugin requires at least :
 
-- Java 17
-
 - Mindustry v146
 
+- Java 17
+
 - [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) latest
+
+- [SLF4MD](https://github.com/xpdustry/slf4md) latest
+
+- [SQL4MD](https://github.com/xpdustry/sql4md) latest
 
 ## Usage
 
