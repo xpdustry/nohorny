@@ -10,7 +10,7 @@ shadow = "8.3.5"
 indra = "3.1.3"
 toxopid = "4.1.1"
 spotless = "6.25.0"
-ksr = "1.0.0"
+ksr = "2.0.0-SNAPSHOT"
 dokka = "1.9.20"
 
 # utilities
