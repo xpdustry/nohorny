@@ -82,7 +82,7 @@ dependencies {
 }
 ```
 
-Then you will be able to intercept `ImageAnalyzerEvent`, which is posted every time a cluster of `NoHornyImage` is processed,
+Then you will be able to intercept `ImageAnalyzerEvent`, which is posted every time a group of `NoHornyImage` is processed,
 see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for an example.
 
 ## Advanced Configuration
@@ -98,18 +98,18 @@ auto-ban: true
 processing-delay: 5s
 # Display tracker configuration
 displays:
-  # The minimum number of draw instructions in a logic processor to be part of a cluster
+  # The minimum number of draw instructions in a logic processor to be part of a group
   minimum-instruction-count: 100
-  # The minimum number of logic processors in a cluster to be eligible for processing
+  # The minimum number of logic processors in a group to be eligible for processing
   minimum-processor-count: 5
-  # The search radius of linked logic processors around a cluster of logic displays,
+  # The search radius of linked logic processors around a group of logic displays,
   # tweak depending on the average size of your server maps
   processor-search-radius: 10
 # Canvas tracker configuration
 canvases:
-  # The minimum number of canvases in a cluster to be eligible for processing,
+  # The minimum number of canvases in a group to be eligible for processing,
   # relatively high since you a lot of canvases are needed for a clear picture
-  minimum-canvas-cluster-size: 9
+  minimum-group-size: 9
 ```
 
 ## Building

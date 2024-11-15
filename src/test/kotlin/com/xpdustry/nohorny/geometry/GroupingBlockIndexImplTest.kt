@@ -43,12 +43,12 @@ class GroupingBlockIndexImplTest {
         index.insert(1, 0, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
 
-        val cluster = index.groups().toList()[0]
-        Assertions.assertEquals(2, cluster.blocks.size)
-        Assertions.assertEquals(0, cluster.x)
-        Assertions.assertEquals(0, cluster.y)
-        Assertions.assertEquals(2, cluster.w)
-        Assertions.assertEquals(1, cluster.h)
+        val group = index.groups().toList()[0]
+        Assertions.assertEquals(2, group.blocks.size)
+        Assertions.assertEquals(0, group.x)
+        Assertions.assertEquals(0, group.y)
+        Assertions.assertEquals(2, group.w)
+        Assertions.assertEquals(1, group.h)
     }
 
     @Test
@@ -120,7 +120,7 @@ class GroupingBlockIndexImplTest {
     }
 
     @Test
-    fun `test cluster split`() {
+    fun `test group split`() {
         val index = createIndex()
         for (x in 0..2) {
             index.insert(x, 0, 1, Unit)
@@ -132,7 +132,7 @@ class GroupingBlockIndexImplTest {
     }
 
     @Test
-    fun `test cluster merge`() {
+    fun `test group merge`() {
         val index = createIndex()
         for (y in 0..2) {
             for (x in 0..2) {
@@ -147,7 +147,7 @@ class GroupingBlockIndexImplTest {
     }
 
     @Test
-    fun `test cluster on same axis spaced by 1`() {
+    fun `test group on same axis spaced by 1`() {
         val index = createIndex()
         index.insert(0, 0, 6, Unit)
         index.insert(7, 0, 6, Unit)

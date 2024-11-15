@@ -41,7 +41,7 @@ import mindustry.world.blocks.logic.LogicDisplay
 
 internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener("Auto Ban", Dispatchers.Default) {
     override fun onInit() {
-        onEvent<ImageAnalyzerEvent> { (result, cluster, _, author) ->
+        onEvent<ImageAnalyzerEvent> { (result, group, _, author) ->
             if (result.rating == NoHornyInformation.Rating.UNSAFE &&
                 plugin.config.autoBan &&
                 author != null
@@ -55,7 +55,7 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListen
                         )
                     }
                 }
-                cluster.blocks
+                group.blocks
                     .asSequence()
                     .flatMap { block ->
                         val points = mutableListOf(ImmutablePoint(block.x, block.y))
