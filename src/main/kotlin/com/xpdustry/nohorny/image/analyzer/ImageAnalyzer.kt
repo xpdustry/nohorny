@@ -23,25 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.image.analyzer
 
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import org.slf4j.LoggerFactory
-import kotlin.coroutines.CoroutineContext
+import com.xpdustry.nohorny.image.NoHornyInformation
+import java.awt.image.BufferedImage
+import java.util.concurrent.CompletableFuture
 
-private val NoHornyCoroutineExceptionHandler =
-    CoroutineExceptionHandler { _, throwable ->
-        LoggerFactory.getLogger(NoHornyPlugin::class.java).error("An uncaught error occurred", throwable)
+public interface ImageAnalyzer {
+    public fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation>
+
+    public object None : ImageAnalyzer {
+        override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> =
+            CompletableFuture.completedFuture(NoHornyInformation.EMPTY)
     }
-
-internal abstract class NoHornyListener(name: String, context: CoroutineContext) {
-    protected val scope =
-        CoroutineScope(
-            context + SupervisorJob() + CoroutineName("NoHorny $name Scope") + NoHornyCoroutineExceptionHandler,
-        )
-
-    open fun onInit() = Unit
 }

@@ -29,24 +29,26 @@ import arc.graphics.Color
 import arc.math.geom.Point2
 import arc.struct.IntIntMap
 import arc.struct.IntMap
-import com.xpdustry.nohorny.NoHornyImage
+import com.xpdustry.nohorny.NoHornyConfig
 import com.xpdustry.nohorny.NoHornyListener
-import com.xpdustry.nohorny.NoHornyPlugin
 import com.xpdustry.nohorny.extension.asAuthor
 import com.xpdustry.nohorny.extension.onBuildingLifecycleEvent
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
-import com.xpdustry.nohorny.geometry.BlockGroup
 import com.xpdustry.nohorny.geometry.GroupingBlockIndex
+import com.xpdustry.nohorny.geometry.IndexGroup
+import com.xpdustry.nohorny.image.ImageProcessor
+import com.xpdustry.nohorny.image.NoHornyImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mindustry.game.EventType
 import mindustry.world.blocks.logic.CanvasBlock
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.toJavaDuration
 
 internal data class CanvasesConfig(
     val minimumGroupSize: Int = 9,
@@ -56,10 +58,13 @@ internal data class CanvasesConfig(
     }
 }
 
-internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
+internal class CanvasesTracker(
+    private val config: () -> NoHornyConfig,
+    private val processor: ImageProcessor,
+) : NoHornyListener("Canvases Tracker", Dispatchers.Default.limitedParallelism(1)) {
     private val canvases = GroupingBlockIndex.create<NoHornyImage.Canvas>()
     private val marked = IntMap<Long>()
-    private val groups: AtomicReference<List<BlockGroup<NoHornyImage.Canvas>>> = AtomicReference(emptyList())
+    private val groups: AtomicReference<List<IndexGroup<NoHornyImage.Canvas>>> = AtomicReference(emptyList())
 
     override fun onInit() {
         onBuildingLifecycleEvent<CanvasBlock.CanvasBuild>(
@@ -69,8 +74,8 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 val y = canvas.ry
                 val size = canvas.block.size
                 val pixels = readCanvas(canvas)
-                plugin.coroutines.canvases.launch {
-                    canvases.upsert(
+                scope.launch {
+                    canvases.insert(
                         x,
                         y,
                         size,
@@ -82,7 +87,7 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 }
             },
             remove = { x, y ->
-                plugin.coroutines.canvases.launch {
+                scope.launch {
                     canvases.remove(x, y)
                     marked.remove(Point2.pack(x, y))
                 }
@@ -90,33 +95,40 @@ internal class CanvasesTracker(private val plugin: NoHornyPlugin) : NoHornyListe
         )
 
         onEvent<EventType.ResetEvent> {
-            plugin.coroutines.displays.launch {
+            scope.launch {
                 canvases.removeAll()
                 marked.clear()
             }
         }
 
-        plugin.coroutines.global.launch {
-            while (isActive) {
-                delay(plugin.config.processingDelay.toJavaDuration().toMillis())
-                plugin.coroutines.canvases.launch {
-                    groups.set(canvases.groups().toList())
-                    for (group in groups.get()) {
-                        val now = System.currentTimeMillis()
-                        val lastMod =
-                            group.blocks.asSequence()
-                                .mapNotNull { marked.get(Point2.pack(it.x, it.y)) }
-                                .maxOrNull()
-                                ?: now
-                        val elapsed = (now - lastMod).milliseconds
-                        if (
-                            elapsed > plugin.config.processingDelay / 2 &&
-                            group.blocks.size >= plugin.config.canvases.minimumGroupSize
-                        ) {
-                            plugin.process(group)
-                            for (block in group.blocks) marked.remove(Point2.pack(block.x, block.y))
-                        }
-                    }
+        scope.launch {
+            withContext(Dispatchers.Default) {
+                while (isActive) {
+                    delay(config().processingDelay)
+                    scope.launch { update() }
+                }
+            }
+        }
+    }
+
+    private fun update() {
+        val config = config()
+        groups.set(canvases.groups().toList())
+        for (group in groups.get()) {
+            val now = System.currentTimeMillis()
+            val lastMod =
+                group.blocks.asSequence()
+                    .mapNotNull { marked.get(Point2.pack(it.x, it.y)) }
+                    .maxOrNull()
+                    ?: now
+            val elapsed = (now - lastMod).milliseconds
+            if (
+                elapsed > config.processingDelay / 2 &&
+                group.blocks.size >= config.canvases.minimumGroupSize
+            ) {
+                processor.process(group)
+                for (block in group.blocks) {
+                    marked.remove(Point2.pack(block.x, block.y))
                 }
             }
         }

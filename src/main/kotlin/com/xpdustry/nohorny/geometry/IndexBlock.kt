@@ -23,18 +23,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.geometry
 
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asCoroutineDispatcher
-import java.util.concurrent.ExecutorService
+public data class IndexBlock<T : Any>(
+    val x: Int,
+    val y: Int,
+    val size: Int,
+    val data: T,
+) {
+    init {
+        require(size > 0) { "Size must be greater than 0" }
+    }
 
-internal class NoHornyCoroutines(executor: ExecutorService) {
-    private val dispatcher = executor.asCoroutineDispatcher()
-    val job = SupervisorJob()
-    val displays = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Displays Scope"))
-    val canvases = CoroutineScope(dispatcher.limitedParallelism(1) + job + CoroutineName("Canvases Scope"))
-    val global = CoroutineScope(dispatcher + job + CoroutineName("Global Nohorny Scope"))
+    public data class WithLinks<T : Any>(
+        val block: IndexBlock<T>,
+        val links: Collection<IndexBlock<T>>,
+    )
 }

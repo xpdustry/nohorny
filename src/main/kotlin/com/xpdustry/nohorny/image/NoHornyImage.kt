@@ -23,25 +23,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny.image
 
-import com.xpdustry.nohorny.extension.toJpgByteArray
-import java.awt.image.BufferedImage
-import java.io.IOException
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import kotlin.io.path.writeBytes
+import arc.struct.IntIntMap
+import com.xpdustry.nohorny.geometry.ImmutablePoint
+import java.net.InetAddress
 
-internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> {
-        try {
-            directory.toFile().mkdirs()
-            directory
-                .resolve("${System.currentTimeMillis()}.jpg")
-                .writeBytes(image.toJpgByteArray())
-        } catch (error: IOException) {
-            return CompletableFuture.failedFuture(error)
-        }
-        return CompletableFuture.completedFuture(ImageInformation.EMPTY)
+public sealed interface NoHornyImage {
+    public val resolution: Int
+
+    public data class Canvas(
+        override val resolution: Int,
+        public val pixels: IntIntMap,
+        public val author: Author?,
+    ) : NoHornyImage
+
+    public data class Display(
+        override val resolution: Int,
+        public val processors: Map<ImmutablePoint, Processor>,
+    ) : NoHornyImage
+
+    public data class Processor(
+        val instructions: List<Instruction>,
+        val author: Author?,
+        val links: List<ImmutablePoint>,
+    )
+
+    public sealed interface Instruction {
+        public data class Color(val r: Int, val g: Int, val b: Int, val a: Int) : Instruction
+
+        public data class Rect(val x: Int, val y: Int, val w: Int, val h: Int) : Instruction
+
+        public data class Triangle(
+            val x1: Int,
+            val y1: Int,
+            val x2: Int,
+            val y2: Int,
+            val x3: Int,
+            val y3: Int,
+        ) : Instruction
     }
+
+    public data class Author(val uuid: String, val address: InetAddress)
 }

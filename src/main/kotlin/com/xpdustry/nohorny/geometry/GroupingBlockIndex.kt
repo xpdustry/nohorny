@@ -49,12 +49,12 @@ public interface GroupingBlockIndex<T : Any> {
 
     public fun selectAll(): Collection<IndexBlock<T>>
 
-    public fun upsert(
+    public fun insert(
         x: Int,
         y: Int,
         size: Int,
         data: T,
-    ): IndexBlock<T>?
+    ): Boolean
 
     public fun remove(
         x: Int,
@@ -68,63 +68,12 @@ public interface GroupingBlockIndex<T : Any> {
         y: Int,
     ): Collection<IndexBlock<T>>
 
-    public fun groups(): Collection<BlockGroup<T>>
+    public fun groups(): Collection<IndexGroup<T>>
 
     public companion object {
         @JvmStatic
         public fun <T : Any> create(group: GroupingFunction<T> = GroupingFunction.always()): GroupingBlockIndex<T> =
             GroupingBlockIndexImpl(group)
-    }
-}
-
-public data class IndexBlock<T : Any>(
-    val x: Int,
-    val y: Int,
-    val size: Int,
-    val data: T,
-) {
-    public data class WithLinks<T : Any>(
-        val block: IndexBlock<T>,
-        val links: Collection<IndexBlock<T>>,
-    )
-}
-
-public data class BlockGroup<T : Any>(
-    val x: Int,
-    val y: Int,
-    val w: Int,
-    val h: Int,
-    val blocks: List<IndexBlock<T>>,
-)
-
-public fun interface GroupingFunction<T : Any> {
-    public fun group(
-        a: IndexBlock.WithLinks<T>,
-        b: IndexBlock.WithLinks<T>,
-    ): Boolean
-
-    public companion object {
-        @Suppress("UNCHECKED_CAST")
-        @JvmStatic
-        public fun <T : Any> always(): GroupingFunction<T> = Always as GroupingFunction<T>
-
-        @Suppress("UNCHECKED_CAST")
-        @JvmStatic
-        public fun <T : Any> single(): GroupingFunction<T> = Single as GroupingFunction<T>
-    }
-
-    private object Always : GroupingFunction<Any> {
-        override fun group(
-            a: IndexBlock.WithLinks<Any>,
-            b: IndexBlock.WithLinks<Any>,
-        ): Boolean = true
-    }
-
-    private object Single : GroupingFunction<Any> {
-        override fun group(
-            a: IndexBlock.WithLinks<Any>,
-            b: IndexBlock.WithLinks<Any>,
-        ): Boolean = false
     }
 }
 
@@ -153,17 +102,17 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
 
     override fun selectAll() = index.values().toSet()
 
-    override fun upsert(
+    override fun insert(
         x: Int,
         y: Int,
         size: Int,
         data: T,
-    ): IndexBlock<T>? {
+    ): Boolean {
         require(size > 0) { "Size must be greater than 0" }
 
         val previous = select(x, y)
         if (previous != null) {
-            remove(x, y)
+            return false
         }
 
         val block = IndexBlock(x, y, size, data)
@@ -193,21 +142,21 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
             }
         }
 
-        return previous
+        return true
     }
 
     override fun remove(
         x: Int,
         y: Int,
     ): IndexBlock<T>? {
-        val packed = Point2.pack(x, y)
         val block = select(x, y) ?: return null
         for (i in block.x until block.x + block.size) {
             for (j in block.y until block.y + block.size) {
-                index.remove(Point2.pack(i, j))
+                val packed = Point2.pack(i, j)
+                index.remove(packed)
+                graph.removeNode(packed)
             }
         }
-        graph.removeNode(packed)
         return block
     }
 
@@ -224,8 +173,8 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
         return if (graph.nodes().contains(packed)) graph.adjacentNodes(packed).map { index[it]!! } else emptyList()
     }
 
-    override fun groups(): List<BlockGroup<T>> {
-        val clusters = mutableListOf<BlockGroup<T>>()
+    override fun groups(): List<IndexGroup<T>> {
+        val groups = mutableListOf<IndexGroup<T>>()
         val visited = IntSet()
         for (node in graph.nodes()) {
             if (node in visited) continue
@@ -249,9 +198,9 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
                     queue.addLast(neighbor)
                 }
             }
-            clusters += BlockGroup(x, y, w, h, blocks)
+            groups += IndexGroup(x, y, w, h, blocks)
         }
-        return clusters
+        return groups
     }
 
     private fun canBeGroupedWith(

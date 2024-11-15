@@ -25,10 +25,12 @@
  */
 package com.xpdustry.nohorny
 
-import com.xpdustry.nohorny.analyzer.ImageAnalyzerEvent
-import com.xpdustry.nohorny.analyzer.ImageInformation
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.geometry.ImmutablePoint
+import com.xpdustry.nohorny.image.NoHornyImage
+import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.analyzer.ImageAnalyzerEvent
+import kotlinx.coroutines.Dispatchers
 import mindustry.Vars
 import mindustry.content.Blocks
 import mindustry.gen.Call
@@ -37,10 +39,10 @@ import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 
-internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener {
+internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener("Auto Ban", Dispatchers.Default) {
     override fun onInit() {
         onEvent<ImageAnalyzerEvent> { (result, cluster, _, author) ->
-            if (result.rating == ImageInformation.Rating.UNSAFE &&
+            if (result.rating == NoHornyInformation.Rating.UNSAFE &&
                 plugin.config.autoBan &&
                 author != null
             ) {

@@ -28,26 +28,28 @@ package com.xpdustry.nohorny.extension
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.Image
+import java.awt.geom.AffineTransform
+import java.awt.image.AffineTransformOp
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
-internal inline fun BufferedImage.withGraphics(block: (Graphics2D) -> Unit): BufferedImage {
-    val image = BufferedImage(width, height, type)
-    val graphics = image.createGraphics()
+internal inline fun BufferedImage.withGraphics(block: (Graphics2D) -> Unit) {
+    val graphics = createGraphics()
     try {
         block(graphics)
     } finally {
         graphics.dispose()
     }
-    return image
 }
 
 internal fun BufferedImage.toJpgByteArray(): ByteArray {
     var image = this
     if (this.type != BufferedImage.TYPE_INT_RGB) {
         image = BufferedImage(this.width, this.height, BufferedImage.TYPE_INT_RGB)
-        image.createGraphics().apply { drawImage(this@toJpgByteArray, 0, 0, null) }.dispose()
+        image.withGraphics { graphics ->
+            graphics.drawImage(this@toJpgByteArray, 0, 0, null)
+        }
     }
     return ByteArrayOutputStream()
         .also { ImageIO.write(image, "jpg", it) }
@@ -65,11 +67,20 @@ internal fun BufferedImage.resize(
         } else {
             this
         }
-    return BufferedImage(w, h, type).withGraphics {
+    val result = BufferedImage(w, h, type)
+    result.withGraphics { graphics ->
         if (fill != null) {
-            it.color = fill
-            it.fillRect(0, 0, w, h)
+            graphics.color = fill
+            graphics.fillRect(0, 0, w, h)
         }
-        it.drawImage(source, 0, 0, w, h, null)
+        graphics.drawImage(source, 0, 0, w, h, null)
     }
+    return result
+}
+
+internal fun BufferedImage.invertYAxis(): BufferedImage {
+    val transform = AffineTransform.getScaleInstance(1.0, -1.0)
+    transform.translate(0.0, -getHeight(null).toDouble())
+    val op = AffineTransformOp(transform, AffineTransformOp.TYPE_NEAREST_NEIGHBOR)
+    return op.filter(this, null)
 }

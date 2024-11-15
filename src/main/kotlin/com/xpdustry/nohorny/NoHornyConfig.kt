@@ -25,43 +25,20 @@
  */
 package com.xpdustry.nohorny
 
-import com.sksamuel.hoplite.Secret
-import com.xpdustry.nohorny.analyzer.ImageInformation
+import com.xpdustry.nohorny.image.analyzer.AnalyzerConfig
 import com.xpdustry.nohorny.tracker.CanvasesConfig
 import com.xpdustry.nohorny.tracker.DisplaysConfig
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 internal data class NoHornyConfig(
-    val analyzer: Analyzer = Analyzer.None,
+    val analyzer: AnalyzerConfig = AnalyzerConfig.None,
     val autoBan: Boolean = true,
     val processingDelay: Duration = 5.seconds,
     val displays: DisplaysConfig = DisplaysConfig(),
     val canvases: CanvasesConfig = CanvasesConfig(),
 ) {
     init {
-        require(processingDelay > Duration.ZERO) { "processingDelay must be above 0" }
-    }
-
-    sealed interface Analyzer {
-        data object None : Analyzer
-
-        data object Debug : Analyzer
-
-        data class SightEngine(
-            val sightEngineUser: String,
-            val sightEngineSecret: Secret,
-            val unsafeThreshold: Float = 0.55F,
-            val warningThreshold: Float = 0.4F,
-            val kinds: List<ImageInformation.Kind> = listOf(ImageInformation.Kind.NUDITY),
-        ) : Analyzer {
-            init {
-                require(unsafeThreshold >= 0) { "unsafeThreshold cannot be lower than 0" }
-                require(warningThreshold >= 0) { "warningThreshold cannot be lower than 0" }
-                require(kinds.isNotEmpty()) { "models cannot be empty" }
-            }
-        }
-
-        data class Fallback(val primary: Analyzer, val secondary: Analyzer) : Analyzer
+        require(processingDelay >= 1.seconds) { "processingDelay must be above 1 second" }
     }
 }

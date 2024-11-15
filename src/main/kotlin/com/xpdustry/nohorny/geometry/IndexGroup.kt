@@ -23,21 +23,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny.geometry
 
-import org.slf4j.LoggerFactory
-import java.awt.image.BufferedImage
-import java.util.concurrent.CompletableFuture
-
-internal class FallbackAnalyzer(private val primary: ImageAnalyzer, private val secondary: ImageAnalyzer) :
-    ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> =
-        primary.analyse(image).exceptionallyCompose { throwable ->
-            LOGGER.debug("Primary analyzer failed, switching to secondary", throwable)
-            secondary.analyse(image)
-        }
-
-    companion object {
-        private val LOGGER = LoggerFactory.getLogger(FallbackAnalyzer::class.java)
-    }
-}
+public data class IndexGroup<T : Any>(
+    val x: Int,
+    val y: Int,
+    val w: Int,
+    val h: Int,
+    val blocks: List<IndexBlock<T>>,
+)

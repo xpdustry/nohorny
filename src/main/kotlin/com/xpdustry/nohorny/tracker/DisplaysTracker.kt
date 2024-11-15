@@ -28,21 +28,24 @@ package com.xpdustry.nohorny.tracker
 import arc.math.geom.Point2
 import arc.struct.IntMap
 import com.google.common.collect.ImmutableMap
-import com.xpdustry.nohorny.NoHornyImage
+import com.xpdustry.nohorny.NoHornyConfig
 import com.xpdustry.nohorny.NoHornyListener
-import com.xpdustry.nohorny.NoHornyPlugin
 import com.xpdustry.nohorny.extension.asAuthor
 import com.xpdustry.nohorny.extension.onBuildingLifecycleEvent
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.extension.rx
 import com.xpdustry.nohorny.extension.ry
-import com.xpdustry.nohorny.geometry.BlockGroup
 import com.xpdustry.nohorny.geometry.GroupingBlockIndex
 import com.xpdustry.nohorny.geometry.GroupingFunction
 import com.xpdustry.nohorny.geometry.ImmutablePoint
+import com.xpdustry.nohorny.geometry.IndexGroup
+import com.xpdustry.nohorny.image.ImageProcessor
+import com.xpdustry.nohorny.image.NoHornyImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mindustry.Vars
 import mindustry.game.EventType
 import mindustry.logic.LExecutor
@@ -63,11 +66,14 @@ internal data class DisplaysConfig(
     }
 }
 
-internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListener {
+internal class DisplaysTracker(
+    private val config: () -> NoHornyConfig,
+    private val processor: ImageProcessor,
+) : NoHornyListener("Display Tracker", Dispatchers.Default.limitedParallelism(1)) {
     private val processors = GroupingBlockIndex.create<NoHornyImage.Processor>(GroupingFunction.single())
     private val displays = GroupingBlockIndex.create<NoHornyImage.Display>()
     private val marked = IntMap<Long>()
-    private val groups: AtomicReference<List<BlockGroup<NoHornyImage.Display>>> = AtomicReference(emptyList())
+    private val groups: AtomicReference<List<IndexGroup<NoHornyImage.Display>>> = AtomicReference(emptyList())
 
     override fun onInit() {
         onBuildingLifecycleEvent<LogicDisplay.LogicDisplayBuild>(
@@ -75,7 +81,7 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 val resolution = (display.block as LogicDisplay).displaySize
                 val map = ImmutableMap.builder<ImmutablePoint, NoHornyImage.Processor>()
 
-                val config = plugin.config.displays
+                val config = config().displays
                 for ((x, y, _, data) in processors.select(
                     display.tileX() - (config.processorSearchRadius / 2),
                     display.tileY() - (config.processorSearchRadius / 2),
@@ -103,13 +109,13 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 val y = display.ry
                 val size = display.block.size
 
-                plugin.coroutines.displays.launch {
-                    displays.upsert(x, y, size, NoHornyImage.Display(resolution, map.build()))
+                scope.launch {
+                    displays.insert(x, y, size, NoHornyImage.Display(resolution, map.build()))
                     marked.put(Point2.pack(display.rx, display.ry), System.currentTimeMillis())
                 }
             },
             remove = { x, y ->
-                plugin.coroutines.displays.launch {
+                scope.launch {
                     displays.remove(x, y)
                     marked.remove(Point2.pack(x, y))
                 }
@@ -121,7 +127,7 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 val instructions = readInstructions(processor.executor)
                 val links = processor.links.select { it.active }.map { ImmutablePoint(it.x, it.y) }
 
-                if (instructions.size < plugin.config.displays.minimumInstructionCount || links.isEmpty) {
+                if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty) {
                     return@onBuildingLifecycleEvent
                 }
 
@@ -131,11 +137,11 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 val y = processor.ry
                 val size = processor.block.size
 
-                plugin.coroutines.displays.launch {
-                    processors.upsert(x, y, size, data)
+                scope.launch {
+                    processors.insert(x, y, size, data)
                     for (link in links) {
                         val element = displays.select(link.x, link.y) ?: continue
-                        displays.upsert(
+                        displays.insert(
                             element.x,
                             element.y,
                             element.size,
@@ -152,12 +158,12 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
                 }
             },
             remove = { x, y ->
-                plugin.coroutines.displays.launch {
+                scope.launch {
                     val point = ImmutablePoint(x, y)
                     val block = processors.remove(x, y) ?: return@launch
                     for (link in block.data.links) {
                         val element = displays.select(link.x, link.y) ?: continue
-                        displays.upsert(
+                        displays.insert(
                             element.x,
                             element.y,
                             element.size,
@@ -172,33 +178,38 @@ internal class DisplaysTracker(private val plugin: NoHornyPlugin) : NoHornyListe
         )
 
         onEvent<EventType.ResetEvent> {
-            plugin.coroutines.displays.launch {
+            scope.launch {
                 processors.removeAll()
                 displays.removeAll()
                 marked.clear()
             }
         }
 
-        plugin.coroutines.global.launch {
-            while (isActive) {
-                delay(plugin.config.processingDelay)
-                plugin.coroutines.displays.launch {
-                    groups.set(displays.groups().toList())
-                    for (group in groups.get()) {
-                        val now = System.currentTimeMillis()
-                        val lastMod =
-                            group.blocks.asSequence()
-                                .mapNotNull { marked.get(Point2.pack(it.x, it.y)) }
-                                .maxOrNull()
-                                ?: now
-                        val elapsed = (now - lastMod).milliseconds
-                        if (elapsed > (plugin.config.processingDelay / 2) &&
-                            group.blocks.sumOf { it.data.processors.size } >= plugin.config.displays.minimumProcessorCount
-                        ) {
-                            plugin.process(group)
-                            for (block in group.blocks) marked.remove(Point2.pack(block.x, block.y))
-                        }
-                    }
+        scope.launch {
+            withContext(Dispatchers.Default) {
+                while (isActive) {
+                    delay(config().processingDelay)
+                    scope.launch { update() }
+                }
+            }
+        }
+    }
+
+    private fun update() {
+        val config = config()
+        groups.set(displays.groups().toList())
+        for (group in groups.get()) {
+            val now = System.currentTimeMillis()
+            val lastMod =
+                group.blocks.asSequence().mapNotNull { marked.get(Point2.pack(it.x, it.y)) }.maxOrNull()
+                    ?: now
+            val elapsed = (now - lastMod).milliseconds
+            if (elapsed > (config.processingDelay / 2) &&
+                group.blocks.sumOf { it.data.processors.size } >= config.displays.minimumProcessorCount
+            ) {
+                processor.process(group)
+                for (block in group.blocks) {
+                    marked.remove(Point2.pack(block.x, block.y))
                 }
             }
         }

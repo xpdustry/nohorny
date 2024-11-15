@@ -23,21 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.cache
+package com.xpdustry.nohorny.image.cache
 
 import arc.struct.IntSeq
-import com.xpdustry.nohorny.NoHornyCoroutines
-import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.NoHornyListener
-import com.xpdustry.nohorny.analyzer.ImageInformation
 import com.xpdustry.nohorny.extension.resize
-import com.xpdustry.nohorny.geometry.BlockGroup
+import com.xpdustry.nohorny.geometry.IndexGroup
+import com.xpdustry.nohorny.image.NoHornyImage
+import com.xpdustry.nohorny.image.NoHornyInformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer
 import java.util.BitSet
@@ -45,13 +43,11 @@ import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 import kotlin.time.Duration.Companion.hours
 
-@Suppress("SqlNoDataSourceInspection")
-internal class SQLCache(
-    private val datasource: () -> DataSource,
-    private val coroutines: NoHornyCoroutines,
-) : NoHornyCache, NoHornyListener {
+internal class H2ImageCache(
+    private val datasource: DataSource,
+) : ImageCache, NoHornyListener("Database", Dispatchers.IO) {
     override fun onInit() {
-        datasource().connection.use { connection ->
+        datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(
                     """
@@ -89,7 +85,7 @@ internal class SQLCache(
             }
         }
 
-        coroutines.global.launch(Dispatchers.IO) {
+        scope.launch {
             while (isActive) {
                 cleanup()
                 delay(1.hours)
@@ -98,13 +94,13 @@ internal class SQLCache(
     }
 
     override fun getResult(
-        group: BlockGroup<out NoHornyImage>,
+        group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-    ): CompletableFuture<ImageInformation?> =
-        coroutines.global.future(Dispatchers.IO) {
+    ): CompletableFuture<NoHornyInformation?> =
+        scope.future {
             val hashes = computeBlockMeanHashRedundant(image)
             if (hashes.isEmpty()) return@future null
-            datasource().connection.use { connection ->
+            datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
                     statement.execute(
                         """
@@ -130,7 +126,7 @@ internal class SQLCache(
                 }
 
                 val matched = IntSeq()
-                var info = ImageInformation.EMPTY
+                var info = NoHornyInformation.EMPTY
                 connection.prepareStatement(
                     """
                     SELECT 
@@ -155,7 +151,7 @@ internal class SQLCache(
                             val identifier = result.getInt("image_id")
                             matched.add(identifier)
                             val temp = getInformation(identifier)
-                            if (temp.rating > info.rating || info == ImageInformation.EMPTY) info = temp
+                            if (temp.rating > info.rating || info == NoHornyInformation.EMPTY) info = temp
                         }
                     }
                 }
@@ -177,19 +173,19 @@ internal class SQLCache(
                     }
                 }
 
-                info.takeUnless { it == ImageInformation.EMPTY }
+                info.takeUnless { it == NoHornyInformation.EMPTY }
             }
         }
 
     override fun putResult(
-        group: BlockGroup<out NoHornyImage>,
+        group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-        result: ImageInformation,
+        result: NoHornyInformation,
     ) {
-        coroutines.global.launch(Dispatchers.IO) {
+        scope.launch {
             val hashes = computeBlockMeanHashRedundant(image)
             if (hashes.isEmpty()) return@launch
-            datasource().connection.use { connection ->
+            datasource.connection.use { connection ->
                 connection.prepareStatement(
                     """
                     INSERT INTO 
@@ -247,7 +243,7 @@ internal class SQLCache(
     }
 
     private fun getInformation(id: Int) =
-        datasource().connection.use { connection ->
+        datasource.connection.use { connection ->
             val rating =
                 connection.prepareStatement(
                     """
@@ -261,16 +257,16 @@ internal class SQLCache(
                 ).use { statement ->
                     statement.setInt(1, id)
                     statement.executeQuery().use { result ->
-                        if (!result.next()) return ImageInformation.EMPTY
+                        if (!result.next()) return NoHornyInformation.EMPTY
                         try {
-                            ImageInformation.Rating.valueOf(result.getString("rating"))
+                            NoHornyInformation.Rating.valueOf(result.getString("rating"))
                         } catch (e: IllegalArgumentException) {
-                            return ImageInformation.EMPTY
+                            return NoHornyInformation.EMPTY
                         }
                     }
                 }
 
-            val details = mutableMapOf<ImageInformation.Kind, Float>()
+            val details = mutableMapOf<NoHornyInformation.Kind, Float>()
             connection.prepareStatement(
                 """
                 SELECT 
@@ -286,7 +282,7 @@ internal class SQLCache(
                     while (result.next()) {
                         val kind =
                             try {
-                                ImageInformation.Kind.valueOf(result.getString("name"))
+                                NoHornyInformation.Kind.valueOf(result.getString("name"))
                             } catch (e: IllegalArgumentException) {
                                 continue
                             }
@@ -295,22 +291,20 @@ internal class SQLCache(
                 }
             }
 
-            ImageInformation(rating, details)
+            NoHornyInformation(rating, details)
         }
 
-    private suspend fun cleanup() =
-        withContext(Dispatchers.IO) {
-            datasource().connection.use { connection ->
-                connection.prepareStatement(
-                    """
-                    DELETE FROM 
-                        `nh_image`
-                    WHERE 
-                        DATEDIFF('HOUR', `last_match`, CURRENT_TIMESTAMP()) >= 1
-                    """.trimIndent(),
-                ).use { statement ->
-                    statement.executeUpdate()
-                }
+    private fun cleanup() =
+        datasource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                DELETE FROM 
+                    `nh_image`
+                WHERE 
+                    DATEDIFF('HOUR', `last_match`, CURRENT_TIMESTAMP()) >= 1
+                """.trimIndent(),
+            ).use { statement ->
+                statement.executeUpdate()
             }
         }
 

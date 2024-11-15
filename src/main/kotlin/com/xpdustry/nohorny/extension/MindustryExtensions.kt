@@ -27,8 +27,8 @@ package com.xpdustry.nohorny.extension
 
 import arc.Events
 import com.google.common.net.InetAddresses
-import com.xpdustry.nohorny.NoHornyImage
 import com.xpdustry.nohorny.NoHornyPlugin
+import com.xpdustry.nohorny.image.NoHornyImage
 import mindustry.game.EventType
 import mindustry.gen.Building
 import mindustry.gen.Player

@@ -23,36 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.cache
+package com.xpdustry.nohorny.image.analyzer
 
-import com.xpdustry.nohorny.NoHornyImage
-import com.xpdustry.nohorny.analyzer.ImageInformation
-import com.xpdustry.nohorny.geometry.BlockGroup
+import com.xpdustry.nohorny.image.NoHornyInformation
+import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
-public interface NoHornyCache {
-    public fun getResult(
-        group: BlockGroup<out NoHornyImage>,
-        image: BufferedImage,
-    ): CompletableFuture<ImageInformation?>
+internal class FallbackAnalyzer(private val primary: ImageAnalyzer, private val secondary: ImageAnalyzer) :
+    ImageAnalyzer {
+    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> =
+        primary.analyse(image).exceptionallyCompose { throwable ->
+            LOGGER.debug("Primary analyzer failed, switching to secondary", throwable)
+            secondary.analyse(image)
+        }
 
-    public fun putResult(
-        group: BlockGroup<out NoHornyImage>,
-        image: BufferedImage,
-        result: ImageInformation,
-    )
-
-    public data object None : NoHornyCache {
-        override fun getResult(
-            group: BlockGroup<out NoHornyImage>,
-            image: BufferedImage,
-        ): CompletableFuture<ImageInformation?> = CompletableFuture.completedFuture(null)
-
-        override fun putResult(
-            group: BlockGroup<out NoHornyImage>,
-            image: BufferedImage,
-            result: ImageInformation,
-        ): Unit = Unit
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(FallbackAnalyzer::class.java)
     }
 }

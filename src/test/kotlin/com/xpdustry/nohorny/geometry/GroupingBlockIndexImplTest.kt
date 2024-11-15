@@ -30,10 +30,17 @@ import org.junit.jupiter.api.Test
 
 class GroupingBlockIndexImplTest {
     @Test
+    fun `test ignore occupied`() {
+        val index = createIndex()
+        Assertions.assertTrue(index.insert(0, 0, 1, Unit))
+        Assertions.assertFalse(index.insert(0, 0, 1, Unit))
+    }
+
+    @Test
     fun `test blocks that share a side`() {
         val index = createIndex()
-        index.upsert(0, 0, 1, Unit)
-        index.upsert(1, 0, 1, Unit)
+        index.insert(0, 0, 1, Unit)
+        index.insert(1, 0, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
 
         val cluster = index.groups().toList()[0]
@@ -47,25 +54,25 @@ class GroupingBlockIndexImplTest {
     @Test
     fun `test blocks that do not share a side`() {
         val index = createIndex()
-        index.upsert(2, 2, 2, Unit)
-        index.upsert(-2, 0, 1, Unit)
-        index.upsert(10, 10, 10, Unit)
+        index.insert(2, 2, 2, Unit)
+        index.insert(-2, 0, 1, Unit)
+        index.insert(10, 10, 10, Unit)
         Assertions.assertEquals(3, index.groups().size)
     }
 
     @Test
     fun `test blocks that partially share a side`() {
         val index = createIndex()
-        index.upsert(1, 1, 2, Unit)
-        index.upsert(3, 2, 2, Unit)
+        index.insert(1, 1, 2, Unit)
+        index.insert(3, 2, 2, Unit)
         Assertions.assertEquals(1, index.groups().size)
     }
 
     @Test
     fun `test blocks that only share a corner`() {
         val index = createIndex()
-        index.upsert(0, 0, 1, Unit)
-        index.upsert(1, 1, 1, Unit)
+        index.insert(0, 0, 1, Unit)
+        index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(2, index.groups().size)
     }
 
@@ -74,7 +81,7 @@ class GroupingBlockIndexImplTest {
         val index = createIndex()
         for (x in 0..2) {
             for (y in 0..5) {
-                index.upsert(x, y, 1, Unit)
+                index.insert(x, y, 1, Unit)
             }
         }
 
@@ -93,7 +100,7 @@ class GroupingBlockIndexImplTest {
         val index = createIndex()
         for (x in 0..4) {
             for (y in 0..4) {
-                index.upsert(x, y, 1, Unit)
+                index.insert(x, y, 1, Unit)
             }
         }
 
@@ -116,9 +123,9 @@ class GroupingBlockIndexImplTest {
     fun `test cluster split`() {
         val index = createIndex()
         for (x in 0..2) {
-            index.upsert(x, 0, 1, Unit)
+            index.insert(x, 0, 1, Unit)
         }
-        index.upsert(1, 1, 1, Unit)
+        index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
         index.remove(1, 0)
         Assertions.assertEquals(3, index.groups().size)
@@ -129,32 +136,23 @@ class GroupingBlockIndexImplTest {
         val index = createIndex()
         for (y in 0..2) {
             for (x in 0..2) {
-                index.upsert(x, y * 2, 1, Unit)
+                index.insert(x, y * 2, 1, Unit)
             }
         }
         Assertions.assertEquals(3, index.groups().size)
-        index.upsert(1, 1, 1, Unit)
+        index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(2, index.groups().size)
-        index.upsert(1, 3, 1, Unit)
+        index.insert(1, 3, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
     }
-
-    /*
-    @Test
-    fun `test error on add to occupied`() {
-        val index = createIndex()
-        index.upsert(0, 0, 1, Unit)
-        assertThrows<IllegalStateException> { index.upsert(createBlock(0, 0, 1)) }
-    }
-     */
 
     @Test
     fun `test cluster on same axis spaced by 1`() {
         val index = createIndex()
-        index.upsert(0, 0, 6, Unit)
-        index.upsert(7, 0, 6, Unit)
-        index.upsert(0, 7, 6, Unit)
-        index.upsert(7, 7, 6, Unit)
+        index.insert(0, 0, 6, Unit)
+        index.insert(7, 0, 6, Unit)
+        index.insert(0, 7, 6, Unit)
+        index.insert(7, 7, 6, Unit)
         Assertions.assertEquals(4, index.groups().size)
     }
 

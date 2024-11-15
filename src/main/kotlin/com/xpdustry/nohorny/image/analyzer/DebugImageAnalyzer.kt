@@ -23,25 +23,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.image.analyzer
 
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import org.slf4j.LoggerFactory
-import kotlin.coroutines.CoroutineContext
+import com.xpdustry.nohorny.extension.toJpgByteArray
+import com.xpdustry.nohorny.image.NoHornyInformation
+import java.awt.image.BufferedImage
+import java.io.IOException
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import kotlin.io.path.writeBytes
 
-private val NoHornyCoroutineExceptionHandler =
-    CoroutineExceptionHandler { _, throwable ->
-        LoggerFactory.getLogger(NoHornyPlugin::class.java).error("An uncaught error occurred", throwable)
+internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
+    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> {
+        try {
+            directory.toFile().mkdirs()
+            directory
+                .resolve("${System.currentTimeMillis()}.jpg")
+                .writeBytes(image.toJpgByteArray())
+        } catch (error: IOException) {
+            return CompletableFuture.failedFuture(error)
+        }
+        return CompletableFuture.completedFuture(NoHornyInformation.EMPTY)
     }
-
-internal abstract class NoHornyListener(name: String, context: CoroutineContext) {
-    protected val scope =
-        CoroutineScope(
-            context + SupervisorJob() + CoroutineName("NoHorny $name Scope") + NoHornyCoroutineExceptionHandler,
-        )
-
-    open fun onInit() = Unit
 }

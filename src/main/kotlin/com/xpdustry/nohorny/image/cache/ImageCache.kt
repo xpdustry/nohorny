@@ -23,18 +23,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny.image.cache
 
+import com.xpdustry.nohorny.geometry.IndexGroup
+import com.xpdustry.nohorny.image.NoHornyImage
+import com.xpdustry.nohorny.image.NoHornyInformation
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
-public interface ImageAnalyzer {
-    public fun analyse(image: BufferedImage): CompletableFuture<ImageInformation>
+internal interface ImageCache {
+    fun getResult(
+        group: IndexGroup<out NoHornyImage>,
+        image: BufferedImage,
+    ): CompletableFuture<NoHornyInformation?>
 
-    public object None : ImageAnalyzer {
-        override fun analyse(image: BufferedImage): CompletableFuture<ImageInformation> =
-            CompletableFuture.completedFuture(
-                ImageInformation.EMPTY,
-            )
+    fun putResult(
+        group: IndexGroup<out NoHornyImage>,
+        image: BufferedImage,
+        result: NoHornyInformation,
+    )
+
+    data object None : ImageCache {
+        override fun getResult(
+            group: IndexGroup<out NoHornyImage>,
+            image: BufferedImage,
+        ): CompletableFuture<NoHornyInformation?> = CompletableFuture.completedFuture(null)
+
+        override fun putResult(
+            group: IndexGroup<out NoHornyImage>,
+            image: BufferedImage,
+            result: NoHornyInformation,
+        ): Unit = Unit
     }
 }

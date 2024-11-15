@@ -23,26 +23,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny.analyzer
+package com.xpdustry.nohorny.geometry
 
-import kotlinx.serialization.Serializable
-
-@Serializable
-public data class ImageInformation(val rating: Rating, val details: Map<Kind, Float>) {
-    @Serializable
-    public enum class Kind {
-        NUDITY,
-        GORE,
-    }
-
-    @Serializable
-    public enum class Rating {
-        SAFE,
-        WARNING,
-        UNSAFE,
-    }
+public fun interface GroupingFunction<T : Any> {
+    public fun group(
+        a: IndexBlock.WithLinks<T>,
+        b: IndexBlock.WithLinks<T>,
+    ): Boolean
 
     public companion object {
-        @JvmField public val EMPTY: ImageInformation = ImageInformation(Rating.SAFE, emptyMap())
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        public fun <T : Any> always(): GroupingFunction<T> = Always as GroupingFunction<T>
+
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        public fun <T : Any> single(): GroupingFunction<T> = Single as GroupingFunction<T>
+    }
+
+    private object Always : GroupingFunction<Any> {
+        override fun group(
+            a: IndexBlock.WithLinks<Any>,
+            b: IndexBlock.WithLinks<Any>,
+        ): Boolean = true
+    }
+
+    private object Single : GroupingFunction<Any> {
+        override fun group(
+            a: IndexBlock.WithLinks<Any>,
+            b: IndexBlock.WithLinks<Any>,
+        ): Boolean = false
     }
 }

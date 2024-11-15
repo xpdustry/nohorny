@@ -23,15 +23,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.image.analyzer
 
-import com.xpdustry.nohorny.cache.NoHornyCache
-import mindustry.Vars
+import com.sksamuel.hoplite.Secret
+import com.xpdustry.nohorny.image.NoHornyInformation
 
-public interface NoHornyAPI {
-    public fun setCache(cache: NoHornyCache)
+internal sealed interface AnalyzerConfig {
+    data object None : AnalyzerConfig
 
-    public companion object {
-        @JvmStatic public fun get(): NoHornyAPI = Vars.mods.getMod(NoHornyPlugin::class.java).main as NoHornyAPI
+    data object Debug : AnalyzerConfig
+
+    data class Fallback(val primary: AnalyzerConfig, val secondary: AnalyzerConfig) : AnalyzerConfig
+
+    data class SightEngine(
+        val sightEngineUser: String,
+        val sightEngineSecret: Secret,
+        val unsafeThreshold: Float = 0.55F,
+        val warningThreshold: Float = 0.4F,
+        val kinds: List<NoHornyInformation.Kind> = listOf(NoHornyInformation.Kind.NUDITY),
+    ) : AnalyzerConfig {
+        init {
+            require(unsafeThreshold >= 0) { "unsafeThreshold cannot be lower than 0" }
+            require(warningThreshold >= 0) { "warningThreshold cannot be lower than 0" }
+            require(kinds.isNotEmpty()) { "models cannot be empty" }
+        }
     }
 }
