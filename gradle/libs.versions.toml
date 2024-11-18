@@ -20,7 +20,7 @@ slf4j = "2.0.16"
 hoplite = "2.8.2"
 okhttp = "4.12.0"
 guava = "33.3.1-jre"
-hikari = "6.1.0"
+hikari = "6.2.1"
 
 # testing
 junit = "5.11.3"
