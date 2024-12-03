@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v3.0.0-beta.1 - 2024-11-15
+
+### Features
+
+- Removed `NoHornyAPI#setCache` in favor of a custom H2 cache.
+- Added `FallbackAnalalyzer`.
+- Many improvements of NoHorny internals.
+
+### Fixes
+
+- Solved performances issues by offloading tracking in a background thread.
+
 ## v2.2.0 - 2024-04-03
 
 ### Features
