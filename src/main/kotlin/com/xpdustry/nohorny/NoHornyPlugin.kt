@@ -30,6 +30,7 @@ import arc.Core
 import arc.util.CommandHandler
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
+import com.sksamuel.hoplite.KebabCaseParamMapper
 import com.sksamuel.hoplite.addPathSource
 import com.xpdustry.nohorny.image.ImageProcessorImpl
 import com.xpdustry.nohorny.image.ImageRendererImpl
@@ -71,6 +72,7 @@ public class NoHornyPlugin : Plugin() {
             .addDefaultDecoders()
             .addDefaultParamMappers()
             .addDefaultParsers()
+            .addParameterMapper(KebabCaseParamMapper)
             .addPathSource(file)
             .withReport()
             .withReportPrintFn(logger::debug)
