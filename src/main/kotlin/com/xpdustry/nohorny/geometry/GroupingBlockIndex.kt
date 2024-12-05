@@ -28,6 +28,7 @@ package com.xpdustry.nohorny.geometry
 import arc.math.geom.Point2
 import arc.struct.IntMap
 import arc.struct.IntQueue
+import arc.struct.IntSeq
 import arc.struct.IntSet
 import com.google.common.graph.ElementOrder
 import com.google.common.graph.GraphBuilder
@@ -174,14 +175,21 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
     }
 
     override fun groups(): List<IndexGroup<T>> {
+        val removing = IntSeq()
         val groups = mutableListOf<IndexGroup<T>>()
         val visited = IntSet()
         for (node in graph.nodes()) {
             if (node in visited) continue
             var x = Point2.x(node).toInt()
             var y = Point2.y(node).toInt()
-            var w = index[node]!!.size
-            var h = w
+            val size = index[node]?.size
+            if (size == null) {
+                // Very strange this even happens
+                removing.add(node)
+                continue
+            }
+            var w: Int = size
+            var h: Int = size
             val blocks = mutableListOf<IndexBlock<T>>()
             val queue = IntQueue()
             queue.addLast(node)
@@ -199,6 +207,9 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
                 }
             }
             groups += IndexGroup(x, y, w, h, blocks)
+        }
+        repeat(removing.size) {
+            graph.removeNode(removing.get(it))
         }
         return groups
     }
