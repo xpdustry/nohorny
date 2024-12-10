@@ -134,6 +134,7 @@ tasks.shadowJar {
     kotlinRelocate("okio", "$shadowPackage.okio")
     relocate("org.yaml.snakeyaml", "$shadowPackage.snakeyaml")
     relocate("com.google.common", "$shadowPackage.guava")
+    relocate("com.zaxxer.hikari", "$shadowPackage.hikari")
 
     mergeServiceFiles()
     minimize {
