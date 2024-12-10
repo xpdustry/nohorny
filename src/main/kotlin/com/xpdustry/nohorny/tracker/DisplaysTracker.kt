@@ -51,6 +51,7 @@ import mindustry.game.EventType
 import mindustry.logic.LExecutor
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
+import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -79,7 +80,7 @@ internal class DisplaysTracker(
         onBuildingLifecycleEvent<LogicDisplay.LogicDisplayBuild>(
             insert = { display, _, _ ->
                 val resolution = (display.block as LogicDisplay).displaySize
-                val map = ImmutableMap.builder<ImmutablePoint, NoHornyImage.Processor>()
+                val map = HashMap<ImmutablePoint, NoHornyImage.Processor>()
 
                 val config = config().displays
                 for ((x, y, _, data) in processors.select(
@@ -99,7 +100,15 @@ internal class DisplaysTracker(
                             if (link.x in display.rx until display.rx + display.block.size &&
                                 link.y in display.ry until display.ry + display.block.size
                             ) {
-                                map.put(point, data)
+                                if (map.containsKey(point)) {
+                                    logger.debug(
+                                        "Processor at {} is already linked to the display at ({}, {})",
+                                        point,
+                                        display.rx,
+                                        display.ry,
+                                    )
+                                }
+                                map[point] = data
                             }
                         }
                     }
@@ -110,7 +119,7 @@ internal class DisplaysTracker(
                 val size = display.block.size
 
                 scope.launch {
-                    displays.insert(x, y, size, NoHornyImage.Display(resolution, map.build()))
+                    displays.insert(x, y, size, NoHornyImage.Display(resolution, map))
                     marked.put(Point2.pack(display.rx, display.ry), System.currentTimeMillis())
                 }
             },
@@ -255,5 +264,9 @@ internal class DisplaysTracker(
     private fun normalizeColorValue(value: Int): Int {
         val result = value % 256
         return if (result < 0) result + 256 else result
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(DisplaysTracker::class.java)
     }
 }
