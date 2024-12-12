@@ -83,7 +83,7 @@ dependencies {
 ```
 
 Then you will be able to intercept `ImageAnalyzerEvent`, which is posted every time a group of `NoHornyImage` is processed,
-see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for an example.
+see [NoHornyAutoMod](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoMod.kt) for an example.
 
 ## Advanced Configuration
 
