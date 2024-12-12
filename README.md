@@ -90,9 +90,12 @@ see [NoHornyAutoBan](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoBan.kt) for
 In `config.yaml`:
 
 ```yaml
-# Whether nohorny should automatically ban players when nsfw is detected,
-# set to false if you want to handle that yourself
-auto-ban: true
+# NoHorny built-in auto moderator configuration
+auto-mod:
+  # The minimum rating for nohorny to delete the suspicious blocks (also refunding the player's team)
+  delete-on: WARNING
+  # The minimum rating for nohorny to ban the player
+  ban-on: UNSAFE
 # The delay between the last logic or canvas block built and the analysis step,
 # lower it on servers with fast build time such as sandbox
 processing-delay: 5s

@@ -104,7 +104,7 @@ public class NoHornyPlugin : Plugin() {
         val processor = ImageProcessorImpl({ analyzer }, createCache(config.cache), renderer)
         listeners += CanvasesTracker({ config }, processor)
         listeners += DisplaysTracker({ config }, processor)
-        listeners += NoHornyAutoBan(this)
+        listeners += NoHornyAutoMod(this)
 
         listeners.forEach(NoHornyListener::onInit)
         addExitListener { executor.shutdown() }

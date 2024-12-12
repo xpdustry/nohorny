@@ -25,6 +25,7 @@
  */
 package com.xpdustry.nohorny
 
+import com.google.common.net.InetAddresses
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.geometry.ImmutablePoint
 import com.xpdustry.nohorny.image.NoHornyImage
@@ -39,22 +40,27 @@ import mindustry.world.blocks.logic.CanvasBlock
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 
-internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListener("Auto Ban", Dispatchers.Default) {
+internal class NoHornyAutoMod(private val plugin: NoHornyPlugin) : NoHornyListener("Auto Ban", Dispatchers.Default) {
     override fun onInit() {
         onEvent<ImageAnalyzerEvent> { (result, group, _, author) ->
-            if (result.rating == NoHornyInformation.Rating.UNSAFE &&
-                plugin.config.autoBan &&
-                author != null
-            ) {
+            if (result.rating == NoHornyInformation.Rating.SAFE) return@onEvent
+            val config = plugin.config.autoMod
+
+            var warn = true
+            if (result.rating >= config.banOn && author != null) {
+                warn = false
                 for (player in Groups.player) {
-                    if (player.uuid() == author.uuid || player.ip() == author.address.hostAddress) {
+                    if (player.uuid() == author.uuid || InetAddresses.forString(player.ip()) == author.address) {
                         Vars.netServer.admins.banPlayer(player.uuid())
-                        player.kick("[scarlet]You have been banned for building a NSFW building.")
+                        player.kick("[scarlet]You have been banned for building NSFW buildings.")
                         Call.sendMessage(
-                            "[pink]NoHorny: [white]${player.plainName()} has been banned for building a NSFW building.",
+                            "[pink]NoHorny: [white]${player.plainName()} has been banned for NSFW buildings at ${group.x}, ${group.y}.",
                         )
                     }
                 }
+            }
+
+            if (result.rating >= config.deleteOn) {
                 group.blocks
                     .asSequence()
                     .flatMap { block ->
@@ -70,9 +76,17 @@ internal class NoHornyAutoBan(private val plugin: NoHornyPlugin) : NoHornyListen
                             building is LogicBlock.LogicBuild ||
                             building is CanvasBlock.CanvasBuild
                         ) {
-                            Vars.world.tile(point.x, point.y)?.setNet(Blocks.air)
+                            val tile = Vars.world.tile(point.x, point.y) ?: return@forEach
+                            val team = tile.team()
+                            tile.setNet(Blocks.air)
+                            if (!Vars.state.rules.infiniteResources && team.active()) {
+                                team.items().add(building.block().requirements.asList())
+                            }
                         }
                     }
+                if (warn) {
+                    Call.sendMessage("[pink]NoHorny: [white]Possible NSFW buildings deleted at ${group.x}, ${group.y}.")
+                }
             }
         }
     }

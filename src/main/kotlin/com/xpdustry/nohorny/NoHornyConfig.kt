@@ -25,6 +25,7 @@
  */
 package com.xpdustry.nohorny
 
+import com.xpdustry.nohorny.image.NoHornyInformation
 import com.xpdustry.nohorny.image.analyzer.AnalyzerConfig
 import com.xpdustry.nohorny.image.cache.ImageCacheConfig
 import com.xpdustry.nohorny.tracker.CanvasesConfig
@@ -34,7 +35,7 @@ import kotlin.time.Duration.Companion.seconds
 
 internal data class NoHornyConfig(
     val analyzer: AnalyzerConfig = AnalyzerConfig.None,
-    val autoBan: Boolean = true,
+    val autoMod: AutoModConfig = AutoModConfig(),
     val processingDelay: Duration = 5.seconds,
     val displays: DisplaysConfig = DisplaysConfig(),
     val canvases: CanvasesConfig = CanvasesConfig(),
@@ -42,5 +43,14 @@ internal data class NoHornyConfig(
 ) {
     init {
         require(processingDelay >= 1.seconds) { "processingDelay must be above 1 second" }
+    }
+}
+
+internal data class AutoModConfig(
+    val banOn: NoHornyInformation.Rating = NoHornyInformation.Rating.UNSAFE,
+    val deleteOn: NoHornyInformation.Rating = NoHornyInformation.Rating.WARNING,
+) {
+    init {
+        require(banOn >= deleteOn) { "banOn must be above or equal to deleteOn" }
     }
 }
