@@ -28,6 +28,7 @@ package com.xpdustry.nohorny.geometry
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
+@Suppress("UnstableApiUsage")
 class GroupingBlockIndexImplTest {
     @Test
     fun `test ignore occupied`() {
@@ -49,6 +50,9 @@ class GroupingBlockIndexImplTest {
         Assertions.assertEquals(0, group.y)
         Assertions.assertEquals(2, group.w)
         Assertions.assertEquals(1, group.h)
+
+        Assertions.assertEquals(2, index.graph.nodes().size)
+        Assertions.assertEquals(1, index.graph.edges().size)
     }
 
     @Test
@@ -58,6 +62,9 @@ class GroupingBlockIndexImplTest {
         index.insert(-2, 0, 1, Unit)
         index.insert(10, 10, 10, Unit)
         Assertions.assertEquals(3, index.groups().size)
+
+        Assertions.assertEquals(3, index.graph.nodes().size)
+        Assertions.assertEquals(0, index.graph.edges().size)
     }
 
     @Test
@@ -66,6 +73,9 @@ class GroupingBlockIndexImplTest {
         index.insert(1, 1, 2, Unit)
         index.insert(3, 2, 2, Unit)
         Assertions.assertEquals(1, index.groups().size)
+
+        Assertions.assertEquals(2, index.graph.nodes().size)
+        Assertions.assertEquals(1, index.graph.edges().size)
     }
 
     @Test
@@ -74,6 +84,9 @@ class GroupingBlockIndexImplTest {
         index.insert(0, 0, 1, Unit)
         index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(2, index.groups().size)
+
+        Assertions.assertEquals(2, index.graph.nodes().size)
+        Assertions.assertEquals(0, index.graph.edges().size)
     }
 
     @Test
@@ -87,12 +100,16 @@ class GroupingBlockIndexImplTest {
 
         Assertions.assertEquals(1, index.groups().size)
         Assertions.assertEquals(18, index.groups().toList()[0].blocks.size)
+        Assertions.assertEquals(18, index.graph.nodes().size)
+        Assertions.assertEquals(27, index.graph.edges().size)
 
         index.remove(0, 1)
         index.remove(1, 1)
 
         Assertions.assertEquals(1, index.groups().size)
         Assertions.assertEquals(16, index.groups().toList()[0].blocks.size)
+        Assertions.assertEquals(16, index.graph.nodes().size)
+        Assertions.assertEquals(21, index.graph.edges().size)
     }
 
     @Test
@@ -106,17 +123,21 @@ class GroupingBlockIndexImplTest {
 
         Assertions.assertEquals(1, index.groups().size)
         Assertions.assertEquals(25, index.groups().toList()[0].blocks.size)
+        Assertions.assertEquals(25, index.graph.nodes().size)
+        Assertions.assertEquals(40, index.graph.edges().size)
 
         // Removes a U shape inside the 5 by 5 square
         for (x in 1..3) {
             for (y in 1..3) {
-                if (x == 1 && (y == 1 || y == 2)) continue
+                if (x == 2 && (y == 2 || y == 3)) continue
                 index.remove(x, y)
             }
         }
 
         Assertions.assertEquals(1, index.groups().size)
         Assertions.assertEquals(18, index.groups().toList()[0].blocks.size)
+        Assertions.assertEquals(18, index.graph.nodes().size)
+        Assertions.assertEquals(18, index.graph.edges().size)
     }
 
     @Test
@@ -127,8 +148,13 @@ class GroupingBlockIndexImplTest {
         }
         index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
+        Assertions.assertEquals(4, index.graph.nodes().size)
+        Assertions.assertEquals(3, index.graph.edges().size)
+
         index.remove(1, 0)
         Assertions.assertEquals(3, index.groups().size)
+        Assertions.assertEquals(3, index.graph.nodes().size)
+        Assertions.assertEquals(0, index.graph.edges().size)
     }
 
     @Test
@@ -140,10 +166,30 @@ class GroupingBlockIndexImplTest {
             }
         }
         Assertions.assertEquals(3, index.groups().size)
+        Assertions.assertEquals(9, index.graph.nodes().size)
+        Assertions.assertEquals(6, index.graph.edges().size)
+
         index.insert(1, 1, 1, Unit)
         Assertions.assertEquals(2, index.groups().size)
+        Assertions.assertEquals(10, index.graph.nodes().size)
+        Assertions.assertEquals(8, index.graph.edges().size)
+
         index.insert(1, 3, 1, Unit)
         Assertions.assertEquals(1, index.groups().size)
+        Assertions.assertEquals(11, index.graph.nodes().size)
+        Assertions.assertEquals(10, index.graph.edges().size)
+    }
+
+    @Test
+    fun `test merge big blocks`() {
+        val index = createIndex()
+        index.insert(0, 0, 10, Unit)
+        index.insert(10, 0, 10, Unit)
+        index.insert(0, 10, 10, Unit)
+        index.insert(10, 10, 10, Unit)
+        Assertions.assertEquals(1, index.groups().size)
+        Assertions.assertEquals(4, index.graph.nodes().size)
+        Assertions.assertEquals(4, index.graph.edges().size)
     }
 
     @Test
@@ -156,5 +202,5 @@ class GroupingBlockIndexImplTest {
         Assertions.assertEquals(4, index.groups().size)
     }
 
-    private fun createIndex() = GroupingBlockIndex.create<Unit>()
+    private fun createIndex() = GroupingBlockIndex.create<Unit>() as GroupingBlockIndexImpl<Unit>
 }

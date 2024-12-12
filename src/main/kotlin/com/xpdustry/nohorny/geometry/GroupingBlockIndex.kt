@@ -81,7 +81,7 @@ public interface GroupingBlockIndex<T : Any> {
 @Suppress("UnstableApiUsage")
 internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFunction<T>) : GroupingBlockIndex<T> {
     private val index = IntMap<IndexBlock<T>>()
-    private val graph =
+    internal val graph =
         GraphBuilder.undirected()
             .nodeOrder(ElementOrder.unordered<Int>())
             .build<Int>()
@@ -117,29 +117,22 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
         }
 
         val block = IndexBlock(x, y, size, data)
-
         graph.addNode(Point2.pack(x, y))
+
         for (ix in x until x + size) {
             for (iy in y until y + size) {
                 val packed = Point2.pack(ix, iy)
                 index.put(packed, block)
+            }
+        }
 
-                if (ix == x && canBeGroupedWith(block, ix - 1, iy)) {
-                    val other = select(ix - 1, iy)!!
-                    graph.putEdge(packed, Point2.pack(other.x, other.y))
-                }
-                if (ix == x + size - 1 && canBeGroupedWith(block, ix + 1, iy)) {
-                    val other = select(ix + 1, iy)!!
-                    graph.putEdge(packed, Point2.pack(other.x, other.y))
-                }
-                if (iy == y && canBeGroupedWith(block, ix, iy - 1)) {
-                    val other = select(ix, iy - 1)!!
-                    graph.putEdge(packed, Point2.pack(other.x, other.y))
-                }
-                if (iy == y + size - 1 && canBeGroupedWith(block, ix, iy + 1)) {
-                    val other = select(ix, iy + 1)!!
-                    graph.putEdge(packed, Point2.pack(other.x, other.y))
-                }
+        adjacent(x, y).forEach { other ->
+            if (group.group(
+                    IndexBlock.WithLinks(block, neighbors(block.x, block.y)),
+                    IndexBlock.WithLinks(other, neighbors(other.x, other.y)),
+                )
+            ) {
+                graph.putEdge(Point2.pack(block.x, block.y), Point2.pack(other.x, other.y))
             }
         }
 
@@ -214,15 +207,28 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
         return groups
     }
 
-    private fun canBeGroupedWith(
-        block: IndexBlock<T>,
-        x2: Int,
-        y2: Int,
-    ): Boolean {
-        val other = select(x2, y2) ?: return false
-        return group.group(
-            IndexBlock.WithLinks(block, neighbors(block.x, block.y)),
-            IndexBlock.WithLinks(other, neighbors(x2, y2)),
-        )
+    private fun adjacent(
+        x: Int,
+        y: Int,
+    ): Collection<IndexBlock<T>> {
+        val block = select(x, y) ?: return emptySet()
+        val result = IntMap<IndexBlock<T>>()
+        repeat(block.size) { i ->
+            val neighbor = select(x - 1, y + i) ?: return@repeat
+            result.put(Point2.pack(neighbor.x, neighbor.y), neighbor)
+        }
+        repeat(block.size) { i ->
+            val neighbor = select(x + block.size, y + i) ?: return@repeat
+            result.put(Point2.pack(neighbor.x, neighbor.y), neighbor)
+        }
+        repeat(block.size) { i ->
+            val neighbor = select(x + i, y - 1) ?: return@repeat
+            result.put(Point2.pack(neighbor.x, neighbor.y), neighbor)
+        }
+        repeat(block.size) { i ->
+            val neighbor = select(x + i, y + block.size) ?: return@repeat
+            result.put(Point2.pack(neighbor.x, neighbor.y), neighbor)
+        }
+        return result.values().toSet()
     }
 }
