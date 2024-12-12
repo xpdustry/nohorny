@@ -32,7 +32,7 @@ internal sealed interface ImageCacheConfig {
     data object None : ImageCacheConfig
 
     data class Local(
-        val expiration: Duration = 24.hours,
-        val max: Int = 1000,
+        val retention: Duration = 24.hours,
+        val maxSize: Int = 1000,
     ) : ImageCacheConfig
 }

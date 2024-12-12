@@ -39,7 +39,7 @@ internal data class NoHornyConfig(
     val processingDelay: Duration = 5.seconds,
     val displays: DisplaysConfig = DisplaysConfig(),
     val canvases: CanvasesConfig = CanvasesConfig(),
-    val cache: ImageCacheConfig = ImageCacheConfig.Local(),
+    val imageCache: ImageCacheConfig = ImageCacheConfig.Local(),
 ) {
     init {
         require(processingDelay >= 1.seconds) { "processingDelay must be above 1 second" }

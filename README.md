@@ -113,6 +113,12 @@ canvases:
   # The minimum number of canvases in a group to be eligible for processing,
   # relatively high since you a lot of canvases are needed for a clear picture
   minimum-group-size: 9
+# Image cache configuration, set it to None (image-cache: None) to disable caching
+image-cache:
+  # The retention period of a cached image, if "(now - retention) >= last-match", the image is removed
+  retention: 24h
+  # The maximum number of images to cache, if the cache is overflowing, the least matched images are removed
+  max-size: 1000
 ```
 
 ## Building

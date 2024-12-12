@@ -319,8 +319,8 @@ internal class H2ImageCache(
                     )
                 """.trimIndent(),
             ).use { statement ->
-                statement.setLong(1, config.expiration.inWholeMinutes)
-                statement.setInt(2, config.max)
+                statement.setLong(1, config.retention.inWholeMinutes)
+                statement.setInt(2, config.maxSize)
                 val count = statement.executeUpdate()
                 logger.debug("Cleanup, deleted {} expired images", count)
             }
