@@ -52,6 +52,7 @@ import mindustry.logic.LExecutor
 import mindustry.world.blocks.logic.LogicBlock
 import mindustry.world.blocks.logic.LogicDisplay
 import org.slf4j.LoggerFactory
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -119,7 +120,7 @@ internal class DisplaysTracker(
                 val size = display.block.size
 
                 scope.launch {
-                    displays.insert(x, y, size, NoHornyImage.Display(resolution, map))
+                    displays.insert(x, y, size, NoHornyImage.Display(resolution, Collections.unmodifiableMap(map)))
                     marked.put(Point2.pack(display.rx, display.ry), System.currentTimeMillis())
                 }
             },
@@ -154,13 +155,7 @@ internal class DisplaysTracker(
                             element.x,
                             element.y,
                             element.size,
-                            element.data.copy(
-                                processors =
-                                    ImmutableMap.builder<ImmutablePoint, NoHornyImage.Processor>()
-                                        .putAll(element.data.processors)
-                                        .put(point, data)
-                                        .build(),
-                            ),
+                            element.data.copy(processors = Collections.unmodifiableMap(element.data.processors + (point to data))),
                         )
                         marked.put(Point2.pack(element.x, element.y), System.currentTimeMillis())
                     }
