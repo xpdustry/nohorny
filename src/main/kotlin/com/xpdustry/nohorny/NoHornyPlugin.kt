@@ -28,6 +28,7 @@ package com.xpdustry.nohorny
 import arc.ApplicationListener
 import arc.Core
 import arc.util.CommandHandler
+import arc.util.OS
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.KebabCaseParamMapper
@@ -40,6 +41,8 @@ import com.xpdustry.nohorny.image.analyzer.FallbackAnalyzer
 import com.xpdustry.nohorny.image.analyzer.ImageAnalyzer
 import com.xpdustry.nohorny.image.analyzer.SightEngineAnalyzer
 import com.xpdustry.nohorny.image.cache.H2ImageCache
+import com.xpdustry.nohorny.image.cache.ImageCache
+import com.xpdustry.nohorny.image.cache.ImageCacheConfig
 import com.xpdustry.nohorny.tracker.CanvasesTracker
 import com.xpdustry.nohorny.tracker.DisplaysTracker
 import com.zaxxer.hikari.HikariConfig
@@ -97,36 +100,15 @@ public class NoHornyPlugin : Plugin() {
 
     override fun init() {
         reload()
-
-        val hikari =
-            HikariDataSource(
-                HikariConfig().apply {
-                    jdbcUrl = "jdbc:h2:${directory.resolve("database.h2").absolutePathString()};MODE=MYSQL"
-                    poolName = "no-horny-jdbc-pool"
-                    maximumPoolSize = 4
-                    minimumIdle = 1
-                },
-            )
-
         val renderer = ImageRendererImpl
-        val cache = H2ImageCache(hikari)
-        listeners += cache
-        val processor = ImageProcessorImpl({ analyzer }, cache, renderer)
+        val processor = ImageProcessorImpl({ analyzer }, createCache(config.cache), renderer)
         listeners += CanvasesTracker({ config }, processor)
         listeners += DisplaysTracker({ config }, processor)
         listeners += NoHornyAutoBan(this)
 
         listeners.forEach(NoHornyListener::onInit)
+        addExitListener { executor.shutdown() }
         logger.info("Initialized no-horny, to the horny jail we go.")
-
-        Core.app.addListener(
-            object : ApplicationListener {
-                override fun dispose() {
-                    executor.shutdown()
-                    hikari.close()
-                }
-            },
-        )
     }
 
     override fun registerServerCommands(handler: CommandHandler) {
@@ -159,6 +141,34 @@ public class NoHornyPlugin : Plugin() {
             is AnalyzerConfig.Fallback -> FallbackAnalyzer(createAnalyzer(config.primary), createAnalyzer(config.secondary))
             is AnalyzerConfig.SightEngine -> SightEngineAnalyzer(config, http)
         }
+
+    private fun createCache(config: ImageCacheConfig): ImageCache =
+        when (config) {
+            is ImageCacheConfig.None -> ImageCache.None
+            is ImageCacheConfig.Local -> {
+                val hikari =
+                    HikariDataSource(
+                        HikariConfig().apply {
+                            jdbcUrl = "jdbc:h2:${directory.resolve("database.h2").absolutePathString()};MODE=MYSQL"
+                            poolName = "no-horny-jdbc-pool"
+                            maximumPoolSize = OS.cores * 2
+                            minimumIdle = 1
+                        },
+                    )
+                addExitListener { hikari.close() }
+                H2ImageCache(hikari, config)
+            }
+        }
+
+    private fun addExitListener(block: () -> Unit) {
+        Core.app.listeners.add(
+            object : ApplicationListener {
+                override fun dispose() = block()
+
+                override fun toString() = "NoHornyExitListener"
+            },
+        )
+    }
 
     private object NoHornyThreadFactory : ThreadFactory {
         private val count = AtomicInteger(0)

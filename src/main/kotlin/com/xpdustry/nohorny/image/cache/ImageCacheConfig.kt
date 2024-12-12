@@ -23,24 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.xpdustry.nohorny
+package com.xpdustry.nohorny.image.cache
 
-import com.xpdustry.nohorny.image.analyzer.AnalyzerConfig
-import com.xpdustry.nohorny.image.cache.ImageCacheConfig
-import com.xpdustry.nohorny.tracker.CanvasesConfig
-import com.xpdustry.nohorny.tracker.DisplaysConfig
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.hours
 
-internal data class NoHornyConfig(
-    val analyzer: AnalyzerConfig = AnalyzerConfig.None,
-    val autoBan: Boolean = true,
-    val processingDelay: Duration = 5.seconds,
-    val displays: DisplaysConfig = DisplaysConfig(),
-    val canvases: CanvasesConfig = CanvasesConfig(),
-    val cache: ImageCacheConfig = ImageCacheConfig.Local(),
-) {
-    init {
-        require(processingDelay >= 1.seconds) { "processingDelay must be above 1 second" }
-    }
+internal sealed interface ImageCacheConfig {
+    data object None : ImageCacheConfig
+
+    data class Local(
+        val expiration: Duration = 24.hours,
+        val max: Int = 1000,
+    ) : ImageCacheConfig
 }

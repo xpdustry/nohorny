@@ -36,15 +36,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer
+import java.sql.Connection
 import java.util.BitSet
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
-import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 internal class H2ImageCache(
     private val datasource: DataSource,
+    private val config: ImageCacheConfig.Local,
 ) : ImageCache, NoHornyListener("Database", Dispatchers.IO) {
     override fun onInit() {
         datasource.connection.use { connection ->
@@ -88,7 +91,7 @@ internal class H2ImageCache(
         scope.launch {
             while (isActive) {
                 cleanup()
-                delay(1.hours)
+                delay(10.minutes)
             }
         }
     }
@@ -150,7 +153,7 @@ internal class H2ImageCache(
                         while (result.next()) {
                             val identifier = result.getInt("image_id")
                             matched.add(identifier)
-                            val temp = getInformation(identifier)
+                            val temp = getInformation(connection, identifier)
                             if (temp.rating > info.rating || info == NoHornyInformation.EMPTY) info = temp
                         }
                     }
@@ -242,57 +245,59 @@ internal class H2ImageCache(
         }
     }
 
-    private fun getInformation(id: Int) =
-        datasource.connection.use { connection ->
-            val rating =
-                connection.prepareStatement(
-                    """
-                    SELECT 
-                        `rating`
-                    FROM 
-                        `nh_image`
-                    WHERE 
-                        `id` = ?
-                    """.trimIndent(),
-                ).use { statement ->
-                    statement.setInt(1, id)
-                    statement.executeQuery().use { result ->
-                        if (!result.next()) return NoHornyInformation.EMPTY
-                        try {
-                            NoHornyInformation.Rating.valueOf(result.getString("rating"))
-                        } catch (e: IllegalArgumentException) {
-                            return NoHornyInformation.EMPTY
-                        }
-                    }
-                }
-
-            val details = mutableMapOf<NoHornyInformation.Kind, Float>()
+    private fun getInformation(
+        connection: Connection,
+        id: Int,
+    ): NoHornyInformation {
+        val rating =
             connection.prepareStatement(
                 """
                 SELECT 
-                    `name`, `value`
+                    `rating`
                 FROM 
-                    `nh_image_meta`
+                    `nh_image`
                 WHERE 
-                    `image_id` = ?
+                    `id` = ?
                 """.trimIndent(),
             ).use { statement ->
                 statement.setInt(1, id)
                 statement.executeQuery().use { result ->
-                    while (result.next()) {
-                        val kind =
-                            try {
-                                NoHornyInformation.Kind.valueOf(result.getString("name"))
-                            } catch (e: IllegalArgumentException) {
-                                continue
-                            }
-                        details[kind] = result.getFloat("value")
+                    if (!result.next()) return@getInformation NoHornyInformation.EMPTY
+                    try {
+                        NoHornyInformation.Rating.valueOf(result.getString("rating"))
+                    } catch (e: IllegalArgumentException) {
+                        return@getInformation NoHornyInformation.EMPTY
                     }
                 }
             }
 
-            NoHornyInformation(rating, details)
+        val details = mutableMapOf<NoHornyInformation.Kind, Float>()
+        connection.prepareStatement(
+            """
+            SELECT 
+                `name`, `value`
+            FROM 
+                `nh_image_meta`
+            WHERE 
+                `image_id` = ?
+            """.trimIndent(),
+        ).use { statement ->
+            statement.setInt(1, id)
+            statement.executeQuery().use { result ->
+                while (result.next()) {
+                    val kind =
+                        try {
+                            NoHornyInformation.Kind.valueOf(result.getString("name"))
+                        } catch (e: IllegalArgumentException) {
+                            continue
+                        }
+                    details[kind] = result.getFloat("value")
+                }
+            }
         }
+
+        return NoHornyInformation(rating, details)
+    }
 
     private fun cleanup() =
         datasource.connection.use { connection ->
@@ -301,10 +306,23 @@ internal class H2ImageCache(
                 DELETE FROM 
                     `nh_image`
                 WHERE 
-                    DATEDIFF('HOUR', `last_match`, CURRENT_TIMESTAMP()) >= 1
+                    DATEDIFF('MINUTE', `last_match`, CURRENT_TIMESTAMP()) >= ?
+                    OR 
+                    `id` NOT IN (
+                        SELECT 
+                            `image_id`
+                        FROM 
+                            `nh_image`
+                        ORDER BY 
+                            `last_match` DESC
+                        LIMIT ?
+                    )
                 """.trimIndent(),
             ).use { statement ->
-                statement.executeUpdate()
+                statement.setLong(1, config.expiration.inWholeMinutes)
+                statement.setInt(2, config.max)
+                val count = statement.executeUpdate()
+                logger.debug("Cleanup, deleted {} expired images", count)
             }
         }
 
@@ -357,5 +375,6 @@ internal class H2ImageCache(
 
     companion object {
         private const val BLOCK_SIZE = 32
+        private val logger = LoggerFactory.getLogger(H2ImageCache::class.java)
     }
 }
