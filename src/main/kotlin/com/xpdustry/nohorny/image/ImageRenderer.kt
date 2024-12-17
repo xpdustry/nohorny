@@ -89,7 +89,14 @@ internal object ImageRendererImpl : ImageRenderer {
 
                                 is NoHornyImage.Instruction.Rect -> {
                                     if (instruction.w == 1 && instruction.h == 1) {
-                                        output.setRGB(instruction.x, instruction.y, graphics.color.rgb)
+                                        if (
+                                            instruction.x >= 0 &&
+                                            instruction.x < image.resolution &&
+                                            instruction.y >= 0 &&
+                                            instruction.y < image.resolution
+                                        ) {
+                                            output.setRGB(instruction.x, instruction.y, graphics.color.rgb)
+                                        }
                                     } else {
                                         graphics.fillRect(
                                             instruction.x,
