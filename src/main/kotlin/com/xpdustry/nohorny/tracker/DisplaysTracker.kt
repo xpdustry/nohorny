@@ -27,7 +27,6 @@ package com.xpdustry.nohorny.tracker
 
 import arc.math.geom.Point2
 import arc.struct.IntMap
-import com.google.common.collect.ImmutableMap
 import com.xpdustry.nohorny.NoHornyConfig
 import com.xpdustry.nohorny.NoHornyListener
 import com.xpdustry.nohorny.extension.asAuthor
@@ -172,7 +171,7 @@ internal class DisplaysTracker(
                             element.y,
                             element.size,
                             element.data.copy(
-                                processors = ImmutableMap.copyOf(element.data.processors - point),
+                                processors = Collections.unmodifiableMap(element.data.processors - point),
                             ),
                         )
                         marked.put(Point2.pack(element.x, element.y), System.currentTimeMillis())

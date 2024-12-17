@@ -48,6 +48,7 @@ import com.xpdustry.nohorny.tracker.DisplaysTracker
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import mindustry.Vars
+import mindustry.gen.Player
 import mindustry.mod.Plugin
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
@@ -62,7 +63,7 @@ import kotlin.io.path.notExists
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-public class NoHornyPlugin : Plugin() {
+internal class NoHornyPlugin : Plugin() {
     private val directory = Vars.modDirectory.child("nohorny").file().toPath()
     private val file = directory.resolve("config.yaml")
     private val listeners = mutableListOf<NoHornyListener>()
@@ -100,10 +101,9 @@ public class NoHornyPlugin : Plugin() {
 
     override fun init() {
         reload()
-        val renderer = ImageRendererImpl
-        val processor = ImageProcessorImpl({ analyzer }, createCache(config.imageCache), renderer)
-        listeners += CanvasesTracker({ config }, processor)
-        listeners += DisplaysTracker({ config }, processor)
+        val processor = ImageProcessorImpl(this::analyzer, createCache(config.imageCache), ImageRendererImpl)
+        listeners += CanvasesTracker(this::config, processor)
+        listeners += DisplaysTracker(this::config, processor)
         listeners += NoHornyAutoMod(this)
 
         listeners.forEach(NoHornyListener::onInit)
@@ -112,7 +112,7 @@ public class NoHornyPlugin : Plugin() {
     }
 
     override fun registerServerCommands(handler: CommandHandler) {
-        handler.register<Unit>("nohorny-reload", "Reload nohorny config.") { _, _ ->
+        handler.register<Player?>("nohorny-reload", "Reload nohorny config.") { _, _ ->
             try {
                 reload()
                 logger.info("Reloaded config")
