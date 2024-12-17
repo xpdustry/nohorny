@@ -25,7 +25,7 @@
  */
 package com.xpdustry.nohorny
 
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import com.xpdustry.nohorny.image.analyzer.AnalyzerConfig
 import com.xpdustry.nohorny.image.cache.ImageCacheConfig
 import com.xpdustry.nohorny.tracker.CanvasesConfig
@@ -47,8 +47,8 @@ internal data class NoHornyConfig(
 }
 
 internal data class AutoModConfig(
-    val banOn: NoHornyInformation.Rating = NoHornyInformation.Rating.UNSAFE,
-    val deleteOn: NoHornyInformation.Rating = NoHornyInformation.Rating.WARNING,
+    val banOn: NoHornyResult.Rating = NoHornyResult.Rating.UNSAFE,
+    val deleteOn: NoHornyResult.Rating = NoHornyResult.Rating.WARNING,
 ) {
     init {
         require(banOn >= deleteOn) { "banOn must be above or equal to deleteOn" }

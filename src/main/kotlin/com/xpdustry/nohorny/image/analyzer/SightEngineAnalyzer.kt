@@ -28,7 +28,7 @@ package com.xpdustry.nohorny.image.analyzer
 import com.xpdustry.nohorny.extension.toCompletableFuture
 import com.xpdustry.nohorny.extension.toJpgByteArray
 import com.xpdustry.nohorny.extension.toJsonObject
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import kotlinx.serialization.json.float
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -47,7 +47,7 @@ internal class SightEngineAnalyzer(
     private val config: AnalyzerConfig.SightEngine,
     private val http: OkHttpClient,
 ) : ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> {
+    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyResult> {
         val request =
             MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
@@ -57,8 +57,8 @@ internal class SightEngineAnalyzer(
                     "models",
                     config.kinds.joinToString(",") {
                         when (it) {
-                            NoHornyInformation.Kind.NUDITY -> "nudity-2.0"
-                            NoHornyInformation.Kind.GORE -> "gore"
+                            NoHornyResult.Kind.NUDITY -> "nudity-2.0"
+                            NoHornyResult.Kind.GORE -> "gore"
                         }
                     },
                 )
@@ -87,31 +87,31 @@ internal class SightEngineAnalyzer(
                     )
                 }
 
-                val results = mutableMapOf<NoHornyInformation.Kind, Float>()
+                val results = mutableMapOf<NoHornyResult.Kind, Float>()
 
-                if (NoHornyInformation.Kind.NUDITY in config.kinds) {
+                if (NoHornyResult.Kind.NUDITY in config.kinds) {
                     val percent =
                         EXPLICIT_NUDITY_FIELDS.maxOf {
                             json["nudity"]!!.jsonObject[it]!!.jsonPrimitive.float
                         }
-                    results[NoHornyInformation.Kind.NUDITY] = percent
+                    results[NoHornyResult.Kind.NUDITY] = percent
                 }
 
-                if (NoHornyInformation.Kind.GORE in config.kinds) {
+                if (NoHornyResult.Kind.GORE in config.kinds) {
                     val percent = json["gore"]!!.jsonObject["prob"]!!.jsonPrimitive.float
-                    results[NoHornyInformation.Kind.GORE] = percent
+                    results[NoHornyResult.Kind.GORE] = percent
                 }
 
                 val result = results.maxOfOrNull { it.value } ?: 0F
                 val rating =
                     when {
-                        result > config.unsafeThreshold -> NoHornyInformation.Rating.UNSAFE
-                        result > config.warningThreshold -> NoHornyInformation.Rating.WARNING
-                        else -> NoHornyInformation.Rating.SAFE
+                        result > config.unsafeThreshold -> NoHornyResult.Rating.UNSAFE
+                        result > config.warningThreshold -> NoHornyResult.Rating.WARNING
+                        else -> NoHornyResult.Rating.SAFE
                     }
 
                 return@thenCompose CompletableFuture.completedFuture(
-                    NoHornyInformation(rating, results),
+                    NoHornyResult(rating, results),
                 )
             }
     }

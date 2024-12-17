@@ -26,7 +26,7 @@
 package com.xpdustry.nohorny.image.analyzer
 
 import com.sksamuel.hoplite.Secret
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 
 internal sealed interface AnalyzerConfig {
     data object None : AnalyzerConfig
@@ -40,7 +40,7 @@ internal sealed interface AnalyzerConfig {
         val sightEngineSecret: Secret,
         val unsafeThreshold: Float = 0.55F,
         val warningThreshold: Float = 0.4F,
-        val kinds: List<NoHornyInformation.Kind> = listOf(NoHornyInformation.Kind.NUDITY),
+        val kinds: List<NoHornyResult.Kind> = listOf(NoHornyResult.Kind.NUDITY),
     ) : AnalyzerConfig {
         init {
             require(unsafeThreshold >= 0) { "unsafeThreshold cannot be lower than 0" }

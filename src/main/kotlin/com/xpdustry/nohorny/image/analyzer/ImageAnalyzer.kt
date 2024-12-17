@@ -25,15 +25,15 @@
  */
 package com.xpdustry.nohorny.image.analyzer
 
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
 public interface ImageAnalyzer {
-    public fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation>
+    public fun analyse(image: BufferedImage): CompletableFuture<NoHornyResult>
 
     public object None : ImageAnalyzer {
-        override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> =
-            CompletableFuture.completedFuture(NoHornyInformation.EMPTY)
+        override fun analyse(image: BufferedImage): CompletableFuture<NoHornyResult> =
+            CompletableFuture.completedFuture(NoHornyResult.EMPTY)
     }
 }

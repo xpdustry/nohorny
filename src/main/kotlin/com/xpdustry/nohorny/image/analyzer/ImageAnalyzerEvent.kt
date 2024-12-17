@@ -27,18 +27,18 @@ package com.xpdustry.nohorny.image.analyzer
 
 import com.xpdustry.nohorny.geometry.IndexGroup
 import com.xpdustry.nohorny.image.NoHornyImage
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import java.awt.image.BufferedImage
 import java.net.InetAddress
 
 public data class ImageAnalyzerEvent(
-    val result: NoHornyInformation,
+    val result: NoHornyResult,
     val group: IndexGroup<out NoHornyImage>,
     val image: BufferedImage,
     val author: NoHornyImage.Author?,
 ) {
     public constructor(
-        result: NoHornyInformation,
+        result: NoHornyResult,
         group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
     ) : this(result, group, image, computeAuthor(group))

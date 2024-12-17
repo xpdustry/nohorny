@@ -28,7 +28,7 @@ package com.xpdustry.nohorny.image
 import kotlinx.serialization.Serializable
 
 @Serializable
-public data class NoHornyInformation(val rating: Rating, val details: Map<Kind, Float>) {
+public data class NoHornyResult(val rating: Rating, val details: Map<Kind, Float>) {
     @Serializable
     public enum class Kind {
         NUDITY,
@@ -43,6 +43,6 @@ public data class NoHornyInformation(val rating: Rating, val details: Map<Kind, 
     }
 
     public companion object {
-        @JvmField public val EMPTY: NoHornyInformation = NoHornyInformation(Rating.SAFE, emptyMap())
+        @JvmField public val EMPTY: NoHornyResult = NoHornyResult(Rating.SAFE, emptyMap())
     }
 }

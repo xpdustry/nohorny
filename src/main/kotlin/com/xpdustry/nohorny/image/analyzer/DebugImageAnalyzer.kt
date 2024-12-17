@@ -26,7 +26,7 @@
 package com.xpdustry.nohorny.image.analyzer
 
 import com.xpdustry.nohorny.extension.toJpgByteArray
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import java.awt.image.BufferedImage
 import java.io.IOException
 import java.nio.file.Path
@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture
 import kotlin.io.path.writeBytes
 
 internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> {
+    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyResult> {
         try {
             directory.toFile().mkdirs()
             directory
@@ -43,6 +43,6 @@ internal class DebugImageAnalyzer(private val directory: Path) : ImageAnalyzer {
         } catch (error: IOException) {
             return CompletableFuture.failedFuture(error)
         }
-        return CompletableFuture.completedFuture(NoHornyInformation.EMPTY)
+        return CompletableFuture.completedFuture(NoHornyResult.EMPTY)
     }
 }

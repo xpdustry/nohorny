@@ -25,14 +25,14 @@
  */
 package com.xpdustry.nohorny.image.analyzer
 
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import org.slf4j.LoggerFactory
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
 internal class FallbackAnalyzer(private val primary: ImageAnalyzer, private val secondary: ImageAnalyzer) :
     ImageAnalyzer {
-    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyInformation> =
+    override fun analyse(image: BufferedImage): CompletableFuture<NoHornyResult> =
         primary.analyse(image).exceptionallyCompose { throwable ->
             LOGGER.debug("Primary analyzer failed, switching to secondary", throwable)
             secondary.analyse(image)

@@ -27,7 +27,7 @@ package com.xpdustry.nohorny.image.cache
 
 import com.xpdustry.nohorny.geometry.IndexGroup
 import com.xpdustry.nohorny.image.NoHornyImage
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
 
@@ -35,24 +35,24 @@ internal interface ImageCache {
     fun getResult(
         group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-    ): CompletableFuture<NoHornyInformation?>
+    ): CompletableFuture<NoHornyResult?>
 
     fun putResult(
         group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-        result: NoHornyInformation,
+        result: NoHornyResult,
     )
 
     data object None : ImageCache {
         override fun getResult(
             group: IndexGroup<out NoHornyImage>,
             image: BufferedImage,
-        ): CompletableFuture<NoHornyInformation?> = CompletableFuture.completedFuture(null)
+        ): CompletableFuture<NoHornyResult?> = CompletableFuture.completedFuture(null)
 
         override fun putResult(
             group: IndexGroup<out NoHornyImage>,
             image: BufferedImage,
-            result: NoHornyInformation,
+            result: NoHornyResult,
         ): Unit = Unit
     }
 }

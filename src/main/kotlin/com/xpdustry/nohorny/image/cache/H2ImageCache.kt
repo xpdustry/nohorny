@@ -30,7 +30,7 @@ import com.xpdustry.nohorny.NoHornyListener
 import com.xpdustry.nohorny.extension.resize
 import com.xpdustry.nohorny.geometry.IndexGroup
 import com.xpdustry.nohorny.image.NoHornyImage
-import com.xpdustry.nohorny.image.NoHornyInformation
+import com.xpdustry.nohorny.image.NoHornyResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.future
@@ -99,7 +99,7 @@ internal class H2ImageCache(
     override fun getResult(
         group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-    ): CompletableFuture<NoHornyInformation?> =
+    ): CompletableFuture<NoHornyResult?> =
         scope.future {
             val hashes = computeBlockMeanHashRedundant(image)
             if (hashes.isEmpty()) return@future null
@@ -129,7 +129,7 @@ internal class H2ImageCache(
                 }
 
                 val matched = IntSeq()
-                var info = NoHornyInformation.EMPTY
+                var info = NoHornyResult.EMPTY
                 connection.prepareStatement(
                     """
                     SELECT 
@@ -153,8 +153,8 @@ internal class H2ImageCache(
                         while (result.next()) {
                             val identifier = result.getInt("image_id")
                             matched.add(identifier)
-                            val temp = getInformation(connection, identifier)
-                            if (temp.rating > info.rating || info == NoHornyInformation.EMPTY) info = temp
+                            val temp = getStoredResult(connection, identifier)
+                            if (temp.rating > info.rating || info == NoHornyResult.EMPTY) info = temp
                         }
                     }
                 }
@@ -176,14 +176,14 @@ internal class H2ImageCache(
                     }
                 }
 
-                info.takeUnless { it == NoHornyInformation.EMPTY }
+                info.takeUnless { it == NoHornyResult.EMPTY }
             }
         }
 
     override fun putResult(
         group: IndexGroup<out NoHornyImage>,
         image: BufferedImage,
-        result: NoHornyInformation,
+        result: NoHornyResult,
     ) {
         scope.launch {
             val hashes = computeBlockMeanHashRedundant(image)
@@ -245,10 +245,10 @@ internal class H2ImageCache(
         }
     }
 
-    private fun getInformation(
+    private fun getStoredResult(
         connection: Connection,
         id: Int,
-    ): NoHornyInformation {
+    ): NoHornyResult {
         val rating =
             connection.prepareStatement(
                 """
@@ -262,16 +262,16 @@ internal class H2ImageCache(
             ).use { statement ->
                 statement.setInt(1, id)
                 statement.executeQuery().use { result ->
-                    if (!result.next()) return@getInformation NoHornyInformation.EMPTY
+                    if (!result.next()) return@getStoredResult NoHornyResult.EMPTY
                     try {
-                        NoHornyInformation.Rating.valueOf(result.getString("rating"))
+                        NoHornyResult.Rating.valueOf(result.getString("rating"))
                     } catch (e: IllegalArgumentException) {
-                        return@getInformation NoHornyInformation.EMPTY
+                        return@getStoredResult NoHornyResult.EMPTY
                     }
                 }
             }
 
-        val details = mutableMapOf<NoHornyInformation.Kind, Float>()
+        val details = mutableMapOf<NoHornyResult.Kind, Float>()
         connection.prepareStatement(
             """
             SELECT 
@@ -287,7 +287,7 @@ internal class H2ImageCache(
                 while (result.next()) {
                     val kind =
                         try {
-                            NoHornyInformation.Kind.valueOf(result.getString("name"))
+                            NoHornyResult.Kind.valueOf(result.getString("name"))
                         } catch (e: IllegalArgumentException) {
                             continue
                         }
@@ -296,7 +296,7 @@ internal class H2ImageCache(
             }
         }
 
-        return NoHornyInformation(rating, details)
+        return NoHornyResult(rating, details)
     }
 
     private fun cleanup() =
