@@ -142,6 +142,10 @@ tasks.shadowJar {
     }
 }
 
+tasks.javadocJar {
+    from(tasks.dokkaHtml)
+}
+
 tasks.register<Copy>("release") {
     dependsOn(tasks.build)
     from(tasks.shadowJar)
