@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v3.0.1 - 2024-12-19
+
+### Fixes
+
+- Fixed `ConcurrentModificationException` occurring when calling `GroupingBlockIndex#removeAll`.
+
 ## v3.0.0-beta.1 - 2024-11-15
 
 ### Features
