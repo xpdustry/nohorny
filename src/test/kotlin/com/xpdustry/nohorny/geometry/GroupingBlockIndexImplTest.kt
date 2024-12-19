@@ -202,5 +202,24 @@ class GroupingBlockIndexImplTest {
         Assertions.assertEquals(4, index.groups().size)
     }
 
+    @Test
+    fun `test remove all`() {
+        val index = createIndex()
+        repeat(5) { x ->
+            index.insert(x, 0, 1, Unit)
+        }
+
+        Assertions.assertEquals(1, index.groups().size)
+        Assertions.assertEquals(5, index.groups().toList()[0].blocks.size)
+        Assertions.assertEquals(5, index.graph.nodes().size)
+        Assertions.assertEquals(4, index.graph.edges().size)
+
+        index.removeAll()
+
+        Assertions.assertEquals(0, index.groups().size)
+        Assertions.assertEquals(0, index.graph.nodes().size)
+        Assertions.assertEquals(0, index.graph.edges().size)
+    }
+
     private fun createIndex() = GroupingBlockIndex.create<Unit>() as GroupingBlockIndexImpl<Unit>
 }

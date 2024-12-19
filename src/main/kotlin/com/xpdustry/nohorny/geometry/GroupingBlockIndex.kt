@@ -81,10 +81,7 @@ public interface GroupingBlockIndex<T : Any> {
 @Suppress("UnstableApiUsage")
 internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFunction<T>) : GroupingBlockIndex<T> {
     private val index = IntMap<IndexBlock<T>>()
-    internal val graph =
-        GraphBuilder.undirected()
-            .nodeOrder(ElementOrder.unordered<Int>())
-            .build<Int>()
+    internal var graph = createGraph()
 
     override fun select(
         x: Int,
@@ -156,7 +153,7 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
 
     override fun removeAll() {
         index.clear()
-        graph.nodes().forEach { graph.removeNode(it) }
+        graph = createGraph()
     }
 
     override fun neighbors(
@@ -231,4 +228,10 @@ internal class GroupingBlockIndexImpl<T : Any>(private val group: GroupingFuncti
         }
         return result.values().toSet()
     }
+
+    private fun createGraph() =
+        GraphBuilder
+            .undirected()
+            .nodeOrder(ElementOrder.unordered<Int>())
+            .build<Int>()
 }
