@@ -47,10 +47,6 @@ internal data class NoHornyConfig(
 }
 
 internal data class AutoModConfig(
-    val banOn: NoHornyResult.Rating = NoHornyResult.Rating.UNSAFE,
-    val deleteOn: NoHornyResult.Rating = NoHornyResult.Rating.WARNING,
-) {
-    init {
-        require(banOn >= deleteOn) { "banOn must be above or equal to deleteOn" }
-    }
-}
+    val banOn: NoHornyResult.Rating? = NoHornyResult.Rating.UNSAFE,
+    val deleteOn: NoHornyResult.Rating? = NoHornyResult.Rating.WARNING,
+)

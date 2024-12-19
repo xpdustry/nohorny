@@ -29,7 +29,6 @@ import com.google.common.net.InetAddresses
 import com.xpdustry.nohorny.extension.onEvent
 import com.xpdustry.nohorny.geometry.ImmutablePoint
 import com.xpdustry.nohorny.image.NoHornyImage
-import com.xpdustry.nohorny.image.NoHornyResult
 import com.xpdustry.nohorny.image.analyzer.ImageAnalyzerEvent
 import kotlinx.coroutines.Dispatchers
 import mindustry.Vars
@@ -43,11 +42,10 @@ import mindustry.world.blocks.logic.LogicDisplay
 internal class NoHornyAutoMod(private val plugin: NoHornyPlugin) : NoHornyListener("Auto Ban", Dispatchers.Default) {
     override fun onInit() {
         onEvent<ImageAnalyzerEvent> { (result, group, _, author) ->
-            if (result.rating == NoHornyResult.Rating.SAFE) return@onEvent
             val config = plugin.config.autoMod
 
             var warn = true
-            if (result.rating >= config.banOn && author != null) {
+            if (config.banOn != null && result.rating >= config.banOn && author != null) {
                 warn = false
                 for (player in Groups.player) {
                     if (player.uuid() == author.uuid || InetAddresses.forString(player.ip()) == author.address) {
@@ -60,7 +58,7 @@ internal class NoHornyAutoMod(private val plugin: NoHornyPlugin) : NoHornyListen
                 }
             }
 
-            if (result.rating >= config.deleteOn) {
+            if (config.deleteOn != null && result.rating >= config.deleteOn) {
                 group.blocks
                     .asSequence()
                     .flatMap { block ->

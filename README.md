@@ -92,9 +92,9 @@ In `config.yaml`:
 ```yaml
 # NoHorny built-in auto moderator configuration
 auto-mod:
-  # The minimum rating for nohorny to delete the suspicious blocks (also refunding the player's team)
+  # The minimum rating for nohorny to delete suspicious blocks (also refunding the player's team). Set to null to disable.
   delete-on: WARNING
-  # The minimum rating for nohorny to ban the player
+  # The minimum rating for nohorny to ban the player. Set to null to disable.
   ban-on: UNSAFE
 # The delay between the last logic or canvas block built and the analysis step,
 # lower it on servers with fast build time such as sandbox
