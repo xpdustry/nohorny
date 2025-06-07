@@ -23,7 +23,7 @@ guava = "33.4.0-jre"
 hikari = "6.2.1"
 
 # testing
-junit = "5.11.4"
+junit = "5.13.1"
 
 [libraries]
 # runtime
