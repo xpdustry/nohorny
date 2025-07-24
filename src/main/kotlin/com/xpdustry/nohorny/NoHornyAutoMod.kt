@@ -78,7 +78,7 @@ internal class NoHornyAutoMod(private val plugin: NoHornyPlugin) : NoHornyListen
                             val team = tile.team()
                             tile.setNet(Blocks.air)
                             if (!Vars.state.rules.infiniteResources && team.active()) {
-                                team.items().add(building.block().requirements.asList())
+                                team.items().add(building.block.requirements.asList())
                             }
                         }
                     }

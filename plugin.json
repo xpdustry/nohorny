@@ -8,6 +8,6 @@
   "main": "com.xpdustry.nohorny.NoHornyPlugin",
   "java": true,
   "hidden": true,
-  "minGameVersion": "146",
+  "minGameVersion": "150",
   "dependencies": [ "kotlin-runtime", "slf4md", "sql4md" ]
 }
