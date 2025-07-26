@@ -134,13 +134,13 @@ internal class DisplaysTracker(
         onBuildingLifecycleEvent<LogicBlock.LogicBuild>(
             insert = { processor, player, _ ->
                 val instructions = readInstructions(processor.executor)
-                val links = processor.links.map { ImmutablePoint(it.x, it.y) }
+                val links = processor.links.filter { it.valid }.map { ImmutablePoint(it.x, it.y) }
 
-                if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty) {
+                if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty()) {
                     return@onBuildingLifecycleEvent
                 }
 
-                val data = NoHornyImage.Processor(instructions, player?.asAuthor(), links.list())
+                val data = NoHornyImage.Processor(instructions, player?.asAuthor(), links)
                 val point = ImmutablePoint(processor.tileX(), processor.tileY())
                 val x = processor.rx
                 val y = processor.ry

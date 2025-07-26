@@ -14,8 +14,8 @@ ksr = "2.0.0"
 dokka = "1.9.20"
 
 # utilities
-slf4md = "1.0.1"
-sql4md = "1.1.0"
+slf4md = "1.1.1"
+sql4md = "1.1.1"
 slf4j = "2.0.16"
 hoplite = "2.9.0"
 okhttp = "4.12.0"
