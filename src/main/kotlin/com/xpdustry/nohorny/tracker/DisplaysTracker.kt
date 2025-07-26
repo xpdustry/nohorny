@@ -134,13 +134,13 @@ internal class DisplaysTracker(
         onBuildingLifecycleEvent<LogicBlock.LogicBuild>(
             insert = { processor, player, _ ->
                 val instructions = readInstructions(processor.executor)
-                val links = processor.links.select { it.active }.map { ImmutablePoint(it.x, it.y) }
+                val links = processor.links.filter { it.valid }.map { ImmutablePoint(it.x, it.y) }
 
-                if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty) {
+                if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty()) {
                     return@onBuildingLifecycleEvent
                 }
 
-                val data = NoHornyImage.Processor(instructions, player?.asAuthor(), links.list())
+                val data = NoHornyImage.Processor(instructions, player?.asAuthor(), links)
                 val point = ImmutablePoint(processor.tileX(), processor.tileY())
                 val x = processor.rx
                 val y = processor.ry
@@ -227,26 +227,26 @@ internal class DisplaysTracker(
             instructions +=
                 when (instruction.type) {
                     LogicDisplay.commandColor -> {
-                        val r = normalizeColorValue(executor.numi(instruction.x))
-                        val g = normalizeColorValue(executor.numi(instruction.y))
-                        val b = normalizeColorValue(executor.numi(instruction.p1))
-                        val a = normalizeColorValue(executor.numi(instruction.p2))
+                        val r = normalizeColorValue(instruction.x.numi())
+                        val g = normalizeColorValue(instruction.y.numi())
+                        val b = normalizeColorValue(instruction.p1.numi())
+                        val a = normalizeColorValue(instruction.p2.numi())
                         NoHornyImage.Instruction.Color(r, g, b, a)
                     }
                     LogicDisplay.commandRect -> {
-                        val x = executor.numi(instruction.x)
-                        val y = executor.numi(instruction.y)
-                        val w = executor.numi(instruction.p1)
-                        val h = executor.numi(instruction.p2)
+                        val x = instruction.x.numi()
+                        val y = instruction.y.numi()
+                        val w = instruction.p1.numi()
+                        val h = instruction.p2.numi()
                         NoHornyImage.Instruction.Rect(x, y, w, h)
                     }
                     LogicDisplay.commandTriangle -> {
-                        val x1 = executor.numi(instruction.x)
-                        val y1 = executor.numi(instruction.y)
-                        val x2 = executor.numi(instruction.p1)
-                        val y2 = executor.numi(instruction.p2)
-                        val x3 = executor.numi(instruction.p3)
-                        val y3 = executor.numi(instruction.p4)
+                        val x1 = instruction.x.numi()
+                        val y1 = instruction.y.numi()
+                        val x2 = instruction.p1.numi()
+                        val y2 = instruction.p2.numi()
+                        val x3 = instruction.p3.numi()
+                        val y3 = instruction.p4.numi()
                         NoHornyImage.Instruction.Triangle(x1, y1, x2, y2, x3, y3)
                     }
                     else -> continue

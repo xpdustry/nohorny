@@ -21,7 +21,7 @@ Enjoy this family friendly factory building game as the [cat](https://github.com
 
 This plugin requires at least :
 
-- Mindustry v146
+- Mindustry v150
 
 - Java 17
 
