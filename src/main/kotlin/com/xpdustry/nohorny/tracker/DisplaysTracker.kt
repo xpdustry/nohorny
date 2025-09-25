@@ -134,7 +134,7 @@ internal class DisplaysTracker(
         onBuildingLifecycleEvent<LogicBlock.LogicBuild>(
             insert = { processor, player, _ ->
                 val instructions = readInstructions(processor.executor)
-                val links = processor.links.filter { it.valid }.map { ImmutablePoint(it.x, it.y) }
+                val links = processor.links.list().map { ImmutablePoint(it.x, it.y) }
 
                 if (instructions.size < config().displays.minimumInstructionCount || links.isEmpty()) {
                     return@onBuildingLifecycleEvent
