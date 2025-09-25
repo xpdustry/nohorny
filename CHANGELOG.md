@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v3.0.3 - 2025-09-25
+
+### Changes
+
+- NoHorny is now compatible with V8. Thanks @ZetaMap.
+
+### Bugfixes
+
+- Fixed H2 cache not initializing properly.
+- Fixed NoHorny never properly processing processor links. Basically making the plugin useless. Sorry about that.
+
 ## v3.0.2 - 2024-12-19
 
 ### Changes
