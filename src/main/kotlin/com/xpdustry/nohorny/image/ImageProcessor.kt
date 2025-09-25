@@ -74,7 +74,11 @@ internal class ImageProcessorImpl(
             logger.trace("Result for group at ({}, {}): {}", group.x, group.y, result)
             if (store) {
                 logger.trace("Storing result for group at ({}, {})", group.x, group.y)
-                cache.putResult(group, image, result)
+                try {
+                    cache.putResult(group, image, result)
+                } catch (e: Exception) {
+                    logger.error("Failed to store result for group at (${group.x}, ${group.y})", e)
+                }
             }
             Core.app.post {
                 Events.fire(ImageAnalyzerEvent(result, group, image))

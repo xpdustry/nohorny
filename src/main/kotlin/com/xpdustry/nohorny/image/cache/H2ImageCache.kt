@@ -304,15 +304,15 @@ internal class H2ImageCache(
             connection.prepareStatement(
                 """
                 DELETE FROM 
-                    `nh_image`
+                    `nh_image` n1
                 WHERE 
-                    DATEDIFF('MINUTE', `last_match`, CURRENT_TIMESTAMP()) >= ?
+                    DATEDIFF('MINUTE', n1.`last_match`, CURRENT_TIMESTAMP()) >= ?
                     OR 
-                    `id` NOT IN (
+                    n1.`id` NOT IN (
                         SELECT 
-                            `image_id`
+                            n2.`id`
                         FROM 
-                            `nh_image`
+                            `nh_image` n2
                         ORDER BY 
                             `last_match` DESC
                         LIMIT ?

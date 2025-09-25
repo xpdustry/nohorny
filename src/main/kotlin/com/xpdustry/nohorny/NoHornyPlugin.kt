@@ -101,10 +101,14 @@ internal class NoHornyPlugin : Plugin() {
 
     override fun init() {
         reload()
-        val processor = ImageProcessorImpl(this::analyzer, createCache(config.imageCache), ImageRendererImpl)
+        val cache = createCache(config.imageCache)
+        val processor = ImageProcessorImpl(this::analyzer, cache, ImageRendererImpl)
         listeners += CanvasesTracker(this::config, processor)
         listeners += DisplaysTracker(this::config, processor)
         listeners += NoHornyAutoMod(this)
+        if (cache is NoHornyListener) {
+            listeners += cache
+        }
 
         listeners.forEach(NoHornyListener::onInit)
         addExitListener { executor.shutdown() }
