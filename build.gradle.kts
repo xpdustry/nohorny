@@ -1,27 +1,40 @@
-import com.xpdustry.ksr.kotlinRelocate
 import com.xpdustry.toxopid.extension.anukeXpdustry
+import com.xpdustry.toxopid.spec.ModDependency
 import com.xpdustry.toxopid.spec.ModMetadata
 import com.xpdustry.toxopid.spec.ModPlatform
 import com.xpdustry.toxopid.task.GithubAssetDownload
+import com.xpdustry.toxopid.task.MindustryExec
 
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.spotless)
-    alias(libs.plugins.indra.common)
-    alias(libs.plugins.indra.git)
-    alias(libs.plugins.indra.publishing)
-    alias(libs.plugins.shadow)
-    alias(libs.plugins.toxopid)
-    alias(libs.plugins.ksr)
-    alias(libs.plugins.dokka)
+    id("com.diffplug.spotless") version "8.2.1"
+    id("net.kyori.indra") version "4.0.0"
+    id("net.kyori.indra.publishing") version "4.0.0"
+    id("com.gradleup.shadow") version "9.3.1"
+    id("com.xpdustry.toxopid") version "4.2.0"
 }
 
-val metadata = ModMetadata.fromJson(rootProject.file("plugin.json"))
-if (indraGit.headTag() == null) metadata.version += "-SNAPSHOT"
 group = "com.xpdustry"
-version = metadata.version
-description = metadata.description
+version = "4.0.0"
+description = "NO HORNY IN MY SERVER!"
+
+val metadata =
+    ModMetadata(
+        name = "nohorny",
+        displayName = "NoHorny",
+        description = description!!,
+        author = "Xpdustry",
+        version = version.toString(),
+        mainClass = "com.xpdustry.nohorny.NoHornyPlugin",
+        repository = "xpdustry/nohorny",
+        java = true,
+        hidden = true,
+        minGameVersion = "155",
+        dependencies =
+            mutableListOf(
+                ModDependency("slf4md"),
+                ModDependency("sql4md-mariadb", soft = true),
+            ),
+    )
 
 toxopid {
     compileVersion = "v${metadata.minGameVersion}"
@@ -34,29 +47,29 @@ repositories {
 }
 
 dependencies {
-    compileOnly(kotlin("stdlib-jdk8"))
-    compileOnly(libs.kotlinx.coroutines.core)
-    compileOnly(libs.kotlinx.coroutines.jdk8)
-    compileOnly(libs.kotlinx.serialization.json)
-
-    compileOnly(toxopid.dependencies.arcCore)
-    testImplementation(toxopid.dependencies.arcCore)
     compileOnly(toxopid.dependencies.mindustryCore)
+    compileOnly(toxopid.dependencies.mindustryHeadless)
+    compileOnly(toxopid.dependencies.arcCore)
     testImplementation(toxopid.dependencies.mindustryCore)
+    testImplementation(toxopid.dependencies.mindustryHeadless)
+    testImplementation(toxopid.dependencies.arcCore)
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    compileOnlyApi("org.jspecify:jspecify:1.0.0")
+    compileOnly("org.slf4j:slf4j-api:2.0.16")
+    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
+    implementation("com.github.gestalt-config:gestalt-core:0.36.0")
+    implementation("com.zaxxer:HikariCP:7.0.2")
+    runtimeOnly("org.postgresql:postgresql:42.7.10")
+    implementation("com.github.mizosoft.methanol:methanol:1.9.0")
+    implementation("com.google.code.gson:gson:2.13.2")
+    implementation("org.yaml:snakeyaml:2.5")
+    implementation("ai.djl:api:0.36.0")
+    runtimeOnly("ai.djl.pytorch:pytorch-engine:0.36.0")
+}
 
-    compileOnly(libs.slf4j.api)
-    testImplementation(libs.slf4j.simple)
-
-    implementation(libs.okhttp)
-    implementation(libs.hoplite.core)
-    implementation(libs.hoplite.yaml)
-    implementation(libs.guava)
-    implementation(libs.hikari) {
-        exclude("org.slf4j")
-    }
-
-    testImplementation(libs.junit.api)
-    testRuntimeOnly(libs.junit.engine)
+configurations.runtimeClasspath {
+    exclude(group = "org.slf4j")
 }
 
 signing {
@@ -67,8 +80,8 @@ signing {
 
 indra {
     javaVersions {
-        target(17)
-        minimumToolchain(17)
+        target(25)
+        minimumToolchain(25)
     }
 
     publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
@@ -76,13 +89,10 @@ indra {
 
     mitLicense()
 
-    if (metadata.repository.isNotBlank()) {
-        val repo = metadata.repository.split("/")
-        github(repo[0], repo[1]) {
-            ci(true)
-            issues(true)
-            scm(true)
-        }
+    github("xpdustry", "nohorny") {
+        ci(true)
+        issues(true)
+        scm(true)
     }
 
     configurePublications {
@@ -96,22 +106,17 @@ indra {
 }
 
 spotless {
-    kotlin {
-        ktlint()
-        licenseHeaderFile(rootProject.file("HEADER.txt"))
+    java {
+        palantirJavaFormat()
+        formatAnnotations()
+        importOrder("", "\\#")
+        forbidModuleImports()
+        forbidWildcardImports()
+        licenseHeader("// SPDX-License-Identifier: MIT")
     }
     kotlinGradle {
         ktlint()
     }
-}
-
-kotlin {
-    explicitApi()
-}
-
-configurations.runtimeClasspath {
-    exclude("org.jetbrains.kotlin")
-    exclude("org.jetbrains.kotlinx")
 }
 
 val generateMetadataFile by tasks.registering {
@@ -124,30 +129,20 @@ val generateMetadataFile by tasks.registering {
 tasks.shadowJar {
     archiveFileName = "${metadata.name}.jar"
     archiveClassifier = "plugin"
-
     from(generateMetadataFile)
     from(rootProject.file("LICENSE.md")) { into("META-INF") }
-
-    val shadowPackage = "com.xpdustry.nohorny.shadow"
-    kotlinRelocate("com.sksamuel.hoplite", "$shadowPackage.hoplite")
-    kotlinRelocate("okhttp3", "$shadowPackage.okhttp3")
-    kotlinRelocate("okio", "$shadowPackage.okio")
-    relocate("org.yaml.snakeyaml", "$shadowPackage.snakeyaml")
-    relocate("com.google.common", "$shadowPackage.guava")
-    relocate("com.zaxxer.hikari", "$shadowPackage.hikari")
-
+    relocate("org.github.gestalt", "com.xpdustry.nohorny.shadow.gestalt")
+    relocate("com.github.mizosoft.methanol", "com.xpdustry.nohorny.shadow.methanol")
+    relocate("org.yaml.snakeyaml", "com.xpdustry.nohorny.shadow.snakeyaml")
     mergeServiceFiles()
     minimize {
-        exclude(dependency("com.sksamuel.hoplite:hoplite-.*:.*"))
+        exclude(dependency("ai.djl.*:.*:.*"))
+        exclude(dependency("com.github.mizosoft.methanol:methanol:.*"))
     }
 }
 
-tasks.javadocJar {
-    from(tasks.dokkaHtml)
-}
-
 tasks.register<Copy>("release") {
-    dependsOn(tasks.build)
+    dependsOn(tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME))
     from(tasks.shadowJar)
     destinationDir = temporaryDir
 }
@@ -156,23 +151,24 @@ val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
     owner = "xpdustry"
     repo = "slf4md"
     asset = "slf4md.jar"
-    version = "v${libs.versions.slf4md.get()}"
+    version = "v1.2.0"
 }
 
 val downloadSql4md by tasks.registering(GithubAssetDownload::class) {
     owner = "xpdustry"
     repo = "sql4md"
-    asset = "sql4md.jar"
-    version = "v${libs.versions.sql4md.get()}"
-}
-
-val downloadKotlinRuntime by tasks.registering(GithubAssetDownload::class) {
-    owner = "xpdustry"
-    repo = "kotlin-runtime"
-    asset = "kotlin-runtime.jar"
-    version = "v${libs.versions.kotlin.runtime.get()}-k.${libs.versions.kotlin.core.get()}"
+    asset = "sql4md-mariadb.jar"
+    version = "v2.0.1"
 }
 
 tasks.runMindustryServer {
-    mods.from(downloadSlf4md, downloadSql4md, downloadKotlinRuntime)
+    mods.from(downloadSlf4md, downloadSql4md)
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
+}
+
+tasks.withType<MindustryExec> {
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }

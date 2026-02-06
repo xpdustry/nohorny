@@ -21,15 +21,13 @@ Enjoy this family friendly factory building game as the [cat](https://github.com
 
 This plugin requires at least :
 
-- Mindustry v150
+- Mindustry v155
 
-- Java 17
-
-- [KotlinRuntime](https://github.com/xpdustry/kotlin-runtime) latest
+- Java 25
 
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest
 
-- [SQL4MD](https://github.com/xpdustry/sql4md) latest
+- [SQL4MD](https://github.com/xpdustry/sql4md) latest (optional)
 
 ## Usage
 
@@ -37,40 +35,142 @@ Put the plugin in your `config/mods` directory and start your server.
 
 Then, go to the created directory `config/mods/nohorny` and create a file named `config.yaml`.
 
-Now you can set up the analyzer of your choice:
+The plugin has two independent modes:
 
-- **[SightEngine](https://sightengine.com/)**: Very nice service with 2000 free operations per month. Also supports gore detection.
- 
-  ```yaml
-  analyzer:
-    sight-engine-user: xxx
-    sight-engine-secret: xxx
-    # Optional thresholds tweaks
-    unsafe-threshold: 0.55
-    warning-threshold: 0.4
-    kinds:
-      - "NUDITY"
-      # Since gore is very uncommon, it's not enabled by default
-      - "GORE"
-  ```
+- `server`: runs the classification HTTP API.
 
-- **Debug**: The debug analyzer allows you to check if the plugin properly renders the logic and canvases images,
-  by saving them in the directory `config/mods/nohorny/debug`.
+- `client`: tracks displays/canvases and sends them to a remote nohorny server.
+
+You can enable either or both.
+
+### Classifiers
+
+- **ViT**: Run a local Vision Transformer model for classification.
 
   ```yaml
-  analyzer: Debug
+  server:
+    classifiers:
+      - type: vit
+        file: falconsai_nsfw_image_detection.pt
+        labels:
+          - normal
+          - nsfw
+        nsfw-label: nsfw
+        thresholds:
+          nsfw: 0.7
+          warn: 0.4
   ```
-  
-Once you chose your analyzer, load your changes using the command `nohorny-reload` in the console, and enjoy,
-the plugin will automatically ban players that have built structures at `UNSAFE` Rating.
+
+- **SightEngine**: Hosted moderation service.
+
+  ```yaml
+  server:
+    classifiers:
+      - type: sight-engine
+        user: xxx
+        secret: xxx
+        thresholds:
+          nsfw: 0.7
+          warn: 0.5
+  ```
+
+- Multiple classifiers can be configured:
+
+  ```yaml
+  server:
+    classifiers:
+      - type: vit
+        file: model.pt
+        labels:
+          - normal
+          - nsfw
+        nsfw-label: nsfw
+        thresholds:
+          nsfw: 0.7
+          warn: 0.4
+      - type: sight-engine
+        user: xxx
+        secret: xxx
+        thresholds:
+          nsfw: 0.7
+          warn: 0.5
+  ```
+
+### Authenticators
+
+Configure the HTTP server authentication for the API:
+
+- **Allow All**: No authentication (not recommended for production).
+
+  ```yaml
+  server:
+    authenticators:
+      - type: allow-all
+  ```
+
+- **Localhost**: Only allow connections from localhost.
+
+  ```yaml
+  server:
+    authenticators:
+      - type: localhost
+  ```
+
+- **API Key**: Authenticate using persisted API keys. Manage keys with `nohorny-api-keys add|remove|list <label>`. Clients should send the key as `Authorization: Bearer <key>`.
+
+  ```yaml
+  server:
+    authenticators:
+      - type: api-key
+  ```
+
+- **Mindustry Server List**: Only allow known Mindustry servers.
+
+  ```yaml
+  server:
+    authenticators:
+      - type: mindustry-server-list
+        sources:
+          - https://example.com/servers.json
+        refresh-interval: 1h
+  ```
+
+### Client Mode
+
+The generated default `config.yaml` enables client mode and points to the public nohorny endpoint:
+
+```yaml
+client:
+  endpoint: https://nohorny.xpdustry.com
+  timeout: 10s
+  displays:
+    processing-threshold: 0.3
+    processing-delay: 5s
+    minimum-group-size: 1
+    minimum-processor-count: 3
+    minimum-instruction-count: 100
+    processor-search-radius: 10
+  canvases:
+    processing-threshold: 0.3
+    processing-delay: 5s
+    minimum-group-size: 9
+    minimum-palette-size: 3
+  auto-mod:
+    ban-on: NSFW
+    delete-on: WARN
+```
+
+Restart the server after changing the configuration.
+
+### Server Commands
+
+- `nohorny-api-keys <add|remove|list> [label]` - Manage API keys (when api-key authenticator is enabled)
 
 ## Developers
 
-For those of you who want more control, like implementing a validation system to avoid false positives.
+Other plugins can depend on nohorny and listen for `ClassificationEvent`.
 
-I suggest you to use the nohorny API in your plugin.
-
-To do so, add the following in your `build.gradle`
+Add the following to your `build.gradle`:
 
 ```gradle
 repositories {
@@ -82,52 +182,57 @@ dependencies {
 }
 ```
 
-Then you will be able to intercept `ImageAnalyzerEvent`, which is posted every time a group of `NoHornyImage` is processed,
-see [NoHornyAutoMod](src/main/kotlin/com/xpdustry/nohorny/NoHornyAutoMod.kt) for an example.
+Then subscribe to `ClassificationEvent` through Mindustry's event bus.
 
 ## Advanced Configuration
 
 In `config.yaml`:
 
 ```yaml
-# NoHorny built-in auto moderator configuration
-auto-mod:
-  # The minimum rating for nohorny to delete suspicious blocks (also refunding the player's team). Set to null to disable.
-  delete-on: WARNING
-  # The minimum rating for nohorny to ban the player. Set to null to disable.
-  ban-on: UNSAFE
-# The delay between the last logic or canvas block built and the analysis step,
-# lower it on servers with fast build time such as sandbox
-processing-delay: 5s
-# Display tracker configuration
-displays:
-  # The minimum number of draw instructions in a logic processor to be part of a group
-  minimum-instruction-count: 100
-  # The minimum number of logic processors in a group to be eligible for processing
-  minimum-processor-count: 5
-  # The search radius of linked logic processors around a group of logic displays,
-  # tweak depending on the average size of your server maps
-  processor-search-radius: 10
-# Canvas tracker configuration
-canvases:
-  # The minimum number of canvases in a group to be eligible for processing,
-  # relatively high since you a lot of canvases are needed for a clear picture
-  minimum-group-size: 9
-# Image cache configuration, set it to None (image-cache: None) to disable caching
-image-cache:
-  # The retention period of a cached image, if "(now - retention) >= last-match", the image is removed
-  retention: 24h
-  # The maximum number of images to cache, if the cache is overflowing, the least matched images are removed
-  max-size: 1000
+server:
+  host: 127.0.0.1
+  port: 8080
+  classifiers:
+    - type: vit
+      file: falconsai_nsfw_image_detection.pt
+      labels:
+        - normal
+        - nsfw
+      nsfw-label: nsfw
+      thresholds:
+        nsfw: 0.7
+        warn: 0.4
+  authenticators:
+    - type: localhost
+
+client:
+  endpoint: http://127.0.0.1:17656
+  token: ""
+  timeout: 30s
+  displays:
+    processing-threshold: 0.3
+    processing-delay: 5s
+    minimum-group-size: 1
+    minimum-processor-count: 3
+    minimum-instruction-count: 100
+    processor-search-radius: 10
+  canvases:
+    processing-threshold: 0.3
+    processing-delay: 5s
+    minimum-group-size: 9
+    minimum-palette-size: 3
+  auto-mod:
+    delete-on: WARN
+    ban-on: NSFW
 ```
 
 ## Building
 
-- `./gradlew shadowJar` to compile the plugin into a usable jar (will be located at `builds/libs/nohorny.jar`).
+- `./gradlew shadowJar` to compile the plugin into a usable jar at `build/libs/nohorny.jar`.
 
 - `./gradlew runMindustryServer` to run the plugin in a local Mindustry server.
 
-- `./gradlew runMindustryClient` to start a local Mindustry client that will let you test the plugin.
+- `./gradlew runMindustryDesktop` to start a local Mindustry client for testing.
 
 - `./gradlew spotlessApply` to apply the code formatting and the licence header.
 
