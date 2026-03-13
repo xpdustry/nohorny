@@ -61,7 +61,7 @@ dependencies {
     compileOnlyApi("org.jspecify:jspecify:1.0.0")
     compileOnly("org.slf4j:slf4j-api:2.0.17")
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
-    implementation("com.github.gestalt-config:gestalt-core:0.36.0")
+    implementation("com.github.gestalt-config:gestalt-core:0.37.1")
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("com.github.mizosoft.methanol:methanol:1.9.0")
     implementation("com.google.code.gson:gson:2.13.2")
