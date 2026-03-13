@@ -65,7 +65,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("com.github.mizosoft.methanol:methanol:1.9.0")
     implementation("com.google.code.gson:gson:2.13.2")
-    implementation("org.yaml:snakeyaml:2.5")
+    implementation("org.yaml:snakeyaml:2.6")
     implementation("ai.djl:api:0.36.0")
     runtimeOnly("ai.djl.pytorch:pytorch-engine:0.36.0")
     annotationProcessor("com.uber.nullaway:nullaway:0.12.15")
