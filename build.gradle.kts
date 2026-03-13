@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "com.xpdustry"
-version = "4.0.0-beta.1"
+version = "4.0.0-beta.1" + if (findProperty("release").toString().toBoolean()) "" else "-SNAPSHOT"
 description = "NO HORNY IN MY SERVER!"
 
 val metadata =
@@ -160,6 +160,10 @@ tasks.runMindustryServer {
 
 tasks.build {
     dependsOn(tasks.shadowJar)
+}
+
+tasks.requireClean {
+    enabled = false
 }
 
 tasks.withType<MindustryExec> {
