@@ -53,7 +53,7 @@ dependencies {
     testImplementation(toxopid.dependencies.mindustryCore)
     testImplementation(toxopid.dependencies.mindustryHeadless)
     testImplementation(toxopid.dependencies.arcCore)
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     compileOnlyApi("org.jspecify:jspecify:1.0.0")
     compileOnly("org.slf4j:slf4j-api:2.0.16")
