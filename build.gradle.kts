@@ -88,8 +88,8 @@ indra {
         minimumToolchain(25)
     }
 
-    publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
-    publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
+    // publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
+    // publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
 
     mitLicense()
 
