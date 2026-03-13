@@ -69,7 +69,7 @@ dependencies {
     implementation("ai.djl:api:0.36.0")
     runtimeOnly("ai.djl.pytorch:pytorch-engine:0.36.0")
     annotationProcessor("com.uber.nullaway:nullaway:0.12.15")
-    errorprone("com.google.errorprone:error_prone_core:2.46.0")
+    errorprone("com.google.errorprone:error_prone_core:2.48.0")
 }
 
 configurations.runtimeClasspath {
