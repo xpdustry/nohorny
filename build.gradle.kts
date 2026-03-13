@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "com.xpdustry"
-version = "4.0.0"
+version = "4.0.0-beta.1"
 description = "NO HORNY IN MY SERVER!"
 
 val metadata =
@@ -60,7 +60,6 @@ dependencies {
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
     implementation("com.github.gestalt-config:gestalt-core:0.36.0")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    runtimeOnly("org.postgresql:postgresql:42.7.10")
     implementation("com.github.mizosoft.methanol:methanol:1.9.0")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("org.yaml:snakeyaml:2.5")
@@ -139,12 +138,6 @@ tasks.shadowJar {
         exclude(dependency("ai.djl.*:.*:.*"))
         exclude(dependency("com.github.mizosoft.methanol:methanol:.*"))
     }
-}
-
-tasks.register<Copy>("release") {
-    dependsOn(tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME))
-    from(tasks.shadowJar)
-    destinationDir = temporaryDir
 }
 
 val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
