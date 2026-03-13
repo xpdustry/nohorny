@@ -140,6 +140,7 @@ public final class MindustryServerAuthenticator implements Authenticator {
 
     private static final class ServerListAdapter extends TypeAdapter<Set<InetAddress>> {
 
+        @SuppressWarnings("EmptyCatch")
         @Override
         public @Nullable Set<InetAddress> read(final JsonReader in) throws IOException {
             if (in.peek() == JsonToken.NULL) {
@@ -157,7 +158,7 @@ public final class MindustryServerAuthenticator implements Authenticator {
                 final var string = in.nextString();
                 try {
                     addresses.add(InetAddress.getByName(extractHost(string)));
-                } catch (final UnknownHostException ignored) {
+                } catch (final UnknownHostException _) {
                 }
             }
             in.endArray();

@@ -142,7 +142,7 @@ public final class NoHornyServer implements NoHornyListener {
             }
         }
 
-        public List<DetectionResult> detect(
+        private List<DetectionResult> detect(
                 final VirtualBuilding.Group<? extends MindustryImage> group, final DetectionRequester requester) {
             final var rendered = renderer.render(group);
             final var results = new ArrayList<DetectionResult>(classifiers.size());

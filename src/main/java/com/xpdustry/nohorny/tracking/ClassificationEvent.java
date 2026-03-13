@@ -22,6 +22,7 @@ public record ClassificationEvent(
         this(classification, group, computeAuthor(group));
     }
 
+    @SuppressWarnings("NullAway")
     private static @Nullable MindustryAuthor computeAuthor(
             final VirtualBuilding.Group<? extends MindustryImage> group) {
         final var authors = new ArrayList<MindustryAuthor>();
@@ -58,6 +59,7 @@ public record ClassificationEvent(
                 best = author;
             }
         }
+
         return best;
     }
 }

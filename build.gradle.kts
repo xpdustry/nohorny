@@ -4,6 +4,8 @@ import com.xpdustry.toxopid.spec.ModMetadata
 import com.xpdustry.toxopid.spec.ModPlatform
 import com.xpdustry.toxopid.task.GithubAssetDownload
 import com.xpdustry.toxopid.task.MindustryExec
+import net.ltgt.gradle.errorprone.CheckSeverity
+import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     id("com.diffplug.spotless") version "8.2.1"
@@ -11,6 +13,7 @@ plugins {
     id("net.kyori.indra.publishing") version "4.0.0"
     id("com.gradleup.shadow") version "9.3.1"
     id("com.xpdustry.toxopid") version "4.2.0"
+    id("net.ltgt.errorprone") version "4.4.0"
 }
 
 group = "com.xpdustry"
@@ -65,6 +68,8 @@ dependencies {
     implementation("org.yaml:snakeyaml:2.5")
     implementation("ai.djl:api:0.36.0")
     runtimeOnly("ai.djl.pytorch:pytorch-engine:0.36.0")
+    annotationProcessor("com.uber.nullaway:nullaway:0.12.15")
+    errorprone("com.google.errorprone:error_prone_core:2.46.0")
 }
 
 configurations.runtimeClasspath {
@@ -168,4 +173,13 @@ tasks.requireClean {
 
 tasks.withType<MindustryExec> {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+tasks.withType<JavaCompile> {
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        disable("MissingSummary", "InlineMeSuggester")
+        check("NullAway", if (name.contains("test", ignoreCase = true)) CheckSeverity.OFF else CheckSeverity.ERROR)
+        option("NullAway:AnnotatedPackages", "com.xpdustry.slf4md")
+    }
 }

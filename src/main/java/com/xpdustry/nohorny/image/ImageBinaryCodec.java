@@ -233,7 +233,7 @@ public final class ImageBinaryCodec {
         if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
             throw new IOException("16-bit signed frame value out of range: " + value);
         }
-        return (Integer.toUnsignedLong(value & 0xFFFF)) << (index * ELEMENT_COORD_BITS);
+        return Integer.toUnsignedLong(value & 0xFFFF) << (index * ELEMENT_COORD_BITS);
     }
 
     private static long packUnsigned16(final int value, final int index) throws IOException {

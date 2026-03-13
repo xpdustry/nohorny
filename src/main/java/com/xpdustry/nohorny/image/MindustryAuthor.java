@@ -4,8 +4,8 @@ package com.xpdustry.nohorny.image;
 import java.net.InetAddress;
 import mindustry.gen.Player;
 
-public record MindustryAuthor(String uuid, String usid, InetAddress address) {
+public record MindustryAuthor(String uuid, InetAddress address) {
     public MindustryAuthor(final Player player) {
-        this(player.uuid(), player.usid(), InetAddress.ofLiteral(player.ip()));
+        this(player.uuid(), InetAddress.ofLiteral(player.ip()));
     }
 }
