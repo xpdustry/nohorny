@@ -20,7 +20,7 @@ jobs:
     steps:
 
       - name: "Download and Extract Test Results"
-        uses: dawidd6/action-download-artifact@883bc3da0e2f55ddd0a8fc8e99378551c1991a55 # v13
+        uses: dawidd6/action-download-artifact@09b07ec687d10771279a426c79925ee415c12906 # v17
         with:
           run_id: ${{ github.event.workflow_run.id }}
           path: artifacts
