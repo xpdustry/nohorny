@@ -1,185 +1,223 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.xpdustry.toxopid.ToxopidExtension
 import com.xpdustry.toxopid.extension.anukeXpdustry
 import com.xpdustry.toxopid.spec.ModDependency
 import com.xpdustry.toxopid.spec.ModMetadata
 import com.xpdustry.toxopid.spec.ModPlatform
 import com.xpdustry.toxopid.task.GithubAssetDownload
 import com.xpdustry.toxopid.task.MindustryExec
+import net.kyori.indra.IndraExtension
+import net.kyori.indra.git.task.RequireClean
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
-    id("com.diffplug.spotless") version "8.3.0"
-    id("net.kyori.indra") version "4.0.0"
-    id("net.kyori.indra.publishing") version "4.0.0"
-    id("com.gradleup.shadow") version "9.3.2"
-    id("com.xpdustry.toxopid") version "4.2.0"
-    id("net.ltgt.errorprone") version "4.4.0"
+    id("com.diffplug.spotless") version "8.3.0" apply false
+    id("net.kyori.indra") version "4.0.0" apply false
+    id("net.kyori.indra.publishing") version "4.0.0" apply false
+    id("com.gradleup.shadow") version "9.3.2" apply false
+    id("com.xpdustry.toxopid") version "4.2.0" apply false
+    id("net.ltgt.errorprone") version "4.4.0" apply false
 }
 
 group = "com.xpdustry"
 version = "4.0.0-beta.1" + if (findProperty("release").toString().toBoolean()) "" else "-SNAPSHOT"
 description = "NO HORNY IN MY SERVER!"
 
-val metadata =
-    ModMetadata(
-        name = "nohorny",
-        displayName = "NoHorny",
-        description = description!!,
-        author = "Xpdustry",
-        version = version.toString(),
-        mainClass = "com.xpdustry.nohorny.NoHornyPlugin",
-        repository = "xpdustry/nohorny",
-        java = true,
-        hidden = true,
-        minGameVersion = "155",
-        dependencies =
-            mutableListOf(
-                ModDependency("slf4md"),
-                ModDependency("sql4md-mariadb", soft = true),
-            ),
-    )
+subprojects {
+    apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "net.kyori.indra")
+    apply(plugin = "net.kyori.indra.publishing")
+    apply(plugin = "net.ltgt.errorprone")
 
-toxopid {
-    compileVersion = "v${metadata.minGameVersion}"
-    platforms = setOf(ModPlatform.SERVER)
-}
-
-repositories {
-    mavenCentral()
-    anukeXpdustry()
-}
-
-dependencies {
-    compileOnly(toxopid.dependencies.mindustryCore)
-    compileOnly(toxopid.dependencies.mindustryHeadless)
-    compileOnly(toxopid.dependencies.arcCore)
-    testImplementation(toxopid.dependencies.mindustryCore)
-    testImplementation(toxopid.dependencies.mindustryHeadless)
-    testImplementation(toxopid.dependencies.arcCore)
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    compileOnlyApi("org.jspecify:jspecify:1.0.0")
-    compileOnly("org.slf4j:slf4j-api:2.0.17")
-    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
-    implementation("com.github.gestalt-config:gestalt-core:0.37.1")
-    implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("com.github.mizosoft.methanol:methanol:1.9.0")
-    implementation("com.google.code.gson:gson:2.13.2")
-    implementation("org.yaml:snakeyaml:2.6")
-    implementation("ai.djl:api:0.36.0")
-    runtimeOnly("ai.djl.pytorch:pytorch-engine:0.36.0")
-    annotationProcessor("com.uber.nullaway:nullaway:0.12.15")
-    errorprone("com.google.errorprone:error_prone_core:2.46.0")
-}
-
-configurations.runtimeClasspath {
-    exclude(group = "org.slf4j")
-}
-
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKey, signingPassword)
-}
-
-indra {
-    javaVersions {
-        target(25)
-        minimumToolchain(25)
+    repositories {
+        mavenCentral()
+        anukeXpdustry()
     }
 
-    // publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
-    // publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
-
-    mitLicense()
-
-    github("xpdustry", "nohorny") {
-        ci(true)
-        issues(true)
-        scm(true)
+    dependencies {
+        "errorprone"("com.google.errorprone:error_prone_core:2.46.0")
+        "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
+        "annotationProcessor"("com.uber.nullaway:nullaway:0.12.15")
+        "testAnnotationProcessor"("com.uber.nullaway:nullaway:0.12.15")
+        "testImplementation"("org.junit.jupiter:junit-jupiter:6.0.3")
+        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
-    configurePublications {
-        pom {
-            organization {
-                name = "xpdustry"
-                url = "https://www.xpdustry.com"
+    configure<SigningExtension> {
+        val signingKey: String? by project
+        val signingPassword: String? by project
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+
+    configure<IndraExtension> {
+        javaVersions {
+            target(25)
+            minimumToolchain(25)
+        }
+
+        // publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
+        // publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
+
+        mitLicense()
+
+        github("xpdustry", "nohorny") {
+            ci(true)
+            issues(true)
+            scm(true)
+        }
+
+        configurePublications {
+            pom {
+                organization {
+                    name = "xpdustry"
+                    url = "https://www.xpdustry.com"
+                }
+
+                developers {
+                    developer {
+                        id.set("Phinner")
+                        timezone.set("Europe/Brussels")
+                    }
+
+                    developer {
+                        id.set("ZetaMap")
+                        timezone.set("Europe/Paris")
+                    }
+                }
             }
+        }
+    }
+
+    configure<SpotlessExtension> {
+        java {
+            palantirJavaFormat()
+            formatAnnotations()
+            importOrder("", "\\#")
+            forbidModuleImports()
+            forbidWildcardImports()
+            licenseHeader("// SPDX-License-Identifier: MIT")
+        }
+        kotlinGradle {
+            ktlint()
+        }
+    }
+
+    tasks.withType<RequireClean> {
+        enabled = false
+    }
+
+    tasks.withType<JavaCompile> {
+        options.errorprone {
+            disableWarningsInGeneratedCode = true
+            disable("MissingSummary", "InlineMeSuggester")
+            option("NullAway:OnlyNullMarked")
+            check("NullAway", CheckSeverity.ERROR)
         }
     }
 }
 
-spotless {
-    java {
-        palantirJavaFormat()
-        formatAnnotations()
-        importOrder("", "\\#")
-        forbidModuleImports()
-        forbidWildcardImports()
-        licenseHeader("// SPDX-License-Identifier: MIT")
-    }
-    kotlinGradle {
-        ktlint()
-    }
-}
+configure(listOf(project(":nohorny-client"), project(":nohorny-server"))) {
+    apply(plugin = "com.gradleup.shadow")
 
-val generateMetadataFile by tasks.registering {
-    inputs.property("metadata", metadata)
-    val output = temporaryDir.resolve("plugin.json")
-    outputs.file(output)
-    doLast { output.writeText(ModMetadata.toJson(metadata)) }
-}
+    dependencies {
+        "implementation"(project(":nohorny-common"))
+        "implementation"("com.google.code.gson:gson:2.13.2")
+        "implementation"("org.slf4j:slf4j-api:2.0.17")
+        "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")
+    }
 
-tasks.shadowJar {
-    archiveFileName = "${metadata.name}.jar"
-    archiveClassifier = "plugin"
-    from(generateMetadataFile)
-    from(rootProject.file("LICENSE.md")) { into("META-INF") }
-    relocate("org.github.gestalt", "com.xpdustry.nohorny.shadow.gestalt")
-    relocate("com.github.mizosoft.methanol", "com.xpdustry.nohorny.shadow.methanol")
-    relocate("org.yaml.snakeyaml", "com.xpdustry.nohorny.shadow.snakeyaml")
-    mergeServiceFiles()
-    minimize {
-        exclude(dependency("ai.djl.*:.*:.*"))
-        exclude(dependency("com.github.mizosoft.methanol:methanol:.*"))
+    tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
+        archiveFileName = "${project.name}.jar"
+        archiveClassifier = "shaded"
+        from(rootProject.file("LICENSE.md")) { into("META-INF") }
+        minimize()
+        mergeServiceFiles()
+    }
+
+    tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME) {
+        dependsOn(tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME))
     }
 }
 
-val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
-    owner = "xpdustry"
-    repo = "slf4md"
-    asset = "slf4md.jar"
-    version = "v1.2.0"
+project(":nohorny-server") {
+    dependencies {
+        "implementation"("com.github.gestalt-config:gestalt-core:0.37.1")
+        "implementation"("org.yaml:snakeyaml:2.6")
+        "implementation"("ai.djl:api:0.36.0")
+        "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
+        "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
+    }
+
+    tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
+        minimize { exclude(dependency("ai.djl.*:.*:.*")) }
+    }
 }
 
-val downloadSql4md by tasks.registering(GithubAssetDownload::class) {
-    owner = "xpdustry"
-    repo = "sql4md"
-    asset = "sql4md-mariadb.jar"
-    version = "v2.0.1"
-}
+project(":nohorny-client") {
+    apply(plugin = "com.xpdustry.toxopid")
 
-tasks.runMindustryServer {
-    mods.from(downloadSlf4md, downloadSql4md)
-}
+    val metadata =
+        ModMetadata(
+            name = "nohorny",
+            displayName = "NoHorny",
+            description = description!!,
+            author = "Xpdustry",
+            version = version.toString(),
+            mainClass = "com.xpdustry.nohorny.client.NoHornyPlugin",
+            repository = "xpdustry/nohorny",
+            java = true,
+            hidden = true,
+            minGameVersion = "156.2",
+            dependencies = mutableListOf(ModDependency("slf4md")),
+        )
 
-tasks.build {
-    dependsOn(tasks.shadowJar)
-}
+    val toxopid = extensions.getByType<ToxopidExtension>()
+    toxopid.platforms = setOf(ModPlatform.SERVER)
+    toxopid.compileVersion = "v${metadata.minGameVersion}"
 
-tasks.requireClean {
-    enabled = false
-}
+    repositories {
+        anukeXpdustry()
+    }
 
-tasks.withType<MindustryExec> {
-    jvmArgs("--enable-native-access=ALL-UNNAMED")
-}
+    dependencies {
+        "compileOnly"(toxopid.dependencies.mindustryCore)
+        "testImplementation"(toxopid.dependencies.mindustryCore)
+        "compileOnly"(toxopid.dependencies.arcCore)
+        "testImplementation"(toxopid.dependencies.arcCore)
+        "compileOnly"(toxopid.dependencies.mindustryHeadless)
+        "testImplementation"(toxopid.dependencies.mindustryHeadless)
+    }
 
-tasks.withType<JavaCompile> {
-    options.errorprone {
-        disableWarningsInGeneratedCode = true
-        disable("MissingSummary", "InlineMeSuggester")
-        check("NullAway", if (name.contains("test", ignoreCase = true)) CheckSeverity.OFF else CheckSeverity.ERROR)
-        option("NullAway:AnnotatedPackages", "com.xpdustry.slf4md")
+    configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) {
+        exclude(group = "org.slf4j")
+    }
+
+    val generateMetadataFile by tasks.registering {
+        inputs.property("metadata", metadata)
+        val output = temporaryDir.resolve("plugin.json")
+        outputs.file(output)
+        doLast { output.writeText(ModMetadata.toJson(metadata)) }
+    }
+
+    tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
+        relocate("com.google.code.gson", "com.xpdustry.nohorny.client.shadow.gson")
+        from(generateMetadataFile)
+    }
+
+    val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
+        owner = "xpdustry"
+        repo = "slf4md"
+        asset = "slf4md.jar"
+        version = "v1.2.0"
+    }
+
+    tasks.named<MindustryExec>(MindustryExec.SERVER_EXEC_TASK_NAME) {
+        mods.from(downloadSlf4md)
+    }
+
+    tasks.withType<MindustryExec> {
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
     }
 }
