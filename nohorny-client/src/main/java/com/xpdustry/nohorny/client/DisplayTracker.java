@@ -2,6 +2,7 @@
 package com.xpdustry.nohorny.client;
 
 import com.xpdustry.nohorny.common.geometry.ImmutablePoint2;
+import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
 import com.xpdustry.nohorny.common.image.DrawInstruction;
 import com.xpdustry.nohorny.common.image.MindustryAuthor;
@@ -28,17 +29,17 @@ import org.jspecify.annotations.Nullable;
 final class DisplayTracker implements LifecycleListener {
 
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 40;
-    private static final int PROCESSOR_SEARCH_RADIUS = Vars.content.blocks().list().stream()
-            .filter(LogicBlock.class::isInstance)
-            .mapToInt(b -> (int) ((LogicBlock) b).range / Vars.tilesize)
-            .max()
-            .orElse(4);
+    private static final int PROCESSOR_SEARCH_RADIUS = 8;
 
-    private final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
+    // TODO Maybe dynamically assembling displays+processors aint a good idea, return to chirurgical updates?
+    final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final VirtualBuildingIndexMarker modified = new VirtualBuildingIndexMarker();
-    private final VirtualBuildingIndex<Integer> resolutions = new VirtualBuildingIndex<>();
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().name("display-tracker-worker").daemon().factory());
+    final VirtualBuildingIndex<Integer> resolutions = new VirtualBuildingIndex<>();
+    final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
+            .name("display-tracker-worker")
+            .daemon()
+            .uncaughtExceptionHandler(LoggingExceptionHandler.INSTANCE)
+            .factory());
     private final NoHornyClient client;
 
     private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<ImmutablePoint2> links) {}
@@ -52,7 +53,7 @@ final class DisplayTracker implements LifecycleListener {
     public void onInit() {
         this.scheduler.scheduleWithFixedDelay(this::collect, 2, 2, TimeUnit.SECONDS);
 
-        EventUtils.subscribe(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
+        MindustryUtils.onEvent(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(final LogicDisplay.LogicDisplayBuild building, final @Nullable Player player) {
                 final int x = BuildingUtils.anchorTileX(building);
@@ -74,7 +75,7 @@ final class DisplayTracker implements LifecycleListener {
             }
         });
 
-        EventUtils.subscribe(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
+        MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(final LogicBlock.LogicBuild building, final @Nullable Player player) {
                 final var x = BuildingUtils.anchorTileX(building);
@@ -169,15 +170,7 @@ final class DisplayTracker implements LifecycleListener {
         if (!Vars.state.isGame()) {
             return;
         }
-        final var displays = new VirtualBuildingIndex<MindustryDisplay>();
-        for (final var building : this.resolutions.selectAll()) {
-            final var processors = this.getProcessorsLinkedTo(building.x(), building.y(), building.size());
-            if (processors.isEmpty()) {
-                continue;
-            }
-            displays.insert(
-                    building.x(), building.y(), building.size(), new MindustryDisplay(building.data(), processors));
-        }
+        final var displays = this.assembleDisplayIndex();
         final var marked = displays.groups().stream()
                 .filter(group -> group.elements().stream()
                         .anyMatch(display -> display.data().processors().keySet().stream()
@@ -194,6 +187,33 @@ final class DisplayTracker implements LifecycleListener {
         }
     }
 
+    VirtualBuildingIndex<MindustryDisplay> assembleDisplayIndex() {
+        final var displays = new VirtualBuildingIndex<MindustryDisplay>();
+        for (final var building : this.resolutions.selectAll()) {
+            final var processors = this.getProcessorsLinkedTo(building.x(), building.y(), building.size());
+            if (processors.isEmpty()) {
+                continue;
+            }
+            displays.insert(
+                    building.x(), building.y(), building.size(), new MindustryDisplay(building.data(), processors));
+        }
+        return displays;
+    }
+
+    // TODO This does not make me very happy :(
+    VirtualBuilding.@Nullable Group<MindustryDisplay> getGroupAt(final int x, final int y) {
+        final var displays = new VirtualBuildingIndex<MindustryDisplay>();
+        for (final var building : this.resolutions.selectAll()) {
+            final var processors = this.getProcessorsLinkedTo(building.x(), building.y(), building.size());
+            if (processors.isEmpty()) {
+                continue;
+            }
+            displays.insert(
+                    building.x(), building.y(), building.size(), new MindustryDisplay(building.data(), processors));
+        }
+        return displays.groupAt(x, y);
+    }
+
     private Map<ImmutablePoint2, MindustryDisplay.Processor> getProcessorsLinkedTo(
             final int x, final int y, final int size) {
         final int minX = Math.max(0, x - PROCESSOR_SEARCH_RADIUS);
@@ -204,7 +224,7 @@ final class DisplayTracker implements LifecycleListener {
         final var result = new HashMap<ImmutablePoint2, MindustryDisplay.Processor>();
         for (final var processor : this.processors.selectAllWithinSquare(minX, minY, radius)) {
             for (final var link : processor.data().links()) {
-                if ((x <= link.x() && link.x() < x + size) && (y <= link.y() && link.y() < y + size)) {
+                if (x <= link.x() && link.x() < x + size && y <= link.y() && link.y() < y + size) {
                     result.put(
                             new ImmutablePoint2(processor.x() - x, processor.y() - y),
                             processor.data().processor());

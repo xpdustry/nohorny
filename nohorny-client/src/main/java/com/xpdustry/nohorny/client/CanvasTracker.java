@@ -22,10 +22,13 @@ final class CanvasTracker implements LifecycleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanvasTracker.class);
 
-    private final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
+    final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
     private final VirtualBuildingIndexMarker modified = new VirtualBuildingIndexMarker();
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().name("canvas-tracker-worker").daemon().factory());
+    final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
+            .name("canvas-tracker-worker")
+            .daemon()
+            .uncaughtExceptionHandler(LoggingExceptionHandler.INSTANCE)
+            .factory());
     private final NoHornyClient client;
 
     public CanvasTracker(final NoHornyClient client) {
@@ -37,7 +40,7 @@ final class CanvasTracker implements LifecycleListener {
     public void onInit() {
         this.scheduler.scheduleWithFixedDelay(this::collect, 2, 2, TimeUnit.SECONDS);
 
-        EventUtils.subscribe(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {
+        MindustryUtils.onEvent(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(final CanvasBlock.CanvasBuild building, final @Nullable Player player) {
                 final var x = BuildingUtils.anchorTileX(building);

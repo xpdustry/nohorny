@@ -66,10 +66,12 @@ public final class ImageRenderer {
                 for (int y = 0; y < canvas.resolution(); y++) {
                     for (int x = 0; x < canvas.resolution(); x++) {
                         final var index = Byte.toUnsignedInt(canvas.pixels().get(x + (y * canvas.resolution())));
-                        final var value = canvas.palette().get(index);
-                        final var color = new Color(value, true);
+                        final var value = canvas.palette().get(index) >> 8;
+                        // The java.awt.Color(rgba) but it actually expects argb, what the fuck java...
+                        final var color = new Color(value, false);
                         graphics.setColor(color);
-                        graphics.fillRect(x, y, 1, 1);
+                        // We are already working with an inverted Y axis so revert it
+                        graphics.fillRect(x, canvas.resolution() - y - 1, 1, 1);
                     }
                 }
             }

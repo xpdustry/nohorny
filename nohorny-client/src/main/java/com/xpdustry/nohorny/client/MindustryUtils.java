@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.Core;
 import arc.Events;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
@@ -11,9 +12,9 @@ import org.slf4j.LoggerFactory;
 import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileX;
 import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileY;
 
-final class EventUtils {
+final class MindustryUtils {
 
-    public static <T> void subscribe(final Class<T> type, final EventListener<T> listener) {
+    public static <T> void onEvent(final Class<T> type, final EventListener<T> listener) {
         Events.on(type, event -> {
             try {
                 listener.onEvent(event);
@@ -24,9 +25,20 @@ final class EventUtils {
         });
     }
 
-    public static <B extends Building> void subscribe(
+    public static <T extends Enum<T>> void onEvent(final T type, final EventListener<T> listener) {
+        Events.run(type, () -> {
+            try {
+                listener.onEvent(type);
+            } catch (final Throwable e) {
+                LoggerFactory.getLogger(NoHornyPlugin.class)
+                        .error("An error occurred while handling event {}", type, e);
+            }
+        });
+    }
+
+    public static <B extends Building> void onEvent(
             final Class<B> type, final BuildingLifecycleEventListener<B> listener) {
-        EventUtils.subscribe(EventType.BlockBuildEndEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.BlockBuildEndEvent.class, event -> {
             if (event.tile.build instanceof ConstructBlock.ConstructBuild constructing) {
                 if (constructing.prevBuild != null) {
                     for (final var building : constructing.prevBuild) {
@@ -47,20 +59,20 @@ final class EventUtils {
             }
         });
 
-        EventUtils.subscribe(EventType.BlockDestroyEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.BlockDestroyEvent.class, event -> {
             if (type.isInstance(event.tile.build)) {
                 listener.onRemove(
                         anchorTileX(event.tile.build), anchorTileY(event.tile.build), event.tile.build.block.size);
             }
         });
 
-        EventUtils.subscribe(EventType.BuildingBulletDestroyEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.BuildingBulletDestroyEvent.class, event -> {
             if (type.isInstance(event.build)) {
                 listener.onRemove(anchorTileX(event.build), anchorTileY(event.build), event.build.block.size);
             }
         });
 
-        EventUtils.subscribe(EventType.BuildTeamChangeEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.BuildTeamChangeEvent.class, event -> {
             if (type.isInstance(event.build)) {
                 final var casted = type.cast(event.build);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
@@ -68,7 +80,7 @@ final class EventUtils {
             }
         });
 
-        EventUtils.subscribe(EventType.ConfigEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.ConfigEvent.class, event -> {
             if (type.isInstance(event.tile)) {
                 final var casted = type.cast(event.tile);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
@@ -76,7 +88,7 @@ final class EventUtils {
             }
         });
 
-        EventUtils.subscribe(EventType.StateChangeEvent.class, event -> {
+        MindustryUtils.onEvent(EventType.StateChangeEvent.class, event -> {
             if (event.from == GameState.State.menu
                     && (event.to == GameState.State.playing || event.to == GameState.State.paused)) {
                 listener.onRemoveAll();
@@ -84,5 +96,16 @@ final class EventUtils {
         });
     }
 
-    private EventUtils() {}
+    public static void runInMainThread(final Runnable runnable) {
+        Core.app.post(() -> {
+            try {
+                runnable.run();
+            } catch (final Throwable e) {
+                LoggerFactory.getLogger(NoHornyPlugin.class)
+                        .error("An error occurred while running a task in the main thread", e);
+            }
+        });
+    }
+
+    private MindustryUtils() {}
 }

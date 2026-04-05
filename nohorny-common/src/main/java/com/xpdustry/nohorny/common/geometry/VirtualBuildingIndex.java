@@ -3,13 +3,13 @@ package com.xpdustry.nohorny.common.geometry;
 
 import com.xpdustry.nohorny.common.NoHornyChecks;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -136,47 +136,54 @@ public final class VirtualBuildingIndex<T> {
         }
     }
 
+    // TODO Refactor to convert into an Iterator, with starting positions for groups and max bound size
     public Collection<VirtualBuilding.Group<T>> groups() {
         final var queue = new ArrayDeque<Integer>();
         final var visited = new HashSet<Integer>();
-        final var groups = new ArrayList<VirtualBuilding.Group<T>>();
+        return this.index.values().stream()
+                .map(building -> this.groupAt(building.x(), building.y(), visited, queue))
+                .filter(Objects::nonNull)
+                .toList();
+    }
 
-        for (final var building : this.index.values()) {
-            if (!visited.add(pack(building.x(), building.y()))) {
+    public VirtualBuilding.@Nullable Group<T> groupAt(final int x, final int y) {
+        return this.groupAt(x, y, new HashSet<>(), new ArrayDeque<>());
+    }
+
+    public VirtualBuilding.@Nullable Group<T> groupAt(
+            final int x, final int y, final Set<Integer> visited, final Queue<Integer> queue) {
+        final var building = this.select(x, y);
+        if (building == null || !visited.add(pack(building.x(), building.y()))) {
+            return null;
+        }
+
+        int minX = building.x();
+        int minY = building.y();
+        int maxX = building.x() + building.size();
+        int maxY = building.y() + building.size();
+
+        final var set = new HashSet<VirtualBuilding<T>>();
+        queue.add(pack(building.x(), building.y()));
+
+        while (!queue.isEmpty()) {
+            final var visiting = this.index.get(queue.remove());
+            if (visiting == null) {
                 continue;
             }
 
-            int minX = building.x();
-            int minY = building.y();
-            int maxX = building.x() + building.size();
-            int maxY = building.y() + building.size();
+            minX = Math.min(minX, visiting.x());
+            minY = Math.min(minY, visiting.y());
+            maxX = Math.max(maxX, visiting.x() + visiting.size());
+            maxY = Math.max(maxY, visiting.y() + visiting.size());
+            set.add(visiting);
 
-            final var set = new HashSet<VirtualBuilding<T>>();
-            queue.addLast(pack(building.x(), building.y()));
-
-            while (!queue.isEmpty()) {
-                final var visiting = this.index.get(queue.removeFirst());
-                if (visiting == null) {
-                    continue;
-                }
-
-                minX = Math.min(minX, visiting.x());
-                minY = Math.min(minY, visiting.y());
-                maxX = Math.max(maxX, visiting.x() + visiting.size());
-                maxY = Math.max(maxY, visiting.y() + visiting.size());
-                set.add(visiting);
-
-                for (final var neighbor : this.selectAllAdjacent(visiting.x(), visiting.y())) {
-                    if (visited.add(pack(neighbor.x(), neighbor.y()))) {
-                        queue.addLast(pack(neighbor.x(), neighbor.y()));
-                    }
+            for (final var neighbor : this.selectAllAdjacent(visiting.x(), visiting.y())) {
+                if (visited.add(pack(neighbor.x(), neighbor.y()))) {
+                    queue.add(pack(neighbor.x(), neighbor.y()));
                 }
             }
-
-            groups.add(new VirtualBuilding.Group<>(
-                    minX, minY, maxX - minX, maxY - minY, Collections.unmodifiableSet(set)));
         }
 
-        return Collections.unmodifiableList(groups);
+        return new VirtualBuilding.Group<>(minX, minY, maxX - minX, maxY - minY, Collections.unmodifiableSet(set));
     }
 }

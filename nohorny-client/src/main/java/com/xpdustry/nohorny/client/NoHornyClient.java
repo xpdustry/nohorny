@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.UncheckedIOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,6 +43,7 @@ public final class NoHornyClient implements LifecycleListener {
 
     private final Gson gson = new GsonBuilder().setStrictness(Strictness.STRICT).create();
     private final HttpClient http = HttpClient.newHttpClient();
+    // TODO Named threads?
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     private final Supplier<URI> endpoint = ConfigUtils.registerSafeSettingEntry(
@@ -59,15 +61,17 @@ public final class NoHornyClient implements LifecycleListener {
         final HttpResponse<String> response;
         try {
             response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (final ConnectException e) {
+            LOGGER.error("The configured NoHorny server ({}) is not reachable, is it running?", this.resolve(""));
+            return;
         } catch (final Exception e) {
             LOGGER.error("Failed to check the status of {}", this.resolve(""), e);
             return;
         }
         if (response.statusCode() != 200) {
-            LOGGER.error(
-                    "The remote NoHorny API returned {} on status check: {}", response.statusCode(), response.body());
+            LOGGER.error("The NoHorny server returned {} on status check: {}", response.statusCode(), response.body());
         } else {
-            LOGGER.info("The remote NoHorny API is operational: {}", response.body());
+            LOGGER.info("The NoHorny server is operational: {}", response.body());
         }
     }
 
@@ -81,6 +85,13 @@ public final class NoHornyClient implements LifecycleListener {
                 } catch (final InterruptedException _) {
                     Thread.currentThread().interrupt();
                     return;
+                } catch (final ConnectException e) {
+                    LOGGER.error(
+                            "Failed to rate group at ({}, {}), attempt {}/{}: The NoHorny server is not reachable",
+                            group.x(),
+                            group.y(),
+                            attempt + 1,
+                            RETRY_DELAYS.size());
                 } catch (final Exception e) {
                     LOGGER.error(
                             "Failed to rate group at ({}, {}), attempt {}/{}",

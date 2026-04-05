@@ -28,7 +28,7 @@ final class AutoModerator implements LifecycleListener {
 
     @Override
     public void onInit() {
-        EventUtils.subscribe(ClassificationEvent.class, this::onClassificationEvent);
+        MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
     }
 
     @SuppressWarnings({"fallthrough", "MissingCasesInEnumSwitch"})
