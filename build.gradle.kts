@@ -143,7 +143,7 @@ configure(listOf(project(":nohorny-client"), project(":nohorny-server"))) {
 
 project(":nohorny-server") {
     dependencies {
-        "implementation"("com.github.gestalt-config:gestalt-core:0.37.1")
+        "implementation"("com.github.gestalt-config:gestalt-core:0.37.2")
         "implementation"("org.yaml:snakeyaml:2.6")
         "implementation"("ai.djl:api:0.36.0")
         "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
