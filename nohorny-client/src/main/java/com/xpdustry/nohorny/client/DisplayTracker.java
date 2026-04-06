@@ -31,7 +31,7 @@ final class DisplayTracker implements LifecycleListener {
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 40;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
 
-    // TODO Maybe dynamically assembling displays+processors aint a good idea, return to chirurgical updates?
+    // TODO Maybe dynamically assembling displays+processors ain't a good idea, return to chirurgical updates?
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final VirtualBuildingIndexMarker modified = new VirtualBuildingIndexMarker();
     final VirtualBuildingIndex<Integer> resolutions = new VirtualBuildingIndex<>();

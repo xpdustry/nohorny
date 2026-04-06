@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 
 public record MindustryCanvas(
         int resolution,
-        ImmutableIntArray palette,
+        ImmutableIntArray palette, // NOTE Palette elements are rgba
         ImmutableByteArray pixels,
         @Nullable MindustryAuthor author) implements MindustryImage {
     public MindustryCanvas {

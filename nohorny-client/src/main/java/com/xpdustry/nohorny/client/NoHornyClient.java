@@ -35,7 +35,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class NoHornyClient implements LifecycleListener {
+final class NoHornyClient implements LifecycleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NoHornyClient.class);
     private static final List<Duration> RETRY_DELAYS =

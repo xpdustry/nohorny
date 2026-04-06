@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.struct.ByteSeq;
 import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
 import com.xpdustry.nohorny.common.image.MindustryAuthor;
@@ -76,6 +77,7 @@ final class CanvasTracker implements LifecycleListener {
         this.scheduler.close();
     }
 
+    // TODO Consider using RLE, using the highest bit as a marker for either count or color value
     private MindustryCanvas data(final CanvasBlock.CanvasBuild building, final @Nullable Player player) {
         final var block = ((CanvasBlock) building.block);
         final var pixels = new byte[block.canvasSize * block.canvasSize];

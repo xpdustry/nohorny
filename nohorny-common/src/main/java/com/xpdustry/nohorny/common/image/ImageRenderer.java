@@ -19,7 +19,7 @@ public final class ImageRenderer {
             scope.graphics().setColor(Color.BLACK);
             scope.graphics().fillRect(0, 0, image.getWidth(), image.getHeight());
 
-            // Invert y-axis, because Mindustry uses bottom-left as origin
+            // Invert y-axis, because Mindustry uses bottom-left as the origin
             scope.graphics().translate(0, image.getHeight());
             scope.graphics().scale(1, -1);
 
@@ -66,11 +66,12 @@ public final class ImageRenderer {
                 for (int y = 0; y < canvas.resolution(); y++) {
                     for (int x = 0; x < canvas.resolution(); x++) {
                         final var index = Byte.toUnsignedInt(canvas.pixels().get(x + (y * canvas.resolution())));
-                        final var value = canvas.palette().get(index) >> 8;
-                        // The java.awt.Color(rgba) but it actually expects argb, what the fuck java...
+                        final var value = canvas.palette().get(index) >>> 8;
+                        // The constructor of java.awt.Color is (int rgba),
+                        // but actually, it expects argb, what the fuck java...
                         final var color = new Color(value, false);
                         graphics.setColor(color);
-                        // We are already working with an inverted Y axis so revert it
+                        // pixmap origin is top-left, so we cancel the inverting of the Y axis here.
                         graphics.fillRect(x, canvas.resolution() - y - 1, 1, 1);
                     }
                 }
