@@ -80,7 +80,7 @@ final class NoHornyClient implements LifecycleListener {
             for (int attempt = 0; attempt < RETRY_DELAYS.size(); attempt++) {
                 try {
                     Thread.sleep(RETRY_DELAYS.get(attempt));
-                    this.rate(group);
+                    this.classify(group);
                     return;
                 } catch (final InterruptedException _) {
                     Thread.currentThread().interrupt();
@@ -105,8 +105,8 @@ final class NoHornyClient implements LifecycleListener {
         });
     }
 
-    private <T extends MindustryImage> void rate(final VirtualBuilding.Group<T> group) throws Exception {
-        final var request = HttpRequest.newBuilder(this.resolve("v4/rate"))
+    private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
+        final var request = HttpRequest.newBuilder(this.resolve("v4/classify"))
                 .timeout(Duration.ofSeconds(15L))
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> {
                     final var in = new PipedInputStream();

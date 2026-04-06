@@ -8,9 +8,10 @@ import org.jspecify.annotations.Nullable;
 
 public record MindustryCanvas(
         int resolution,
-        ImmutableIntArray palette, // NOTE Palette elements are rgba
+        ImmutableIntArray palette, // NOTE Palette elements must be in rgba
         ImmutableByteArray pixels,
-        @Nullable MindustryAuthor author) implements MindustryImage {
+        @Nullable MindustryAuthor author)
+        implements MindustryImage {
     public MindustryCanvas {
         NoHornyChecks.positive(resolution, "resolution");
         final var expectedPixelCount = resolution * resolution;

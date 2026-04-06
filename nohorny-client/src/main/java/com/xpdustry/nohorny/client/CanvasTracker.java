@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.struct.ByteSeq;
 import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
 import com.xpdustry.nohorny.common.image.MindustryAuthor;

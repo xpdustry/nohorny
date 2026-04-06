@@ -2,7 +2,7 @@
 
 [![Maven](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny?color=008080&name=nohorny&prefix=v)](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny)
 [![Downloads](https://img.shields.io/github/downloads/xpdustry/nohorny/total?color=008080)](https://github.com/xpdustry/nohorny/releases)
-[![Mindustry 156.2](https://img.shields.io/badge/Mindustry-156.2-008080)](https://github.com/Anuken/Mindustry/releases)
+[![Mindustry 8.0](https://img.shields.io/badge/Mindustry-8.0-008080)](https://github.com/Anuken/Mindustry/releases)
 [![Discord](https://img.shields.io/discord/519293558599974912?color=008080&label=Discord)](https://discord.xpdustry.com)
 
 ## Description
@@ -13,17 +13,9 @@ Well, worry no more, xpdustry cooked another banger plugin for just this situati
 
 Introducing **nohorny**, the successor of [BMI](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage).
 This project consists of a Mindustry plugin client that automatically tracks logic displays and canvases,
-and a standalone classification server that processes them with a Vision Transformer model.
+and a standalone classification server that processes them.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
-
-## Architecture
-
-The project is split into three modules:
-
-- **nohorny-common**: Shared library with classification types, image handling, and geometry utilities.
-- **nohorny-client**: The Mindustry plugin. Tracks displays/canvases in-game and sends them to a nohorny server for classification.
-- **nohorny-server**: A standalone Java HTTP server that loads a ViT model and exposes a classification API.
 
 ## Installation
 
@@ -31,7 +23,7 @@ The project is split into three modules:
 
 This plugin requires at least:
 
-- Mindustry 156.2
+- Mindustry 156
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest
 
@@ -79,11 +71,11 @@ Create a `config.json` file:
     "port": 8080
   },
   "classifier": {
-    "repository": "Falconsai/nsfw_image_detection",
+    "repository": "phinner/nsfw_image_detection",
     "revision": "main",
     "file": "falconsai_nsfw_image_detection.pt",
     "labels": ["normal", "nsfw"],
-    "nsfwLabel": "nsfw",
+    "nsfw-label": "nsfw",
     "thresholds": {
       "nsfw": 0.7,
       "warn": 0.4
@@ -96,26 +88,19 @@ Create a `config.json` file:
 
 The server supports a single **ViT** (Vision Transformer) classifier, loaded via [DJL](https://djl.ai).
 
-| Field | Description | Default |
-| --- | --- | --- |
-| `repository` | HuggingFace model repository (e.g. `Falconsai/nsfw_image_detection`) | Required |
-| `revision` | Git revision to download from | `"main"` |
-| `file` | Model filename to download | Required |
-| `token` | HuggingFace API token for private models | None |
-| `labels` | Classification labels the model outputs | Required |
-| `nsfwLabel` | Which label counts as NSFW | Required |
-| `thresholds.nsfw` | Confidence threshold for NSFW rating | Required |
-| `thresholds.warn` | Confidence threshold for WARN rating (must be less than `nsfw`) | Required |
-| `engine` | Inference engine: `PYTORCH` or `ONNX` | `PYTORCH` |
+| Field             | Description                                                     | Default   |
+|-------------------|-----------------------------------------------------------------|-----------|
+| `repository`      | HuggingFace model repository                                    | Required  |
+| `revision`        | Git revision to download from                                   | `"main"`  |
+| `file`            | Model filename to download                                      | Required  |
+| `token`           | HuggingFace API token for private models                        | None      |
+| `labels`          | Classification labels the model outputs                         | Required  |
+| `nsfw-label`      | Which label counts as NSFW                                      | Required  |
+| `thresholds.nsfw` | Confidence threshold for NSFW rating                            | Required  |
+| `thresholds.warn` | Confidence threshold for WARN rating (must be less than `nsfw`) | Required  |
+| `engine`          | Inference engine: `PYTORCH` or `ONNX`                           | `PYTORCH` |
 
 The model is downloaded from HuggingFace on first startup and cached in `.nohorny-model-cache/`.
-
-### Server Endpoints
-
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/v4/status` | Health check, returns `"ok"` |
-| `POST` | `/v4/classify` | Classify an image, returns `ClassificationResponse` |
 
 ## Client Commands
 
@@ -123,7 +108,7 @@ The model is downloaded from HuggingFace on first startup and cached in `.nohorn
 
 ## Developers
 
-Other plugins can depend on nohorny-client and listen for `ClassificationEvent`.
+Other plugins can depend on nohorny-client and listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
 
 Add the following to your `build.gradle`:
 
@@ -137,21 +122,23 @@ dependencies {
 }
 ```
 
-Then subscribe to `ClassificationEvent` through Mindustry's event bus.
-
-### ClassificationEvent
+Then subscribe to [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) through Mindustry's event bus:
 
 ```java
-public record ClassificationEvent(
-    VirtualBuilding.Group<? extends MindustryImage> group,
-    Rating rating,
-    @Nullable MindustryAuthor author
-) {}
-```
+import arc.Events;
+import mindustry.mod.Plugin;
 
-- `group` - The building group that was classified.
-- `rating` - One of `NSFW`, `WARN`, or `SAFE`.
-- `author` - The most likely author (uuid + ip), nullable if undetermined.
+public final class MyPlugin extends Plugin {
+
+    @Override
+    public void init() {
+        Events.on(ClassificationEvent.class, event -> {
+            System.out.println(
+                    "The group at " + event.group().x() + ", " + event.group().y() + " has been classified");
+        });
+    }
+}
+```
 
 ## Building
 
