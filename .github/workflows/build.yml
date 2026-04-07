@@ -57,11 +57,20 @@ jobs:
       - name: "Build Gradle"
         run: ./gradlew build
 
-      - name: "Upload Artifacts"
+      - name: "Upload Client Jar"
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: artifacts
-          path: "build/libs/nohorny.jar"
+          path: "nohorny-client/build/libs/nohorny-client.jar"
+          archive: false
+          if-no-files-found: error
+
+      - name: "Upload Server Jar"
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: artifacts
+          path: "nohorny-server/build/libs/nohorny-server.jar"
+          archive: false
           if-no-files-found: error
 
       - name: "Upload Test Results"
@@ -86,7 +95,9 @@ jobs:
         if: ${{ github.event_name == 'release' }}
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
-          files: "build/libs/nohorny.jar"
+          files: |
+            nohorny-client/build/libs/nohorny-client.jar
+            nohorny-server/build/libs/nohorny-server.jar
 
       - name: "Update Changelog"
         if: ${{ github.event_name == 'release' }}
