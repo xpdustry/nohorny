@@ -24,14 +24,15 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
-group = "com.xpdustry"
-version = "4.0.0-beta.1" + if (findProperty("release").toString().toBoolean()) "" else "-SNAPSHOT"
-description = "NO HORNY IN MY SERVER!"
+allprojects {
+    group = "com.xpdustry"
+    version = "4.0.0-beta.1" + if (findProperty("release").toString().toBoolean()) "" else "-SNAPSHOT"
+    description = "NO HORNY IN MY SERVER!"
+}
 
 subprojects {
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "net.kyori.indra")
-    apply(plugin = "net.kyori.indra.publishing")
     apply(plugin = "net.ltgt.errorprone")
 
     repositories {
@@ -48,20 +49,14 @@ subprojects {
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
-    configure<SigningExtension> {
-        val signingKey: String? by project
-        val signingPassword: String? by project
-        useInMemoryPgpKeys(signingKey, signingPassword)
-    }
-
     configure<IndraExtension> {
         javaVersions {
             target(25)
             minimumToolchain(25)
         }
 
-        // publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
-        // publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
+        publishSnapshotsTo("xpdustry", "https://maven.xpdustry.com/snapshots")
+        publishReleasesTo("xpdustry", "https://maven.xpdustry.com/releases")
 
         mitLicense()
 
@@ -121,40 +116,8 @@ subprojects {
     }
 }
 
-project(":nohorny-server") {
-    apply(plugin = "org.springframework.boot")
-    apply(plugin = "io.spring.dependency-management")
-
-    dependencies {
-        "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
-        "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
-        "developmentOnly"("org.springframework.boot:spring-boot-devtools")
-
-        "implementation"(project(":nohorny-common"))
-
-        "implementation"("ai.djl:api:0.36.0")
-        "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
-        "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
-
-        "implementation"("org.springframework.boot:spring-boot-starter-validation")
-    }
-
-    tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
-        archiveClassifier = "plain"
-    }
-
-    tasks.named<Jar>("bootJar") {
-        archiveClassifier = "boot"
-        archiveFileName = "${project.name}.jar"
-    }
-
-    tasks.named<BootRun>("bootRun") {
-        workingDir = temporaryDir
-        jvmArgs("--enable-native-access=ALL-UNNAMED")
-    }
-}
-
 project(":nohorny-client") {
+    apply(plugin = "net.kyori.indra.publishing")
     apply(plugin = "com.gradleup.shadow")
     apply(plugin = "com.xpdustry.toxopid")
 
@@ -234,5 +197,47 @@ project(":nohorny-client") {
 
     tasks.withType<MindustryExec> {
         jvmArgs("--enable-native-access=ALL-UNNAMED")
+    }
+}
+
+project(":nohorny-server") {
+    apply(plugin = "org.springframework.boot")
+    apply(plugin = "io.spring.dependency-management")
+
+    dependencies {
+        "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
+        "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
+        "developmentOnly"("org.springframework.boot:spring-boot-devtools")
+
+        "implementation"(project(":nohorny-common"))
+
+        "implementation"("ai.djl:api:0.36.0")
+        "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
+        "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
+
+        "implementation"("org.springframework.boot:spring-boot-starter-validation")
+    }
+
+    tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
+        archiveClassifier = "plain"
+    }
+
+    tasks.named<Jar>("bootJar") {
+        archiveClassifier = "boot"
+        archiveFileName = "${project.name}.jar"
+    }
+
+    tasks.named<BootRun>("bootRun") {
+        workingDir = temporaryDir
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+    }
+}
+
+configure(listOf(project(":nohorny-common"), project(":nohorny-client"))) {
+    apply(plugin = "net.kyori.indra.publishing")
+    configure<SigningExtension> {
+        val signingKey: String? by project
+        val signingPassword: String? by project
+        useInMemoryPgpKeys(signingKey, signingPassword)
     }
 }
