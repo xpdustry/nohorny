@@ -51,4 +51,6 @@ ENV JAVA_OPTS="-server \
 
 USER appuser
 
+EXPOSE 8080
+
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar"]
