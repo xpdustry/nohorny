@@ -145,14 +145,14 @@ project(":nohorny-client") {
     }
 
     dependencies {
+        "implementation"(project(":nohorny-common"))
+
         "compileOnly"(toxopid.dependencies.mindustryCore)
         "testImplementation"(toxopid.dependencies.mindustryCore)
         "compileOnly"(toxopid.dependencies.arcCore)
         "testImplementation"(toxopid.dependencies.arcCore)
         "compileOnly"(toxopid.dependencies.mindustryHeadless)
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
-
-        "implementation"(project(":nohorny-common"))
 
         "implementation"("com.google.code.gson:gson:2.13.2")
         "compileOnly"("org.slf4j:slf4j-api:2.0.17")
@@ -205,17 +205,16 @@ project(":nohorny-server") {
     apply(plugin = "io.spring.dependency-management")
 
     dependencies {
+        "implementation"(project(":nohorny-common"))
+
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
+        "implementation"("org.springframework.boot:spring-boot-starter-validation")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
-
-        "implementation"(project(":nohorny-common"))
 
         "implementation"("ai.djl:api:0.36.0")
         "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
         "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
-
-        "implementation"("org.springframework.boot:spring-boot-starter-validation")
     }
 
     tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
