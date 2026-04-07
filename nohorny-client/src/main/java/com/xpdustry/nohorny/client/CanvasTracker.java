@@ -5,7 +5,6 @@ import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
 import com.xpdustry.nohorny.common.image.MindustryAuthor;
 import com.xpdustry.nohorny.common.image.MindustryCanvas;
-import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import com.xpdustry.nohorny.common.struct.ImmutableByteArray;
 import com.xpdustry.nohorny.common.struct.ImmutableIntArray;
 import java.util.concurrent.Executors;

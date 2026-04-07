@@ -13,7 +13,6 @@ import com.xpdustry.nohorny.common.image.MindustryAuthor;
 import com.xpdustry.nohorny.common.image.MindustryCanvas;
 import com.xpdustry.nohorny.common.image.MindustryDisplay;
 import com.xpdustry.nohorny.common.image.MindustryImage;
-import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;

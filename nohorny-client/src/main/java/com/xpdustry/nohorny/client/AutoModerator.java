@@ -5,7 +5,6 @@ import arc.struct.IntSeq;
 import com.xpdustry.nohorny.common.classification.Rating;
 import com.xpdustry.nohorny.common.image.MindustryCanvas;
 import com.xpdustry.nohorny.common.image.MindustryDisplay;
-import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Supplier;

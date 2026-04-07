@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.lifecycle;
+package com.xpdustry.nohorny.client;
 
 public interface LifecycleListener {
 

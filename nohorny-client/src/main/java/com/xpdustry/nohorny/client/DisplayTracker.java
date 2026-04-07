@@ -7,7 +7,6 @@ import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
 import com.xpdustry.nohorny.common.image.DrawInstruction;
 import com.xpdustry.nohorny.common.image.MindustryAuthor;
 import com.xpdustry.nohorny.common.image.MindustryDisplay;
-import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

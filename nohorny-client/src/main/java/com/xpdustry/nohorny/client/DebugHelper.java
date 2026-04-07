@@ -11,7 +11,6 @@ import com.xpdustry.nohorny.common.image.ImageRenderer;
 import com.xpdustry.nohorny.common.image.MindustryCanvas;
 import com.xpdustry.nohorny.common.image.MindustryDisplay;
 import com.xpdustry.nohorny.common.image.MindustryImage;
-import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
