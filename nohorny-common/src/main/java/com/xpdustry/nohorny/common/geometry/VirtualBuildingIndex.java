@@ -16,13 +16,11 @@ import org.jspecify.annotations.Nullable;
 public final class VirtualBuildingIndex<T> {
 
     // TODO The bound checks should be in the insert method...
-    public static int pack(final int x, final int y) {
-        NoHornyChecks.within(x, 0, Short.MAX_VALUE, "x");
-        NoHornyChecks.within(y, 0, Short.MAX_VALUE, "y");
-        return (x << 16) | (y & 0xFFFF);
+    public static long pack(final int x, final int y) {
+        return (long) x << Integer.SIZE | y;
     }
 
-    private final Map<Integer, VirtualBuilding<T>> index = new HashMap<>();
+    private final Map<Long, VirtualBuilding<T>> index = new HashMap<>();
 
     public @Nullable VirtualBuilding<T> select(final int x, final int y) {
         return this.index.get(pack(x, y));
@@ -138,8 +136,8 @@ public final class VirtualBuildingIndex<T> {
 
     // TODO Refactor to convert into an Iterator, with starting positions for groups and max bound size
     public Collection<VirtualBuilding.Group<T>> groups() {
-        final var queue = new ArrayDeque<Integer>();
-        final var visited = new HashSet<Integer>();
+        final var queue = new ArrayDeque<Long>();
+        final var visited = new HashSet<Long>();
         return this.index.values().stream()
                 .map(building -> this.groupAt(building.x(), building.y(), visited, queue))
                 .filter(Objects::nonNull)
@@ -151,7 +149,7 @@ public final class VirtualBuildingIndex<T> {
     }
 
     public VirtualBuilding.@Nullable Group<T> groupAt(
-            final int x, final int y, final Set<Integer> visited, final Queue<Integer> queue) {
+            final int x, final int y, final Set<Long> visited, final Queue<Long> queue) {
         final var building = this.select(x, y);
         if (building == null || !visited.add(pack(building.x(), building.y()))) {
             return null;

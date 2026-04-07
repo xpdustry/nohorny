@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
+import java.util.HashSet;
+import java.util.Set;
 
 final class VirtualBuildingIndexMarker {
 
-    private final IntSet flags = new IntSet();
+    // TODO Consider using gnu trove
+    private final Set<Long> flags = new HashSet<>();
 
     public boolean marked(final VirtualBuilding<?> building) {
         return this.flags.contains(VirtualBuildingIndex.pack(building.x(), building.y()));

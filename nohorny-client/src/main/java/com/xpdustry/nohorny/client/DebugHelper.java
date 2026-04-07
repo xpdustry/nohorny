@@ -85,7 +85,7 @@ final class DebugHelper implements LifecycleListener {
             }
         });
 
-        MindustryUtils.onEvent(EventType.PlayerJoin.class, event -> {
+        MindustryUtils.onEvent(EventType.PlayerLeave.class, event -> {
             this.debugging.remove(event.player.id());
         });
 

@@ -11,6 +11,7 @@ import net.kyori.indra.IndraExtension
 import net.kyori.indra.git.task.RequireClean
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
+import org.springframework.boot.gradle.tasks.run.BootRun
 
 plugins {
     id("com.diffplug.spotless") version "8.3.0" apply false
@@ -19,6 +20,8 @@ plugins {
     id("com.gradleup.shadow") version "9.3.2" apply false
     id("com.xpdustry.toxopid") version "4.2.0" apply false
     id("net.ltgt.errorprone") version "4.4.0" apply false
+    id("org.springframework.boot") version "4.0.5" apply false
+    id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
 group = "com.xpdustry"
@@ -118,44 +121,41 @@ subprojects {
     }
 }
 
-configure(listOf(project(":nohorny-client"), project(":nohorny-server"))) {
-    apply(plugin = "com.gradleup.shadow")
-
-    dependencies {
-        "implementation"(project(":nohorny-common"))
-        "implementation"("com.google.code.gson:gson:2.13.2")
-        "implementation"("org.slf4j:slf4j-api:2.0.17")
-        "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")
-    }
-
-    tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
-        archiveFileName = "${project.name}.jar"
-        archiveClassifier = "shaded"
-        from(rootProject.file("LICENSE.md")) { into("META-INF") }
-        minimize()
-        mergeServiceFiles()
-    }
-
-    tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME) {
-        dependsOn(tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME))
-    }
-}
-
 project(":nohorny-server") {
+    apply(plugin = "org.springframework.boot")
+    apply(plugin = "io.spring.dependency-management")
+
     dependencies {
-        "implementation"("com.github.gestalt-config:gestalt-core:0.37.1")
-        "implementation"("org.yaml:snakeyaml:2.6")
+        "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
+        "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
+        "developmentOnly"("org.springframework.boot:spring-boot-devtools")
+
+        "implementation"(project(":nohorny-common"))
+
         "implementation"("ai.djl:api:0.36.0")
         "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
         "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
+
+        "implementation"("org.springframework.boot:spring-boot-starter-validation")
     }
 
-    tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
-        minimize { exclude(dependency("ai.djl.*:.*:.*")) }
+    tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
+        archiveClassifier = "plain"
+    }
+
+    tasks.named<Jar>("bootJar") {
+        archiveClassifier = "boot"
+        archiveFileName = "${project.name}.jar"
+    }
+
+    tasks.named<BootRun>("bootRun") {
+        workingDir = temporaryDir
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
     }
 }
 
 project(":nohorny-client") {
+    apply(plugin = "com.gradleup.shadow")
     apply(plugin = "com.xpdustry.toxopid")
 
     val metadata =
@@ -188,6 +188,13 @@ project(":nohorny-client") {
         "testImplementation"(toxopid.dependencies.arcCore)
         "compileOnly"(toxopid.dependencies.mindustryHeadless)
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
+
+        "implementation"(project(":nohorny-common"))
+
+        "implementation"("com.google.code.gson:gson:2.13.2")
+        "compileOnly"("org.slf4j:slf4j-api:2.0.17")
+        "testImplementation"("org.slf4j:slf4j-api:2.0.17")
+        "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")
     }
 
     configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) {
@@ -202,8 +209,16 @@ project(":nohorny-client") {
     }
 
     tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
+        archiveFileName = "${project.name}.jar"
+        archiveClassifier = "shaded"
+        from(rootProject.file("LICENSE.md")) { into("META-INF") }
+        mergeServiceFiles()
         relocate("com.google.code.gson", "com.xpdustry.nohorny.client.shadow.gson")
         from(generateMetadataFile)
+    }
+
+    tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME) {
+        dependsOn(tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME))
     }
 
     val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {

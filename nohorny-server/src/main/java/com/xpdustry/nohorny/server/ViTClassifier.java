@@ -10,74 +10,38 @@ import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
+@Component
 public final class ViTClassifier implements Classifier {
 
-    public enum Engine {
-        PYTORCH("PyTorch"),
-        ONNX("OnnxRuntime");
-
-        private final String djlName;
-
-        Engine(final String djlName) {
-            this.djlName = djlName;
-        }
-
-        public String djlName() {
-            return this.djlName;
-        }
-    }
-
-    private final String repository;
-    private final String revision;
-    private final String file;
-    private final @Nullable String token;
-    private final List<String> labels;
-    private final String nsfwLabel;
-    private final HttpClient http;
-    private final Path directory;
-    private final Thresholds thresholds;
-    private final Engine engine;
+    private static final Logger logger = LoggerFactory.getLogger(ViTClassifier.class);
+    private final RestClient restClient;
+    private final ViTClassifierProperties properties;
 
     private @Nullable ZooModel<Image, Classifications> model;
 
-    public ViTClassifier(
-            final String repository,
-            final String revision,
-            final String file,
-            final @Nullable String token,
-            final List<String> labels,
-            final String nsfwLabel,
-            final HttpClient http,
-            final Path directory,
-            final Thresholds thresholds,
-            final Engine engine) {
-        this.repository = repository;
-        this.revision = revision;
-        this.file = file;
-        this.token = token;
-        this.labels = labels;
-        this.nsfwLabel = nsfwLabel;
-        this.http = http;
-        this.directory = directory;
-        this.thresholds = thresholds;
-        this.engine = engine;
+    @Autowired
+    public ViTClassifier(final RestClient restClient, final ViTClassifierProperties properties) {
+        this.restClient = restClient;
+        this.properties = properties;
     }
 
     @Override
     public String name() {
-        return "vit/" + this.repository + ":" + this.revision + "/" + this.file;
+        return "vit/" + this.properties.repository() + ":" + this.properties.revision() + "/" + this.properties.file();
     }
 
     @Override
@@ -86,36 +50,36 @@ public final class ViTClassifier implements Classifier {
         final var converted = ImageFactory.getInstance().fromImage(image);
         try (final var predictor = model.newPredictor()) {
             final var prediction = predictor.predict(converted);
-            final var score = prediction.get(this.nsfwLabel).getProbability();
-            return new Result(this.thresholds.apply(score), prediction.serialize());
+            final var score = prediction.get(this.properties.nsfwLabel()).getProbability();
+            return new Result(this.properties.thresholds().apply(score), prediction.serialize());
         }
     }
 
-    @Override
-    public void onInit() {
-        final var name = this.name().replace('/', '-');
-        final var target = this.directory.resolve(name);
+    @PostConstruct
+    void onInit() {
+        final var name = this.name().replace('/', '-').replace(':', '-');
+        final var target = this.properties.directory().resolve(name);
         if (Files.notExists(target)) {
-            final var url = "https://huggingface.co/" + this.repository + "/resolve/" + this.revision + "/" + this.file;
-            final var request = HttpRequest.newBuilder(URI.create(url)).GET();
-            if (this.token != null) {
-                request.header("Authorization", "Bearer " + this.token);
+            final var url = "https://huggingface.co/" + this.properties.repository() + "/resolve/"
+                    + this.properties.revision() + "/" + this.properties.file();
+            logger.info("Model {} does not exists locally, downloading from hugging face at {}", name, url);
+            final var request = this.restClient.get().uri(url);
+            if (this.properties.token() != null) {
+                request.header("Authorization", "Bearer " + this.properties.token());
             }
-            final HttpResponse<?> response;
-            try {
-                response = this.http.send(request.build(), HttpResponse.BodyHandlers.ofFile(target));
-            } catch (final IOException | InterruptedException e) {
-                throw new RuntimeException("Failed to retrieve hugging face model " + name, e);
-            }
-            if (response.statusCode() != 200) {
-                throw new RuntimeException("Download failed for " + this.file + ": HTTP " + response.statusCode());
+            final var resource = request.retrieve().requiredBody(Resource.class);
+            try (final var in = resource.getInputStream()) {
+                Files.createDirectories(target.getParent());
+                Files.copy(in, target);
+            } catch (final IOException e) {
+                throw new RuntimeException("Failed to copy hugging face model " + name, e);
             }
         }
         try {
             this.model = Criteria.builder()
                     .setTypes(Image.class, Classifications.class)
                     .optModelPath(target)
-                    .optEngine(this.engine.djlName())
+                    .optEngine(this.properties.engine())
                     .optTranslator(new ViTImageTranslator())
                     .build()
                     .loadModel();
@@ -124,7 +88,7 @@ public final class ViTClassifier implements Classifier {
         }
     }
 
-    @Override
+    @PreDestroy
     public void onExit() {
         if (this.model != null) {
             this.model.close();
@@ -149,7 +113,7 @@ public final class ViTClassifier implements Classifier {
             var result = list.singletonOrThrow();
             result = result.squeeze(0); // Remove Batch dimension
             result = result.softmax(0); // Convert to [0, 1] probabilities
-            return new Classifications(ViTClassifier.this.labels, result);
+            return new Classifications(ViTClassifier.this.properties.labels(), result);
         }
     }
 }

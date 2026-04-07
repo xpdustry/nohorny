@@ -17,7 +17,6 @@ import com.xpdustry.nohorny.common.lifecycle.LifecycleListener;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -54,7 +53,7 @@ final class NoHornyClient implements LifecycleListener {
 
     @Override
     public void onInit() {
-        final var request = HttpRequest.newBuilder(this.resolve("v4/status"))
+        final var request = HttpRequest.newBuilder(this.resolve("status"))
                 .timeout(Duration.ofSeconds(5L))
                 .GET()
                 .build();
@@ -106,26 +105,22 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
-        final var request = HttpRequest.newBuilder(this.resolve("v4/classify"))
+        final var request = HttpRequest.newBuilder(this.resolve("classify"))
                 .timeout(Duration.ofSeconds(15L))
+                .header("Content-Type", ImageBinaryCodec.MEDIA_TYPE)
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> {
-                    final var in = new PipedInputStream();
+                    final var in = new PipedInputStream(4 * 1024);
                     final PipedOutputStream out;
                     try {
                         out = new PipedOutputStream(in);
                     } catch (final IOException e) {
-                        throw new UncheckedIOException(e);
+                        throw new IllegalStateException("Failed to connect request body pipe", e);
                     }
                     this.executor.execute(() -> {
-                        try {
+                        try (out) {
                             ImageBinaryCodec.encode(out, group);
-                        } catch (final IOException e1) {
-                            try {
-                                out.close();
-                            } catch (final IOException e2) {
-                                e1.addSuppressed(e2);
-                            }
-                            throw new UncheckedIOException(e1);
+                        } catch (final IOException e) {
+                            LOGGER.warn("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
                         }
                     });
                     return in;
@@ -134,19 +129,15 @@ final class NoHornyClient implements LifecycleListener {
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
-            LOGGER.error(
-                    "Received error response (code={}) for group at ({}, {}): {}",
-                    response.statusCode(),
-                    group.x(),
-                    group.y(),
-                    response.body());
             throw new IllegalStateException(
                     "Remote detector returned " + response.statusCode() + ": " + response.body());
         }
 
         final var classification = this.gson.fromJson(response.body(), ClassificationResponse.class);
+        final var author = computeAuthor(group);
         LOGGER.trace(
-                "Received classification response for group at ({}, {}): {} ({})",
+                "Received classification response for group by {} at ({}, {}): {} ({})",
+                author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
                 group.y(),
                 classification.rating(),
