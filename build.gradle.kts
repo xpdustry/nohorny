@@ -198,6 +198,7 @@ project(":nohorny-client") {
 
     tasks.withType<MindustryExec> {
         jvmArgs("--enable-native-access=ALL-UNNAMED")
+        args("host Shattered sandbox,rules add planet sun")
     }
 }
 
