@@ -41,10 +41,10 @@ subprojects {
     }
 
     dependencies {
-        "errorprone"("com.google.errorprone:error_prone_core:2.49.0")
+        // No update until https://github.com/uber/NullAway/issues/1511 is implemented
+        "errorprone"("com.google.errorprone:error_prone_core:2.48.0")
+        "errorprone"("com.uber.nullaway:nullaway:0.13.1")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
-        "annotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
-        "testAnnotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
         "testImplementation"("org.junit.jupiter:junit-jupiter:6.0.3")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
