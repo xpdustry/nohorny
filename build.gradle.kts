@@ -162,6 +162,7 @@ project(":nohorny-client") {
 
     configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) {
         exclude(group = "org.slf4j")
+        exclude(group = "com.google.errorprone")
     }
 
     val generateMetadataFile by tasks.registering {
@@ -176,7 +177,7 @@ project(":nohorny-client") {
         archiveClassifier = "shaded"
         from(rootProject.file("LICENSE.md")) { into("META-INF") }
         mergeServiceFiles()
-        relocate("com.google.code.gson", "com.xpdustry.nohorny.client.shadow.gson")
+        relocate("com.google.gson", "com.xpdustry.nohorny.client.shadow.gson")
         from(generateMetadataFile)
     }
 
