@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +40,7 @@ final class DisplayTracker implements LifecycleListener {
             .factory());
     private final NoHornyClient client;
 
-    private record ProcessorWithLinks(MindustryDisplay.Processor processor, List<ImmutablePoint2> links) {}
+    private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<ImmutablePoint2> links) {}
 
     public DisplayTracker(final NoHornyClient client) {
         this.client = client;
@@ -64,14 +66,30 @@ final class DisplayTracker implements LifecycleListener {
                                     y - PROCESSOR_SEARCH_RADIUS,
                                     (PROCESSOR_SEARCH_RADIUS * 2) + size)
                             .stream()
-                            .filter(entry -> entry.data().links().stream()
-                                    .anyMatch(link -> x <= link.x()
-                                            && link.x() < x + size
-                                            && y <= link.y()
-                                            && link.y() < y + size))
+                            .filter(entry -> {
+                                final var links = entry.data().links();
+                                // Processors can link their whole radius to inflate link scans, so large link sets are
+                                // matched by scanning the display area instead.
+                                if (links.size() <= size * size) {
+                                    return links.stream()
+                                            .anyMatch(link -> x <= link.x()
+                                                    && link.x() < x + size
+                                                    && y <= link.y()
+                                                    && link.y() < y + size);
+                                }
+                                for (int i = x; i < x + size; i++) {
+                                    for (int j = y; j < y + size; j++) {
+                                        if (links.contains(new ImmutablePoint2(i, j))) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                                return false;
+                            })
                             .collect(Collectors.toUnmodifiableMap(
                                     processor -> new ImmutablePoint2(processor.x() - x, processor.y() - y),
                                     processor -> processor.data().processor(),
+                                    // That should never happen, but meh...
                                     (a, b) -> a.instructions().size()
                                                     > b.instructions().size()
                                             ? a
@@ -105,7 +123,7 @@ final class DisplayTracker implements LifecycleListener {
                 final var x = BuildingUtils.anchorTileX(building);
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
-                final var links = new ArrayList<ImmutablePoint2>(building.links.size);
+                final var links = new HashSet<ImmutablePoint2>(building.links.size);
                 for (final var link : building.links) {
                     links.add(new ImmutablePoint2(link.x, link.y));
                 }
@@ -118,7 +136,7 @@ final class DisplayTracker implements LifecycleListener {
 
                 DisplayTracker.this.scheduler.execute(() -> {
                     final var processor = DisplayTracker.this.processors.upsert(
-                            x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableList(links)));
+                            x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
                     DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE);
                 });
             }
