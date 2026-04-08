@@ -42,7 +42,7 @@ public final class NoHornyPlugin extends Plugin {
         });
     }
 
-    public void addListener(final LifecycleListener listener) {
+    private void addListener(final LifecycleListener listener) {
         this.listeners.add(listener);
     }
 
@@ -69,7 +69,10 @@ public final class NoHornyPlugin extends Plugin {
             try {
                 listener.onExit();
             } catch (final Throwable e) {
-                logger.error("NoHorny failed to exit {} gracefully", listener.getClass().getSimpleName(), e);
+                logger.error(
+                        "NoHorny failed to exit {} gracefully",
+                        listener.getClass().getSimpleName(),
+                        e);
             }
         }
     }

@@ -24,7 +24,7 @@ final class ConfigUtils {
                         LOGGER.atError()
                                 .setMessage("The value '{}' for the '{}' config entry is not valid")
                                 .addArgument(string)
-                                .addArgument(name)
+                                .addArgument(this.name)
                                 .setCause(e)
                                 .log();
                     }
@@ -32,7 +32,7 @@ final class ConfigUtils {
                     LOGGER.atError()
                             .setMessage("The value '{}' for the '{}' config entry is not a string")
                             .addArgument(value)
-                            .addArgument(name)
+                            .addArgument(this.name)
                             .setCause(new Throwable())
                             .log();
                 }

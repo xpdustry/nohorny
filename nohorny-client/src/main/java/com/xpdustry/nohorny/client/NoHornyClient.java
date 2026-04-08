@@ -135,12 +135,13 @@ final class NoHornyClient implements LifecycleListener {
         final var classification = this.gson.fromJson(response.body(), ClassificationResponse.class);
         final var author = computeAuthor(group);
         LOGGER.trace(
-                "Received classification response for group by {} at ({}, {}): {} ({})",
+                "Received classification response for group by {} at ({}, {}): {} ({}/id={})",
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
                 group.y(),
                 classification.rating(),
-                classification.classifier());
+                classification.classifier(),
+                classification.identifier());
         Core.app.post(() -> Events.fire(new ClassificationEvent(group, classification.rating(), computeAuthor(group))));
     }
 
