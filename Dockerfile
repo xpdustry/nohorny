@@ -7,13 +7,15 @@ ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
     GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g"
 
-# TODO Consider retrieving the gradle version from gradle/wrapper/gradle-wrapper.properties
-ARG GRADLE_VERSION=9.4.0
+COPY gradle/wrapper/gradle-wrapper.properties .
+
 RUN apt-get update && apt-get install -y --no-install-recommends unzip wget \
-    && wget -q https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip \
-    && unzip gradle-${GRADLE_VERSION}-bin.zip -d /opt \
-    && ln -s /opt/gradle-${GRADLE_VERSION} /opt/gradle \
-    && rm gradle-${GRADLE_VERSION}-bin.zip \
+    && GRADLE_VERSION=$(sed -nE 's/^distributionUrl=.*gradle-([0-9.]+)-(bin|all)\.zip/\1/p' gradle-wrapper.properties) \
+    && echo "Using Gradle version: $GRADLE_VERSION" \
+    && wget -q "https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" \
+    && unzip "gradle-$GRADLE_VERSION-bin.zip" -d /opt \
+    && ln -s "/opt/gradle-$GRADLE_VERSION" /opt/gradle \
+    && rm "gradle-$GRADLE_VERSION-bin.zip" \
     && apt-get remove -y unzip wget \
     && rm -rf /var/lib/apt/lists/*
 
