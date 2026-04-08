@@ -19,7 +19,7 @@ plugins {
     id("net.kyori.indra.publishing") version "4.0.0" apply false
     id("com.gradleup.shadow") version "9.4.1" apply false
     id("com.xpdustry.toxopid") version "4.2.0" apply false
-    id("net.ltgt.errorprone") version "4.4.0" apply false
+    id("net.ltgt.errorprone") version "5.1.0" apply false
     id("org.springframework.boot") version "4.0.5" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
