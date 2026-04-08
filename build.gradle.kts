@@ -43,8 +43,8 @@ subprojects {
     dependencies {
         "errorprone"("com.google.errorprone:error_prone_core:2.46.0")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
-        "annotationProcessor"("com.uber.nullaway:nullaway:0.12.15")
-        "testAnnotationProcessor"("com.uber.nullaway:nullaway:0.12.15")
+        "annotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
+        "testAnnotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
         "testImplementation"("org.junit.jupiter:junit-jupiter:6.0.3")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
