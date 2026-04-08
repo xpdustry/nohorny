@@ -68,7 +68,8 @@ public final class ImageBinaryCodec {
                 out.writeByte(IMAGE_TYPE_DISPLAY);
                 out.writeInt(display.resolution());
 
-                NoHornyChecks.within(display.processors().size(), 1, MAXIMUM_PROCESSOR_COUNT, "processor count");
+                // TODO Raise min to 1 when implementing iterative grouping with filters
+                NoHornyChecks.within(display.processors().size(), 0, MAXIMUM_PROCESSOR_COUNT, "processor count");
                 out.writeInt(display.processors().size());
                 for (final var entry : display.processors().entrySet()) {
                     final var processor = entry.getValue();
@@ -194,7 +195,8 @@ public final class ImageBinaryCodec {
                 final var processors = new HashMap<ImmutablePoint2, MindustryDisplay.Processor>();
 
                 final var processorCount = in.readInt();
-                NoHornyChecks.within(processorCount, 1, MAXIMUM_PROCESSOR_COUNT, "processor count");
+                // TODO Raise min to 1 when implementing iterative grouping with filters
+                NoHornyChecks.within(processorCount, 0, MAXIMUM_PROCESSOR_COUNT, "processor count");
                 for (int i = 0; i < processorCount; i++) {
                     final var position = new ImmutablePoint2(in.readShort(), in.readShort());
 

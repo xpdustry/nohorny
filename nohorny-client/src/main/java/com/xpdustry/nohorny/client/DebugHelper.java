@@ -127,7 +127,7 @@ final class DebugHelper implements LifecycleListener {
             });
 
             this.displays.scheduler.execute(() -> {
-                final var group = this.displays.getGroupAt(x, y);
+                final var group = this.displays.displays.groupAt(x, y);
                 if (group == null) {
                     player.sendMessage("No display group at (" + x + ", " + y + ")");
                     return;
@@ -149,8 +149,7 @@ final class DebugHelper implements LifecycleListener {
         MindustryUtils.onEvent(EventType.Trigger.update, _ -> {
             if (this.interval.get(Time.toSeconds * 2)) {
                 this.canvases.scheduler.execute(() -> this.render(this.canvases.canvases.groups()));
-                this.displays.scheduler.execute(
-                        () -> this.render(this.displays.assembleDisplayIndex().groups()));
+                this.displays.scheduler.execute(() -> this.render(this.displays.displays.groups()));
             }
         });
     }
