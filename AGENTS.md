@@ -5,3 +5,4 @@ A few things when working with this codebase:
   unless you are working with the public api or serialization.
 - You SHOULD work with a YOLO attitude, not concerning yourself with compatibility or regressions.
   That means, you CAN modify any file necessary to complete a task, allowing you to avoid workarounds and inefficient solutions.
+- You MUST NOT compile the project when reviewing code. Otherwise, You MUST USE the --daemon flag.
