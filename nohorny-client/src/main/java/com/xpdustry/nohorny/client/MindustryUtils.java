@@ -3,10 +3,13 @@ package com.xpdustry.nohorny.client;
 
 import arc.Core;
 import arc.Events;
+import com.xpdustry.nohorny.common.image.MindustryAuthor;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
 import mindustry.gen.Building;
+import mindustry.gen.Player;
 import mindustry.world.blocks.ConstructBlock;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 
 import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileX;
@@ -54,7 +57,7 @@ final class MindustryUtils {
                 if (event.breaking) {
                     listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
                 } else {
-                    listener.onCreate(casted, event.unit != null ? event.unit.getPlayer() : null);
+                    listener.onCreate(casted, asAuthor(event.unit == null ? null : event.unit.getPlayer()));
                 }
             }
         });
@@ -84,7 +87,7 @@ final class MindustryUtils {
             if (type.isInstance(event.tile)) {
                 final var casted = type.cast(event.tile);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, event.player);
+                listener.onCreate(casted, asAuthor(event.player));
             }
         });
 
@@ -105,6 +108,10 @@ final class MindustryUtils {
                         .error("An error occurred while running a task in the main thread", e);
             }
         });
+    }
+
+    private static @Nullable MindustryAuthor asAuthor(final @Nullable Player player) {
+        return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
     }
 
     private MindustryUtils() {}

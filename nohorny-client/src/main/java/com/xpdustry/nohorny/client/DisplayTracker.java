@@ -19,7 +19,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import mindustry.Vars;
-import mindustry.gen.Player;
 import mindustry.logic.LExecutor;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
@@ -53,7 +52,8 @@ final class DisplayTracker implements LifecycleListener {
 
         MindustryUtils.onEvent(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
-            public void onCreate(final LogicDisplay.LogicDisplayBuild building, final @Nullable Player player) {
+            public void onCreate(
+                    final LogicDisplay.LogicDisplayBuild building, final @Nullable MindustryAuthor author) {
                 final int x = BuildingUtils.anchorTileX(building);
                 final int y = BuildingUtils.anchorTileY(building);
                 final int size = building.block.size;
@@ -119,7 +119,7 @@ final class DisplayTracker implements LifecycleListener {
 
         MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
-            public void onCreate(final LogicBlock.LogicBuild building, final @Nullable Player player) {
+            public void onCreate(final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author) {
                 final var x = BuildingUtils.anchorTileX(building);
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
@@ -131,7 +131,6 @@ final class DisplayTracker implements LifecycleListener {
                 if (instructions == null || instructions.size() < MIN_DRAW_INSTRUCTION_COUNT) {
                     return;
                 }
-                final var author = player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
                 final var data = new MindustryDisplay.Processor(instructions, author);
 
                 DisplayTracker.this.scheduler.execute(() -> {

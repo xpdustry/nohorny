@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import mindustry.Vars;
-import mindustry.gen.Player;
 import mindustry.world.blocks.logic.CanvasBlock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -41,11 +40,11 @@ final class CanvasTracker implements LifecycleListener {
 
         MindustryUtils.onEvent(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
-            public void onCreate(final CanvasBlock.CanvasBuild building, final @Nullable Player player) {
+            public void onCreate(final CanvasBlock.CanvasBuild building, final @Nullable MindustryAuthor author) {
                 final var x = BuildingUtils.anchorTileX(building);
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
-                final var data = CanvasTracker.this.data(building, player);
+                final var data = CanvasTracker.this.data(building, author);
                 CanvasTracker.this.scheduler.execute(() -> {
                     final var upserted = CanvasTracker.this.canvases.upsert(x, y, size, data);
                     CanvasTracker.this.modified.mark(upserted);
@@ -76,7 +75,7 @@ final class CanvasTracker implements LifecycleListener {
     }
 
     // TODO Consider using RLE, using the highest bit as a marker for either count or color value
-    private MindustryCanvas data(final CanvasBlock.CanvasBuild building, final @Nullable Player player) {
+    private MindustryCanvas data(final CanvasBlock.CanvasBuild building, final @Nullable MindustryAuthor author) {
         final var block = ((CanvasBlock) building.block);
         final var pixels = new byte[block.canvasSize * block.canvasSize];
 
@@ -91,7 +90,6 @@ final class CanvasTracker implements LifecycleListener {
             pixels[index] = (byte) Math.min(value, block.palette.length - 1);
         }
 
-        final var author = player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
         return new MindustryCanvas(
                 block.canvasSize, ImmutableIntArray.wrap(block.palette), ImmutableByteArray.wrap(pixels), author);
     }
