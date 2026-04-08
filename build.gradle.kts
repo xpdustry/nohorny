@@ -41,7 +41,7 @@ subprojects {
     }
 
     dependencies {
-        "errorprone"("com.google.errorprone:error_prone_core:2.46.0")
+        "errorprone"("com.google.errorprone:error_prone_core:2.49.0")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
         "annotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
         "testAnnotationProcessor"("com.uber.nullaway:nullaway:0.13.1")
