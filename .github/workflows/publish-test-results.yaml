@@ -24,6 +24,7 @@ jobs:
         with:
           run_id: ${{ github.event.workflow_run.id }}
           path: artifacts
+          name: test-results|event-file
 
       - name: "Publish Test Results"
         uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
