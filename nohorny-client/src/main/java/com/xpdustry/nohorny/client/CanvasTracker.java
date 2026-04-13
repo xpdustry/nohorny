@@ -61,7 +61,6 @@ final class CanvasTracker implements LifecycleListener {
         MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
     }
 
-    // TODO Consider using RLE, using the highest bit as a marker for either count or color value
     private MindustryCanvas data(final CanvasBlock.CanvasBuild building, final @Nullable MindustryAuthor author) {
         final var block = ((CanvasBlock) building.block);
         final var pixels = new byte[block.canvasSize * block.canvasSize];

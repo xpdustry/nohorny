@@ -3,15 +3,14 @@ package com.xpdustry.nohorny.client;
 
 import arc.Core;
 import arc.Events;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.Strictness;
+import arc.util.serialization.Jval;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.ImageBinaryCodec;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.io.PipedInputStream;
@@ -39,10 +38,9 @@ final class NoHornyClient implements LifecycleListener {
     private static final List<Duration> RETRY_DELAYS =
             List.of(Duration.ZERO, Duration.ofSeconds(10), Duration.ofMinutes(2));
 
-    private final Gson gson = new GsonBuilder().setStrictness(Strictness.STRICT).create();
     private final HttpClient http = HttpClient.newHttpClient();
-    // TODO Named threads?
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
     private final Supplier<URI> endpoint = ConfigUtils.registerSafeSettingEntry(
             "nohorny-api-endpoint",
@@ -132,7 +130,10 @@ final class NoHornyClient implements LifecycleListener {
                     "Remote detector returned " + response.statusCode() + ": " + response.body());
         }
 
-        final var classification = this.gson.fromJson(response.body(), ClassificationResponse.class);
+        final var jval = Jval.read(response.body());
+        final var classification = new ClassificationResponse(
+                jval.getString("classifier"), Rating.valueOf(jval.getString("rating")), jval.getString("identifier"));
+
         final var author = computeAuthor(group);
         LOGGER.trace(
                 "Received classification response for group by {} at ({}, {}): {} ({}/id={})",

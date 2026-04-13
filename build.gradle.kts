@@ -154,8 +154,6 @@ project(":nohorny-client") {
         "compileOnly"(toxopid.dependencies.mindustryHeadless)
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
 
-        "implementation"("com.google.code.gson:gson:2.13.2")
-
         "compileOnly"("org.slf4j:slf4j-api:2.0.17")
         "testImplementation"("org.slf4j:slf4j-api:2.0.17")
         "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")
