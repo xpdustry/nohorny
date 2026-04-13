@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import com.xpdustry.nohorny.common.ImageBinaryCodec;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.util.Map;
@@ -19,7 +19,7 @@ import org.springframework.util.MimeType;
 public final class MindustryImageConverter
         extends AbstractSmartHttpMessageConverter<VirtualBuilding.Group<? extends MindustryImage>> {
 
-    private static final MimeType MEDIA_TYPE = MimeType.valueOf(ImageBinaryCodec.MEDIA_TYPE);
+    private static final MimeType MEDIA_TYPE = MimeType.valueOf(MindustryImageIO.MEDIA_TYPE);
 
     @Override
     public boolean canRead(final ResolvableType type, final @Nullable MediaType mediaType) {
@@ -34,7 +34,7 @@ public final class MindustryImageConverter
             final ResolvableType type, final HttpInputMessage inputMessage, final @Nullable Map<String, Object> hints)
             throws IOException, HttpMessageNotReadableException {
         try (final var stream = inputMessage.getBody()) {
-            return ImageBinaryCodec.decode(stream);
+            return MindustryImageIO.readImageGroup(stream);
         }
     }
 

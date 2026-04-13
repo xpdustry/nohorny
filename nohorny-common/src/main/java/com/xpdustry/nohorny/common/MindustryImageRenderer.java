@@ -5,11 +5,11 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-public final class ImageRenderer {
+public final class MindustryImageRenderer {
 
     private static final int BLOCK_SIZE = 32;
 
-    private ImageRenderer() {}
+    private MindustryImageRenderer() {}
 
     public static BufferedImage render(final VirtualBuilding.Group<? extends MindustryImage> group) {
         final var image =
@@ -30,7 +30,7 @@ public final class ImageRenderer {
                         new GraphicsScope((Graphics2D) scope.graphics().create(x, y, size, size))) {
                     final var scale = (double) size / building.data().resolution();
                     sub.graphics().scale(scale, scale);
-                    ImageRenderer.renderWith(sub.graphics(), building.data());
+                    MindustryImageRenderer.renderWith(sub.graphics(), building.data());
                 }
             }
         }

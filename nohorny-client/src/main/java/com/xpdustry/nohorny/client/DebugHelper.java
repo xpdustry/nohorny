@@ -6,10 +6,10 @@ import arc.math.geom.Point2;
 import arc.struct.IntMap;
 import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.GeometryUtils;
-import com.xpdustry.nohorny.common.ImageRenderer;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -120,7 +120,7 @@ final class DebugHelper implements LifecycleListener {
                 .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".png")
                 .toAbsolutePath();
         try (final var stream = Files.newOutputStream(file)) {
-            ImageIO.write(ImageRenderer.render(group), "png", stream);
+            ImageIO.write(MindustryImageRenderer.render(group), "png", stream);
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");

@@ -4,8 +4,8 @@ package com.xpdustry.nohorny.common;
 public final class GeometryUtils {
 
     public static int pack(final int x, final int y) {
-        NoHornyChecks.within(x, Short.MIN_VALUE, Short.MAX_VALUE, "x");
-        NoHornyChecks.within(y, Short.MIN_VALUE, Short.MAX_VALUE, "y");
+        NoHornyPreconditions.within(x, Short.MIN_VALUE, Short.MAX_VALUE, "x");
+        NoHornyPreconditions.within(y, Short.MIN_VALUE, Short.MAX_VALUE, "y");
         return (Short.toUnsignedInt((short) x) << Short.SIZE) | Short.toUnsignedInt((short) y);
     }
 

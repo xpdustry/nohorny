@@ -10,12 +10,12 @@ public record MindustryCanvas(
         @Nullable MindustryAuthor author)
         implements MindustryImage {
     public MindustryCanvas {
-        NoHornyChecks.positive(resolution, "resolution");
+        NoHornyPreconditions.positive(resolution, "resolution");
         final var expectedPixelCount = resolution * resolution;
         if (expectedPixelCount != pixels.length()) {
             throw new IllegalArgumentException(
                     "Resolution to pixel count mismatch, expecting " + expectedPixelCount + ", got " + pixels.length());
         }
-        NoHornyChecks.within(palette.length(), 0, Byte.MAX_VALUE, "palette length");
+        NoHornyPreconditions.within(palette.length(), 0, Byte.MAX_VALUE, "palette length");
     }
 }

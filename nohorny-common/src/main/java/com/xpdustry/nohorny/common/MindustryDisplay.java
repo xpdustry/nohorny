@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 public record MindustryDisplay(int resolution, Map<Integer, Processor> processors) implements MindustryImage {
     public MindustryDisplay {
-        NoHornyChecks.positive(resolution, "resolution");
+        NoHornyPreconditions.positive(resolution, "resolution");
     }
 
     public record Processor(

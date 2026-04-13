@@ -10,12 +10,12 @@ public record VirtualBuilding<T>(int x, int y, int size, T data) {
     }
 
     public VirtualBuilding {
-        NoHornyChecks.positive(size, "size");
+        NoHornyPreconditions.positive(size, "size");
     }
 
     public record Group<T>(int x, int y, int w, int h, Collection<VirtualBuilding<T>> elements) {
         public Group {
-            NoHornyChecks.notEmpty(elements, "elements");
+            NoHornyPreconditions.notEmpty(elements, "elements");
         }
     }
 }

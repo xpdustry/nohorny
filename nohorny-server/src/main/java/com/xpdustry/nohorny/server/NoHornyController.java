@@ -2,9 +2,9 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ClassificationResponse;
-import com.xpdustry.nohorny.common.ImageBinaryCodec;
-import com.xpdustry.nohorny.common.ImageRenderer;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryImageIO;
+import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.awt.image.BufferedImage;
 import java.util.UUID;
@@ -37,10 +37,10 @@ public final class NoHornyController {
 
     @PostMapping(
             path = "/classify",
-            consumes = ImageBinaryCodec.MEDIA_TYPE,
+            consumes = MindustryImageIO.MEDIA_TYPE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> onClassify(final @RequestBody VirtualBuilding.Group<? extends MindustryImage> group) {
-        return this.classify(ImageRenderer.render(group));
+        return this.classify(MindustryImageRenderer.render(group));
     }
 
     @PostMapping(

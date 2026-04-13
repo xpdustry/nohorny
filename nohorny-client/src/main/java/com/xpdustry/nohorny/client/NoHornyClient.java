@@ -5,11 +5,11 @@ import arc.Core;
 import arc.Events;
 import arc.util.serialization.Jval;
 import com.xpdustry.nohorny.common.ClassificationResponse;
-import com.xpdustry.nohorny.common.ImageBinaryCodec;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
@@ -104,7 +104,7 @@ final class NoHornyClient implements LifecycleListener {
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
         final var request = HttpRequest.newBuilder(this.resolve("classify"))
                 .timeout(Duration.ofSeconds(15L))
-                .header("Content-Type", ImageBinaryCodec.MEDIA_TYPE)
+                .header("Content-Type", MindustryImageIO.MEDIA_TYPE)
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> {
                     final var in = new PipedInputStream(4 * 1024);
                     final PipedOutputStream out;
@@ -115,7 +115,7 @@ final class NoHornyClient implements LifecycleListener {
                     }
                     this.executor.execute(() -> {
                         try (out) {
-                            ImageBinaryCodec.encode(out, group);
+                            MindustryImageIO.writeImageGroup(out, group);
                         } catch (final IOException e) {
                             LOGGER.warn("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
                         }
