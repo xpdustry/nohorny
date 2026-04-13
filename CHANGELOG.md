@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.1 - 2026-04-13
+
+### Changes & New features
+
+**:warning: BREAKING :warning:**
+
+- NoHorny has been rewritten in java and is now split into `nohorny-common`, `nohorny-client`, and `nohorny-server`.
+- The standalone server currently supports image classification via a ViT model.
+- Replaced the old `config.yaml` flow with Mindustry config entries: `nohorny-api-endpoint`, `nohorny-automod-policy`, and `nohorny-debug-tap`.
+- Added admin debug double-tap tooling to inspect tracked display/canvas groups in-game and export rendered PNG snapshots.
+- Replaced `ImageAnalyzerEvent` with the new `ClassificationEvent` in `nohorny-client` for other plugins.
+- Added protection against logic processor link spam when matching processors to displays.
+- Simplified the tracking, allowing us to remove the old background worker thread model.
+- The plugin no longer depends on `kotlin-runtime` or `sql4md`; only [`slf4md`](https://github.com/xpdustry/slf4md) remains required.
+
 ## v3.0.3 - 2025-09-25
 
 ### Changes
