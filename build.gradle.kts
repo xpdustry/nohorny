@@ -145,7 +145,7 @@ project(":nohorny-client") {
     }
 
     dependencies {
-        "implementation"(project(":nohorny-common"))
+        "api"(project(":nohorny-common"))
 
         "compileOnly"(toxopid.dependencies.mindustryCore)
         "testImplementation"(toxopid.dependencies.mindustryCore)
@@ -205,7 +205,7 @@ project(":nohorny-server") {
     apply(plugin = "io.spring.dependency-management")
 
     dependencies {
-        "implementation"(project(":nohorny-common"))
+        "api"(project(":nohorny-common"))
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
