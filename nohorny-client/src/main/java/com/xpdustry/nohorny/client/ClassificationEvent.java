@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.classification.Rating;
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.image.MindustryAuthor;
-import com.xpdustry.nohorny.common.image.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryAuthor;
+import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.Rating;
+import com.xpdustry.nohorny.common.VirtualBuilding;
 import org.jspecify.annotations.Nullable;
 
 public record ClassificationEvent(

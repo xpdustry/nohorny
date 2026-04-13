@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.classification;
+package com.xpdustry.nohorny.common;
 
 public enum Rating {
     NSFW,

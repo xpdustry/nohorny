@@ -4,24 +4,25 @@ package com.xpdustry.nohorny.client;
 import arc.graphics.Color;
 import arc.math.geom.Point2;
 import arc.struct.IntMap;
-import arc.util.Interval;
-import arc.util.Time;
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.image.ImageRenderer;
-import com.xpdustry.nohorny.common.image.MindustryCanvas;
-import com.xpdustry.nohorny.common.image.MindustryDisplay;
-import com.xpdustry.nohorny.common.image.MindustryImage;
+import arc.struct.IntSet;
+import com.xpdustry.nohorny.common.GeometryUtils;
+import com.xpdustry.nohorny.common.ImageRenderer;
+import com.xpdustry.nohorny.common.MindustryCanvas;
+import com.xpdustry.nohorny.common.MindustryDisplay;
+import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.UUID;
+import java.util.Random;
+import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.gen.Call;
-import mindustry.gen.Groups;
 import mindustry.gen.Player;
+import mindustry.world.blocks.logic.CanvasBlock;
+import mindustry.world.blocks.logic.LogicDisplay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,8 +54,13 @@ final class DebugHelper implements LifecycleListener {
         new Color(0x232C16FF), // Dark Olive Green
     };
 
-    private final IntMap<DebugSession> debugging = new IntMap<>();
-    private final Interval interval = new Interval();
+    private final Supplier<Boolean> debugging = ConfigUtils.registerSafeSettingEntry(
+            "nohorny-debug-tap",
+            "Toggle nohorny debug tap for admins, if you double tap on a group of logic displays of canvases, it will show you how it is tracked by nohorny and also create a file of the rendering result of said group.",
+            false,
+            Boolean::parseBoolean);
+
+    private final IntMap<DebugTap> taps = new IntMap<>();
     private final Path directory;
     private final CanvasTracker canvases;
     private final DisplayTracker displays;
@@ -72,119 +78,83 @@ final class DebugHelper implements LifecycleListener {
 
     @Override
     public void onInit() {
-        final var handler = Vars.netServer.clientCommands;
-
-        handler.<Player>register("nohorny-debug", "Toggle NoHorny debugging features", (_, player) -> {
-            if (this.debugging.containsKey(player.id())) {
-                this.debugging.remove(player.id());
-                player.sendMessage("Removed");
-            } else {
-                this.debugging.put(player.id(), new DebugSession());
-                player.sendMessage("Added");
-            }
-        });
-
         MindustryUtils.onEvent(EventType.PlayerLeave.class, event -> {
-            this.debugging.remove(event.player.id());
+            this.taps.remove(event.player.id());
         });
 
-        // TODO
-        //   Replace tap events with a command,
-        //   and maybe use a world label + regular labels + ids such as [D|C]-(001) for the overlay
         MindustryUtils.onEvent(EventType.TapEvent.class, event -> {
-            final var session = this.debugging.get(event.player.id);
-            if (session == null) {
+            if (!event.player.admin() || !this.debugging.get()) {
                 return;
             }
-            if (System.currentTimeMillis() - session.lastTapTimestamp > 1000L
-                    || session.lastTapPos != event.tile.pos()) {
-                session.lastTapPos = event.tile.pos();
-                session.lastTapTimestamp = System.currentTimeMillis();
+            final var tap = this.taps.get(event.player.id, DebugTap::new);
+            if (System.currentTimeMillis() - tap.lastTapTimestamp > 1000L || tap.lastTapPos != event.tile.pos()) {
+                tap.lastTapPos = event.tile.pos();
+                tap.lastTapTimestamp = System.currentTimeMillis();
                 return;
             }
 
-            final var x = Point2.x(session.lastTapPos);
-            final var y = Point2.y(session.lastTapPos);
+            final var x = Point2.x(tap.lastTapPos);
+            final var y = Point2.y(tap.lastTapPos);
             final var player = event.player;
 
-            this.canvases.scheduler.execute(() -> {
-                final var group = this.canvases.canvases.groupAt(x, y);
-                if (group == null) {
-                    player.sendMessage("No canvas group at (" + x + ", " + y + ")");
-                    return;
-                }
-                final var file =
-                        this.directory.resolve(UUID.randomUUID() + ".png").toAbsolutePath();
-                try (final var stream = Files.newOutputStream(file)) {
-                    ImageIO.write(ImageRenderer.render(group), "png", stream);
-                } catch (final IOException e) {
-                    player.sendMessage("Failed to create an image of canvas group at (" + x + ", " + y
-                            + "), see console for stacktrace");
-                    LOGGER.error("Failed to process canvas group at ({}, {}}) for debug rendering", x, y, e);
-                    return;
-                }
-                player.sendMessage("Rendered canvas group at (" + x + ", " + y + ") to " + file);
-            });
-
-            this.displays.scheduler.execute(() -> {
-                final var group = this.displays.displays.groupAt(x, y);
-                if (group == null) {
-                    player.sendMessage("No display group at (" + x + ", " + y + ")");
-                    return;
-                }
-                final var file =
-                        this.directory.resolve(UUID.randomUUID() + ".png").toAbsolutePath();
-                try (final var stream = Files.newOutputStream(file)) {
-                    ImageIO.write(ImageRenderer.render(group), "png", stream);
-                } catch (final IOException e) {
-                    player.sendMessage("Failed to create an image of display group at (" + x + ", " + y
-                            + "), see console for stacktrace");
-                    LOGGER.error("Failed to process display group at ({}, {}}) for debug rendering", x, y, e);
-                    return;
-                }
-                player.sendMessage("Rendered display group at (" + x + ", " + y + ") to " + file);
-            });
-        });
-
-        MindustryUtils.onEvent(EventType.Trigger.update, _ -> {
-            if (this.interval.get(Time.toSeconds * 2)) {
-                this.canvases.scheduler.execute(() -> this.render(this.canvases.canvases.groups()));
-                this.displays.scheduler.execute(() -> this.render(this.displays.displays.groups()));
+            switch (Vars.world.build(x, y)) {
+                case CanvasBlock.CanvasBuild _ -> this.groupDebugSnapshotAt(player, this.canvases.canvases, x, y);
+                case LogicDisplay.LogicDisplayBuild _ ->
+                    this.groupDebugSnapshotAt(player, this.displays.displays, x, y);
+                default -> {}
             }
+
+            this.taps.remove(event.player.id);
         });
+    }
+
+    private <T extends MindustryImage> void groupDebugSnapshotAt(
+            final Player player, final GroupingVirtualBuildingIndex<T> index, final int x, final int y) {
+        final var group = index.groupAt(x, y, 999, new IntSet());
+        if (group == null) {
+            player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]No group at (" + x + ", " + y + ")");
+            return;
+        }
+        this.render(player, group);
+        final var file = this.directory
+                .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".png")
+                .toAbsolutePath();
+        try (final var stream = Files.newOutputStream(file)) {
+            ImageIO.write(ImageRenderer.render(group), "png", stream);
+        } catch (final IOException e) {
+            player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
+                    + ", " + y + "), see console for stacktrace");
+            LOGGER.error("Failed to process group at ({}, {}}) for debugging", x, y, e);
+            return;
+        }
+        player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + file);
     }
 
     @SuppressWarnings("fallthrough")
-    public <T extends MindustryImage> void render(final Collection<VirtualBuilding.Group<T>> groups) {
-        MindustryUtils.runInMainThread(() -> {
-            if (this.debugging.isEmpty()) {
-                return;
-            }
-            int i = 0;
-            for (final var group : groups) {
-                final var color = KELLY_COLORS[i++ % KELLY_COLORS.length];
-                for (final var building : group.elements()) {
-                    switch (building.data()) {
-                        case MindustryDisplay display:
-                            for (final var link : display.processors().keySet()) {
-                                this.forEachDebugging(color, "P", building.x() + link.x(), building.y() + link.y());
-                            }
-                        case MindustryCanvas _:
-                            this.forEachDebugging(color, "I", building.x(), building.y());
+    public <T extends MindustryImage> void render(final Player player, final VirtualBuilding.Group<T> group) {
+        final var color = KELLY_COLORS[new Random().nextInt(KELLY_COLORS.length)];
+        for (final var building : group.elements()) {
+            switch (building.data()) {
+                case MindustryDisplay display:
+                    for (final var link : display.processors().keySet()) {
+                        this.sendLabelIcon(
+                                player,
+                                color,
+                                "P",
+                                building.x() + GeometryUtils.x(link),
+                                building.y() + GeometryUtils.y(link));
                     }
-                }
+                case MindustryCanvas _:
+                    this.sendLabelIcon(player, color, "I", building.x(), building.y());
             }
-        });
-    }
-
-    private void forEachDebugging(final Color color, final String icon, final int x, final int y) {
-        for (final var debugger : this.debugging) {
-            final var player = Groups.player.getByID(debugger.key);
-            Call.label(player.con(), "[#" + color + "]" + icon, 2.1F, x * Vars.tilesize, y * Vars.tilesize);
         }
     }
 
-    private static final class DebugSession {
+    private void sendLabelIcon(final Player player, final Color color, final String icon, final int x, final int y) {
+        Call.label(player.con(), "[#" + color + "]" + icon, 8F, x * Vars.tilesize, y * Vars.tilesize);
+    }
+
+    private static final class DebugTap {
         private int lastTapPos = -1;
         private long lastTapTimestamp = -1;
     }

@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 public final class NoHornyPlugin extends Plugin {
 
+    static final String MESSAGE_PREFIX = "[pink][[NoHorny]: [white]";
+
     private static final Logger logger = LoggerFactory.getLogger(NoHornyPlugin.class);
     private final List<LifecycleListener> listeners = new ArrayList<>();
 

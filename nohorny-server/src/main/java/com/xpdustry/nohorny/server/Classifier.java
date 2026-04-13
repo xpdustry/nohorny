@@ -2,7 +2,7 @@
 package com.xpdustry.nohorny.server;
 
 import com.google.gson.JsonElement;
-import com.xpdustry.nohorny.common.classification.Rating;
+import com.xpdustry.nohorny.common.Rating;
 import java.awt.image.BufferedImage;
 
 public interface Classifier {

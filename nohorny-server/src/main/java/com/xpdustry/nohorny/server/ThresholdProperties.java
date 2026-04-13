@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import com.xpdustry.nohorny.common.classification.Rating;
+import com.xpdustry.nohorny.common.Rating;
 import jakarta.validation.constraints.Positive;
 
 public record ThresholdProperties(

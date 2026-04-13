@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.geometry;
+package com.xpdustry.nohorny.common;
 
-import com.xpdustry.nohorny.common.NoHornyChecks;
-import java.util.Set;
+import java.util.Collection;
 
 public record VirtualBuilding<T>(int x, int y, int size, T data) {
+
+    public int packed() {
+        return GeometryUtils.pack(this.x, this.y);
+    }
 
     public VirtualBuilding {
         NoHornyChecks.positive(size, "size");
     }
 
-    public record Group<T>(int x, int y, int w, int h, Set<VirtualBuilding<T>> elements) {
+    public record Group<T>(int x, int y, int w, int h, Collection<VirtualBuilding<T>> elements) {
         public Group {
             NoHornyChecks.notEmpty(elements, "elements");
         }

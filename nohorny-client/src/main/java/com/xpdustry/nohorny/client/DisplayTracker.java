@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.geometry.ImmutablePoint2;
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
-import com.xpdustry.nohorny.common.image.DrawInstruction;
-import com.xpdustry.nohorny.common.image.MindustryAuthor;
-import com.xpdustry.nohorny.common.image.MindustryDisplay;
+import arc.struct.IntSet;
+import com.xpdustry.nohorny.common.DrawInstruction;
+import com.xpdustry.nohorny.common.GeometryUtils;
+import com.xpdustry.nohorny.common.MindustryAuthor;
+import com.xpdustry.nohorny.common.MindustryDisplay;
+import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.SequencedSet;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import mindustry.Vars;
+import mindustry.game.EventType;
 import mindustry.logic.LExecutor;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
@@ -28,18 +28,14 @@ final class DisplayTracker implements LifecycleListener {
 
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 40;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
+    private static final int MAX_GROUP_RANGE = 3 * 6; // 3 large displays around the anchor
 
+    final GroupingVirtualBuildingIndex<MindustryDisplay> displays = new GroupingVirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
-    private final VirtualBuildingIndexMarker modified = new VirtualBuildingIndexMarker();
-    final VirtualBuildingIndex<MindustryDisplay> displays = new VirtualBuildingIndex<>();
-    final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-            .name("display-tracker-worker")
-            .daemon()
-            .uncaughtExceptionHandler(LoggingExceptionHandler.INSTANCE)
-            .factory());
     private final NoHornyClient client;
+    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
 
-    private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<ImmutablePoint2> links) {}
+    private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
     public DisplayTracker(final NoHornyClient client) {
         this.client = client;
@@ -48,8 +44,6 @@ final class DisplayTracker implements LifecycleListener {
     @SuppressWarnings("FutureReturnValueIgnored")
     @Override
     public void onInit() {
-        this.scheduler.scheduleWithFixedDelay(this::collect, 2, 2, TimeUnit.SECONDS);
-
         MindustryUtils.onEvent(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(
@@ -58,62 +52,57 @@ final class DisplayTracker implements LifecycleListener {
                 final int y = BuildingUtils.anchorTileY(building);
                 final int size = building.block.size;
                 final int resolution = ((LogicDisplay) building.block).displaySize;
-                DisplayTracker.this.scheduler.execute(() -> {
-                    final var processors = DisplayTracker.this
-                            .processors
-                            .selectAllWithinSquare(
-                                    x - PROCESSOR_SEARCH_RADIUS,
-                                    y - PROCESSOR_SEARCH_RADIUS,
-                                    (PROCESSOR_SEARCH_RADIUS * 2) + size)
-                            .stream()
-                            .filter(entry -> {
-                                final var links = entry.data().links();
-                                // Processors can link their whole radius to inflate link scans, so large link sets are
-                                // matched by scanning the display area instead.
-                                if (links.size() <= size * size) {
-                                    return links.stream()
-                                            .anyMatch(link -> x <= link.x()
-                                                    && link.x() < x + size
-                                                    && y <= link.y()
-                                                    && link.y() < y + size);
-                                }
-                                for (int i = x; i < x + size; i++) {
-                                    for (int j = y; j < y + size; j++) {
-                                        if (links.contains(new ImmutablePoint2(i, j))) {
-                                            return true;
-                                        }
+                final var processors = DisplayTracker.this
+                        .processors
+                        .selectAllWithinSquare(
+                                x - PROCESSOR_SEARCH_RADIUS,
+                                y - PROCESSOR_SEARCH_RADIUS,
+                                (PROCESSOR_SEARCH_RADIUS * 2) + size)
+                        .stream()
+                        .filter(entry -> {
+                            final var links = entry.data().links();
+                            // Processors can link their whole radius to inflate link scans, so large link sets are
+                            // matched by scanning the display area instead.
+                            if (links.size() <= size * size) {
+                                return links.stream().anyMatch(link -> {
+                                    final var linkX = GeometryUtils.x(link);
+                                    final var linkY = GeometryUtils.y(link);
+                                    return x <= linkX && linkX < x + size && y <= linkY && linkY < y + size;
+                                });
+                            }
+                            for (int i = x; i < x + size; i++) {
+                                for (int j = y; j < y + size; j++) {
+                                    if (links.contains(GeometryUtils.pack(i, j))) {
+                                        return true;
                                     }
                                 }
-                                return false;
-                            })
-                            .collect(Collectors.toUnmodifiableMap(
-                                    processor -> new ImmutablePoint2(processor.x() - x, processor.y() - y),
-                                    processor -> processor.data().processor(),
-                                    // That should never happen, but meh...
-                                    (a, b) -> a.instructions().size()
-                                                    > b.instructions().size()
-                                            ? a
-                                            : b));
-                    final var added = DisplayTracker.this.displays.upsert(
-                            x, y, size, new MindustryDisplay(resolution, processors));
-                    DisplayTracker.this.modified.mark(added);
-                });
+                            }
+                            return false;
+                        })
+                        .collect(Collectors.toUnmodifiableMap(
+                                processor -> GeometryUtils.pack(processor.x() - x, processor.y() - y),
+                                processor -> processor.data().processor(),
+                                // That should never happen, but meh...
+                                (a, b) -> a.instructions().size()
+                                                > b.instructions().size()
+                                        ? a
+                                        : b));
+                final var added =
+                        DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
+                DisplayTracker.this.queue.addLast(added.packed());
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
-                DisplayTracker.this.scheduler.execute(() -> {
-                    final var removed = DisplayTracker.this.displays.removeAllWithinSquare(x, y, size);
-                    DisplayTracker.this.modified.unmarkAll(removed);
-                });
+                for (final var removed : DisplayTracker.this.displays.removeAllWithinSquare(x, y, size)) {
+                    DisplayTracker.this.queue.remove(removed.packed());
+                }
             }
 
             @Override
             public void onRemoveAll() {
-                DisplayTracker.this.scheduler.execute(() -> {
-                    DisplayTracker.this.displays.removeAll();
-                    DisplayTracker.this.modified.unmarkAll();
-                });
+                DisplayTracker.this.displays.removeAll();
+                DisplayTracker.this.queue.clear();
             }
         });
 
@@ -123,42 +112,34 @@ final class DisplayTracker implements LifecycleListener {
                 final var x = BuildingUtils.anchorTileX(building);
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
-                final var links = new HashSet<ImmutablePoint2>(building.links.size);
+                final var links = new HashSet<Integer>(building.links.size);
                 for (final var link : building.links) {
-                    links.add(new ImmutablePoint2(link.x, link.y));
+                    links.add(GeometryUtils.pack(link.x, link.y));
                 }
                 final var instructions = DisplayTracker.this.instructions(building.executor);
                 if (instructions == null || instructions.size() < MIN_DRAW_INSTRUCTION_COUNT) {
                     return;
                 }
                 final var data = new MindustryDisplay.Processor(instructions, author);
-
-                DisplayTracker.this.scheduler.execute(() -> {
-                    final var processor = DisplayTracker.this.processors.upsert(
-                            x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
-                    DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE);
-                });
+                final var processor = DisplayTracker.this.processors.upsert(
+                        x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
+                DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE);
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
-                DisplayTracker.this.scheduler.execute(() -> {
-                    for (final var processor : DisplayTracker.this.processors.removeAllWithinSquare(x, y, size)) {
-                        DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.REMOVE);
-                    }
-                });
+                for (final var processor : DisplayTracker.this.processors.removeAllWithinSquare(x, y, size)) {
+                    DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.REMOVE);
+                }
             }
 
             @Override
             public void onRemoveAll() {
-                DisplayTracker.this.scheduler.execute(DisplayTracker.this.processors::removeAll);
+                DisplayTracker.this.processors.removeAll();
             }
         });
-    }
 
-    @Override
-    public void onExit() {
-        this.scheduler.close();
+        MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
     }
 
     private @Nullable List<DrawInstruction> instructions(final LExecutor executor) {
@@ -208,37 +189,42 @@ final class DisplayTracker implements LifecycleListener {
         if (!Vars.state.isGame()) {
             return;
         }
-        final var marked = this.displays.groups().stream()
-                .filter(group ->
-                        group.elements().stream().anyMatch(display -> this.modified.marked(display.x(), display.y())))
-                .toList();
-        for (final var group : marked) {
-            this.client.accept(group);
-            for (final var display : group.elements()) {
-                this.modified.unmark(display.x(), display.y());
+        final var visited = new IntSet();
+        while (!this.queue.isEmpty()) {
+            final int point = this.queue.removeFirst();
+            final var x = GeometryUtils.x(point);
+            final var y = GeometryUtils.y(point);
+            final var group = this.displays.groupAt(x, y, MAX_GROUP_RANGE, visited);
+            if (group == null) {
+                continue;
             }
+            this.client.accept(group);
+            for (final var building : group.elements()) {
+                this.queue.remove(building.packed());
+            }
+            break;
         }
     }
 
     private void forEachLinkUpdateDisplay(
             final VirtualBuilding<ProcessorWithLinks> processor, final LinkUpdateKind kind) {
         for (final var link : processor.data().links()) {
-            final var display = this.displays.select(link.x(), link.y());
+            var display = this.displays.select(GeometryUtils.x(link), GeometryUtils.y(link));
             if (display == null) {
                 continue;
             }
             final var processors = new HashMap<>(display.data().processors());
-            final var point = new ImmutablePoint2(processor.x() - display.x(), processor.y() - display.y());
+            final var point = GeometryUtils.pack(processor.x() - display.x(), processor.y() - display.y());
             switch (kind) {
                 case CREATE -> processors.put(point, processor.data().processor());
                 case REMOVE -> processors.remove(point);
             }
-            final var updated = this.displays.upsert(
+            display = this.displays.upsert(
                     display.x(),
                     display.y(),
                     display.size(),
                     new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
-            this.modified.mark(updated);
+            this.queue.addLast(GeometryUtils.pack(display.x(), display.y()));
         }
     }
 

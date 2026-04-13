@@ -132,7 +132,7 @@ project(":nohorny-client") {
             repository = "xpdustry/nohorny",
             java = true,
             hidden = true,
-            minGameVersion = "156.2",
+            minGameVersion = "157",
             dependencies = mutableListOf(ModDependency("slf4md")),
         )
 
@@ -155,6 +155,7 @@ project(":nohorny-client") {
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
 
         "implementation"("com.google.code.gson:gson:2.13.2")
+
         "compileOnly"("org.slf4j:slf4j-api:2.0.17")
         "testImplementation"("org.slf4j:slf4j-api:2.0.17")
         "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.image.ImageBinaryCodec;
-import com.xpdustry.nohorny.common.image.MindustryImage;
+import com.xpdustry.nohorny.common.ImageBinaryCodec;
+import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;

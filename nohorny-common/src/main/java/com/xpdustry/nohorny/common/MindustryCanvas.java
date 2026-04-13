@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.image;
+package com.xpdustry.nohorny.common;
 
-import com.xpdustry.nohorny.common.NoHornyChecks;
-import com.xpdustry.nohorny.common.struct.ImmutableByteArray;
-import com.xpdustry.nohorny.common.struct.ImmutableIntArray;
 import org.jspecify.annotations.Nullable;
 
 public record MindustryCanvas(

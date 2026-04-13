@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.image;
+package com.xpdustry.nohorny.common;
 
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;

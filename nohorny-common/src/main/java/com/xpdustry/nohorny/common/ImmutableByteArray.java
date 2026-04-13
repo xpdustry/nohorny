@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.struct;
+package com.xpdustry.nohorny.common;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;

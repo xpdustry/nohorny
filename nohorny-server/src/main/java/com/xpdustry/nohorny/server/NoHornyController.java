@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import com.xpdustry.nohorny.common.classification.ClassificationResponse;
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.image.ImageBinaryCodec;
-import com.xpdustry.nohorny.common.image.ImageRenderer;
-import com.xpdustry.nohorny.common.image.MindustryImage;
+import com.xpdustry.nohorny.common.ClassificationResponse;
+import com.xpdustry.nohorny.common.ImageBinaryCodec;
+import com.xpdustry.nohorny.common.ImageRenderer;
+import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.awt.image.BufferedImage;
 import java.util.UUID;
 import org.slf4j.Logger;

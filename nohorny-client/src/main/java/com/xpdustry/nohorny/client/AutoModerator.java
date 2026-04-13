@@ -2,9 +2,10 @@
 package com.xpdustry.nohorny.client;
 
 import arc.struct.IntSeq;
-import com.xpdustry.nohorny.common.classification.Rating;
-import com.xpdustry.nohorny.common.image.MindustryCanvas;
-import com.xpdustry.nohorny.common.image.MindustryDisplay;
+import com.xpdustry.nohorny.common.GeometryUtils;
+import com.xpdustry.nohorny.common.MindustryCanvas;
+import com.xpdustry.nohorny.common.MindustryDisplay;
+import com.xpdustry.nohorny.common.Rating;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Supplier;
@@ -43,7 +44,7 @@ final class AutoModerator implements LifecycleListener {
                         if (player.uuid().equals(event.author().uuid())
                                 || player.ip().equals(event.author().ip())) {
                             player.kick("[scarlet]You have been banned for building NSFW buildings.");
-                            Call.sendMessage("[pink][[NoHorny]: [white]" + player.plainName()
+                            Call.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + player.plainName()
                                     + " has been banned for NSFW buildings at "
                                     + event.group().x() + ", "
                                     + event.group().y() + ".");
@@ -84,7 +85,7 @@ final class AutoModerator implements LifecycleListener {
                         display.team().items().add(Arrays.asList(display.block.requirements));
                     }
                     for (final var link : data.processors().keySet()) {
-                        if (!(Vars.world.build(element.x() + link.x(), element.y() + link.y())
+                        if (!(Vars.world.build(element.x() + GeometryUtils.x(link), element.y() + GeometryUtils.y(link))
                                 instanceof LogicBlock.LogicBuild processor)) {
                             continue;
                         }

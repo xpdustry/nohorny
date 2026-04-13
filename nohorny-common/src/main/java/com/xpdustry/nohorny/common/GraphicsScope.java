@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.image;
+package com.xpdustry.nohorny.common;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;

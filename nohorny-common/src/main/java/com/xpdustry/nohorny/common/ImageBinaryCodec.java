@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.common.image;
+package com.xpdustry.nohorny.common;
 
-import com.xpdustry.nohorny.common.NoHornyChecks;
-import com.xpdustry.nohorny.common.geometry.ImmutablePoint2;
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.struct.ImmutableByteArray;
-import com.xpdustry.nohorny.common.struct.ImmutableIntArray;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,7 +9,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 
 public final class ImageBinaryCodec {
 
@@ -74,10 +68,7 @@ public final class ImageBinaryCodec {
                 for (final var entry : display.processors().entrySet()) {
                     final var processor = entry.getValue();
                     final var position = entry.getKey();
-
-                    out.writeShort(position.x());
-                    out.writeShort(position.y());
-
+                    out.writeInt(position);
                     NoHornyChecks.within(
                             processor.instructions().size(), 1, MAXIMUM_INSTRUCTION_COUNT, "instruction count");
                     out.writeInt(processor.instructions().size());
@@ -145,7 +136,7 @@ public final class ImageBinaryCodec {
         final var elementCount = in.readInt();
         NoHornyChecks.within(elementCount, 1, MAXIMUM_GROUP_ELEMENT_COUNT, "element count");
 
-        final var elements = new HashSet<VirtualBuilding<MindustryImage>>();
+        final var elements = new HashMap<Integer, VirtualBuilding<MindustryImage>>();
         int minX = Integer.MAX_VALUE;
         int minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
@@ -158,14 +149,15 @@ public final class ImageBinaryCodec {
             final var image = ImageBinaryCodec.decodeImage(in);
             final var element = new VirtualBuilding<>(x, y, size, image);
 
-            elements.add(element);
+            elements.put(GeometryUtils.pack(x, y), element);
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             maxX = Math.max(maxX, x + size);
             maxY = Math.max(maxY, y + size);
         }
 
-        return new VirtualBuilding.Group<>(minX, minY, maxX - minX, maxY - minY, Collections.unmodifiableSet(elements));
+        return new VirtualBuilding.Group<>(
+                minX, minY, maxX - minX, maxY - minY, Collections.unmodifiableCollection(elements.values()));
     }
 
     private static MindustryImage decodeImage(final DataInputStream in) throws IOException {
@@ -192,13 +184,13 @@ public final class ImageBinaryCodec {
             }
             case IMAGE_TYPE_DISPLAY -> {
                 final var resolution = in.readInt();
-                final var processors = new HashMap<ImmutablePoint2, MindustryDisplay.Processor>();
+                final var processors = new HashMap<Integer, MindustryDisplay.Processor>();
 
                 final var processorCount = in.readInt();
                 // TODO Raise min to 1 when implementing iterative grouping with filters
                 NoHornyChecks.within(processorCount, 0, MAXIMUM_PROCESSOR_COUNT, "processor count");
                 for (int i = 0; i < processorCount; i++) {
-                    final var position = new ImmutablePoint2(in.readShort(), in.readShort());
+                    final var position = in.readInt();
 
                     final var instructionCount = in.readInt();
                     NoHornyChecks.within(instructionCount, 1, MAXIMUM_INSTRUCTION_COUNT, "instruction count");

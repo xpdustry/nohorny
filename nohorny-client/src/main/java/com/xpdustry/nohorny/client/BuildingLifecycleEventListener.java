@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.image.MindustryAuthor;
+import com.xpdustry.nohorny.common.MindustryAuthor;
 import mindustry.gen.Building;
 import org.jspecify.annotations.Nullable;
 

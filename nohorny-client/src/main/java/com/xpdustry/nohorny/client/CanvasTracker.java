@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.geometry.VirtualBuilding;
-import com.xpdustry.nohorny.common.geometry.VirtualBuildingIndex;
-import com.xpdustry.nohorny.common.image.MindustryAuthor;
-import com.xpdustry.nohorny.common.image.MindustryCanvas;
-import com.xpdustry.nohorny.common.struct.ImmutableByteArray;
-import com.xpdustry.nohorny.common.struct.ImmutableIntArray;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import arc.struct.IntSet;
+import com.xpdustry.nohorny.common.GeometryUtils;
+import com.xpdustry.nohorny.common.ImmutableByteArray;
+import com.xpdustry.nohorny.common.ImmutableIntArray;
+import com.xpdustry.nohorny.common.MindustryAuthor;
+import com.xpdustry.nohorny.common.MindustryCanvas;
+import com.xpdustry.nohorny.common.VirtualBuilding;
+import java.util.LinkedHashSet;
+import java.util.SequencedSet;
 import mindustry.Vars;
+import mindustry.game.EventType;
 import mindustry.world.blocks.logic.CanvasBlock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -19,15 +20,11 @@ import org.slf4j.LoggerFactory;
 final class CanvasTracker implements LifecycleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanvasTracker.class);
+    private static final int MAX_GROUP_RANGE = 6 * 2; // 6 regular canvases around the anchor
 
-    final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
-    private final VirtualBuildingIndexMarker modified = new VirtualBuildingIndexMarker();
-    final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-            .name("canvas-tracker-worker")
-            .daemon()
-            .uncaughtExceptionHandler(LoggingExceptionHandler.INSTANCE)
-            .factory());
+    final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
     private final NoHornyClient client;
+    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
 
     public CanvasTracker(final NoHornyClient client) {
         this.client = client;
@@ -36,8 +33,6 @@ final class CanvasTracker implements LifecycleListener {
     @SuppressWarnings("FutureReturnValueIgnored")
     @Override
     public void onInit() {
-        this.scheduler.scheduleWithFixedDelay(this::collect, 2, 2, TimeUnit.SECONDS);
-
         MindustryUtils.onEvent(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(final CanvasBlock.CanvasBuild building, final @Nullable MindustryAuthor author) {
@@ -45,33 +40,25 @@ final class CanvasTracker implements LifecycleListener {
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
                 final var data = CanvasTracker.this.data(building, author);
-                CanvasTracker.this.scheduler.execute(() -> {
-                    final var upserted = CanvasTracker.this.canvases.upsert(x, y, size, data);
-                    CanvasTracker.this.modified.mark(upserted);
-                });
+                final var added = CanvasTracker.this.canvases.upsert(x, y, size, data);
+                CanvasTracker.this.queue.addLast(added.packed());
             }
 
             @Override
             public void onRemoveAll() {
-                CanvasTracker.this.scheduler.execute(() -> {
-                    CanvasTracker.this.canvases.removeAll();
-                    CanvasTracker.this.modified.unmarkAll();
-                });
+                CanvasTracker.this.canvases.removeAll();
+                CanvasTracker.this.queue.clear();
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
-                CanvasTracker.this.scheduler.execute(() -> {
-                    final var removed = CanvasTracker.this.canvases.removeAllWithinSquare(x, y, size);
-                    CanvasTracker.this.modified.unmarkAll(removed);
-                });
+                for (final var removed : CanvasTracker.this.canvases.removeAllWithinSquare(x, y, size)) {
+                    CanvasTracker.this.queue.remove(removed.packed());
+                }
             }
         });
-    }
 
-    @Override
-    public void onExit() {
-        this.scheduler.close();
+        MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
     }
 
     // TODO Consider using RLE, using the highest bit as a marker for either count or color value
@@ -98,18 +85,23 @@ final class CanvasTracker implements LifecycleListener {
         if (!Vars.state.isGame()) {
             return;
         }
-        try {
-            for (final var group : this.canvases.groups()) {
-                if (group.elements().stream().noneMatch(this.modified::marked)) {
-                    continue;
-                }
-                if (group.elements().stream().anyMatch(this::isEligible)) {
-                    this.client.accept(group);
-                }
-                this.modified.unmarkAll(group.elements());
+        final var visited = new IntSet();
+        while (!this.queue.isEmpty()) {
+            final int point = this.queue.removeFirst();
+            final var x = GeometryUtils.x(point);
+            final var y = GeometryUtils.y(point);
+            final var group = this.canvases.groupAt(x, y, MAX_GROUP_RANGE, visited);
+            if (group == null) {
+                continue;
             }
-        } catch (final Exception e) {
-            LOGGER.error("An error occurred while collecting canvas groups for processing", e);
+            if (group.elements().stream().noneMatch(this::isEligible)) {
+                continue;
+            }
+            this.client.accept(group);
+            for (final var building : group.elements()) {
+                this.queue.remove(building.packed());
+            }
+            break;
         }
     }
 

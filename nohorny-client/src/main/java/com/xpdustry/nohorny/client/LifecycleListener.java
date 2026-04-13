@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-public interface LifecycleListener {
+interface LifecycleListener {
 
     default void onInit() {}
 

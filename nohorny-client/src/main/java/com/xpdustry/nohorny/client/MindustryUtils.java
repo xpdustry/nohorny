@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.Core;
 import arc.Events;
-import com.xpdustry.nohorny.common.image.MindustryAuthor;
+import com.xpdustry.nohorny.common.MindustryAuthor;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
 import mindustry.gen.Building;
@@ -95,17 +94,6 @@ final class MindustryUtils {
             if (event.from == GameState.State.menu
                     && (event.to == GameState.State.playing || event.to == GameState.State.paused)) {
                 listener.onRemoveAll();
-            }
-        });
-    }
-
-    public static void runInMainThread(final Runnable runnable) {
-        Core.app.post(() -> {
-            try {
-                runnable.run();
-            } catch (final Throwable e) {
-                LoggerFactory.getLogger(NoHornyPlugin.class)
-                        .error("An error occurred while running a task in the main thread", e);
             }
         });
     }
