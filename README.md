@@ -23,7 +23,7 @@ Enjoy this family friendly factory building game as the [cat](https://github.com
 
 This plugin requires at least:
 
-- Mindustry 156
+- Mindustry 157
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest
 
@@ -35,14 +35,17 @@ This is a standalone Java application requiring:
 
 - Java 25
 
-Run `nohorny-server.jar` with a `config.json` file in the working directory (or set the `NH_CONFIG_FILE_PATH` environment variable).
+Then, you can simply run `java -jar nohorny-server.jar`.
 
 ## Client Configuration
 
 The client uses Mindustry's built-in server configuration system. Use the `config` command in the server console:
 
-- **`nohorny-api-endpoint`** - The NoHorny API endpoint to query for image rating. Default: `https://nohorny.xpdustry.com/api`
-- **`nohorny-automod-policy`** - The policy to adopt when a group of buildings is classified. Default: `BAN_NSFW`
+| Key | Description | Default |
+| --- | --- | --- |
+| `nohorny-api-endpoint` | Base URL used by the plugin. The client resolves `status` and `classify` relative to it. | `https://nohorny.xpdustry.com/api` |
+| `nohorny-automod-policy` | The policy to apply when a group of buildings is classified. | `BAN_NSFW` |
+| `nohorny-debug-tap` | Enables admin double-tap debugging for tracked displays and canvases. | `false` |
 
 ### Auto-Mod Policies
 
@@ -55,56 +58,63 @@ The client uses Mindustry's built-in server configuration system. Use the `confi
 
 ### Example
 
-```
-config nohorny-api-endpoint http://127.0.0.1:8080/api
+```text
+config nohorny-api-endpoint http://127.0.0.1:8080/
 config nohorny-automod-policy ban_nsfw
+config nohorny-debug-tap true
 ```
 
 ## Server Configuration
 
-Create a `config.json` file:
+In most cases, just run `nohorny-server.jar`. The bundled defaults are already set up for the built-in classifier and
+for serving the API on port `8080`.
 
-```json
-{
-  "server": {
-    "host": "localhost",
-    "port": 8080
-  },
-  "classifier": {
-    "repository": "phinner/nsfw_image_detection",
-    "revision": "main",
-    "file": "falconsai_nsfw_image_detection.pt",
-    "labels": ["normal", "nsfw"],
-    "nsfw-label": "nsfw",
-    "thresholds": {
-      "nsfw": 0.7,
-      "warn": 0.4
-    }
-  }
-}
+For localhost deployments, the server exposes `GET /status` and `POST /classify` at the root by default, so the client
+should usually point to `http://127.0.0.1:8080/`. If you want the server to live under `/api` instead, set
+`server.servlet.context-path=/api`.
+
+Spring Boot lets you override settings in a few different ways. For example, these all change the server port to
+`9090`:
+
+```properties
+# application.properties
+server.port=9090
 ```
 
-### Classifier Options
+```text
+SERVER_PORT=9090 java -jar nohorny-server.jar
+```
 
-The server supports a single **ViT** (Vision Transformer) classifier, loaded via [DJL](https://djl.ai).
+```text
+java -jar nohorny-server.jar --server.port=9090
+```
 
-| Field             | Description                                                     | Default   |
-|-------------------|-----------------------------------------------------------------|-----------|
-| `repository`      | HuggingFace model repository                                    | Required  |
-| `revision`        | Git revision to download from                                   | `"main"`  |
-| `file`            | Model filename to download                                      | Required  |
-| `token`           | HuggingFace API token for private models                        | None      |
-| `labels`          | Classification labels the model outputs                         | Required  |
-| `nsfw-label`      | Which label counts as NSFW                                      | Required  |
-| `thresholds.nsfw` | Confidence threshold for NSFW rating                            | Required  |
-| `thresholds.warn` | Confidence threshold for WARN rating (must be less than `nsfw`) | Required  |
-| `engine`          | Inference engine: `PYTORCH` or `ONNX`                           | `PYTORCH` |
+### Properties
 
-The model is downloaded from HuggingFace on first startup and cached in `.nohorny-model-cache/`.
+The server currently exposes:
 
-## Client Commands
+| Property | Description | Default |
+| --- | --- | --- |
+| `server.address` | Bind address for the HTTP server. | Spring Boot default |
+| `server.port` | HTTP port. | `8080` |
+| `server.servlet.context-path` | Optional path prefix for all endpoints. | Empty |
+| `nohorny.classifier.vit.repository` | Hugging Face repository to download the model from. | `phinner/nsfw_image_detection` |
+| `nohorny.classifier.vit.revision` | Repository revision or commit to download. | `aab8ebd004112c8358a8ff9709c0492c2ba96bdc` |
+| `nohorny.classifier.vit.file` | Model file to load. | `falconsai_nsfw_image_detection.pt` |
+| `nohorny.classifier.vit.token` | Hugging Face token for private or gated models. | None |
+| `nohorny.classifier.vit.labels` | Output labels returned by the model. | `normal,nsfw` |
+| `nohorny.classifier.vit.nsfw-label` | Which label is interpreted as NSFW. | `nsfw` |
+| `nohorny.classifier.vit.directory` | Directory where the downloaded model is cached. | `.cached-models` |
+| `nohorny.classifier.vit.engine` | DJL engine name used to load the model. | `PyTorch` |
+| `nohorny.classifier.vit.thresholds.warn` | Confidence threshold for a `WARN` rating. | `0.4` |
+| `nohorny.classifier.vit.thresholds.nsfw` | Confidence threshold for an `NSFW` rating. | `0.7` |
 
-- `nohorny-debug` - Toggle debug overlays and image dumping (labels building groups, double-tap to render group images to `config/mods/nohorny/debug/`)
+The model is downloaded from Hugging Face on first startup and cached under `.cached-models/`.
+
+## Client Debugging
+
+Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display or
+canvas group labels the detected group in-game and dumps a rendered PNG to `config/mods/nohorny/debug/`.
 
 ## Developers
 
@@ -146,7 +156,7 @@ public final class MyPlugin extends Plugin {
 
 - `./gradlew runMindustryServer` to run the client plugin in a local Mindustry server.
 
-- `./gradlew spotlessApply` to apply the code formatting and the licence header.
+- `./gradlew spotlessApply` to apply the code formatting and the license header.
 
 ## Support
 
