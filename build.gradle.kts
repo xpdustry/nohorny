@@ -176,7 +176,6 @@ project(":nohorny-client") {
         archiveClassifier = "shaded"
         from(rootProject.file("LICENSE.md")) { into("META-INF") }
         mergeServiceFiles()
-        relocate("com.google.gson", "com.xpdustry.nohorny.client.shadow.gson")
         from(generateMetadataFile)
     }
 
