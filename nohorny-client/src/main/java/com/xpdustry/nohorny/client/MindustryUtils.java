@@ -15,7 +15,7 @@ import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileY;
 
 final class MindustryUtils {
 
-    private static final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
+    private static final MiniLogger log = MiniLogger.forClass(MindustryUtils.class);
 
     public static <T> void onEvent(final Class<T> type, final EventListener<T> listener) {
         Events.on(type, event -> {
