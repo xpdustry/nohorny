@@ -94,9 +94,6 @@ final class CanvasTracker implements LifecycleListener {
             if (group == null) {
                 continue;
             }
-            if (group.elements().stream().noneMatch(this::isEligible)) {
-                continue;
-            }
             this.client.accept(group);
             for (final var building : group.elements()) {
                 this.queue.remove(building.packed());
