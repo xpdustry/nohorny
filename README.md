@@ -25,7 +25,7 @@ This plugin requires at least:
 
 - Mindustry 157
 - Java 25
-- [SLF4MD](https://github.com/xpdustry/slf4md) latest
+- [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
 Put `nohorny-client.jar` in your `config/mods` directory and start your server.
 

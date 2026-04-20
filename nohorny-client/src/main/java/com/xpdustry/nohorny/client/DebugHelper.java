@@ -23,12 +23,10 @@ import mindustry.gen.Call;
 import mindustry.gen.Player;
 import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class DebugHelper implements LifecycleListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DebugHelper.class);
+    private static final MiniLogger log = MiniLogger.forClass(DebugHelper.class);
 
     // https://stackoverflow.com/a/4382138
     private static final Color[] KELLY_COLORS = {
@@ -124,7 +122,7 @@ final class DebugHelper implements LifecycleListener {
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");
-            LOGGER.error("Failed to process group at ({}, {}}) for debugging", x, y, e);
+            log.error("Failed to process group at ({}, {}}) for debugging", x, y, e);
             return;
         }
         player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + file);

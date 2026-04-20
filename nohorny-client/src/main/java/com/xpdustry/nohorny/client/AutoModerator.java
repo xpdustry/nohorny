@@ -21,12 +21,10 @@ import mindustry.type.ItemSeq;
 import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class AutoModerator implements LifecycleListener {
 
-    private static final Logger log = LoggerFactory.getLogger(AutoModerator.class);
+    private static final MiniLogger log = MiniLogger.forClass(AutoModerator.class);
 
     private final Supplier<Policy> policy = ConfigUtils.registerSafeSettingEntry(
             "nohorny-automod-policy",
