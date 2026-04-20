@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-FROM docker.io/eclipse-temurin:25-jdk AS build
+FROM docker.io/eclipse-temurin:26-jdk AS build
 
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
@@ -36,7 +36,7 @@ COPY nohorny-server/src/ nohorny-server/src/
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle build -x test --no-daemon --stacktrace --build-cache
 
-FROM docker.io/eclipse-temurin:25-jre AS runtime
+FROM docker.io/eclipse-temurin:26-jre AS runtime
 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser
