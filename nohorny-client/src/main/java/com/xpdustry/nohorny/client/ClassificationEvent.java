@@ -10,4 +10,5 @@ import org.jspecify.annotations.Nullable;
 public record ClassificationEvent(
         VirtualBuilding.Group<? extends MindustryImage> group,
         Rating rating,
-        @Nullable MindustryAuthor author) {}
+        @Nullable MindustryAuthor author,
+        String identifier) {}

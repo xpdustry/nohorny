@@ -141,7 +141,8 @@ final class NoHornyClient implements LifecycleListener {
                 classification.rating(),
                 classification.classifier(),
                 classification.identifier());
-        Core.app.post(() -> Events.fire(new ClassificationEvent(group, classification.rating(), computeAuthor(group))));
+        Core.app.post(() -> Events.fire(new ClassificationEvent(
+                group, classification.rating(), computeAuthor(group), classification.identifier())));
     }
 
     private URI resolve(final String path) {
