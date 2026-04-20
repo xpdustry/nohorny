@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.2 - 2026-04-20
+
+### Changes & New features
+
+- Skip group if the anchor is not eligible (#66) ([`99ff1bd`](https://github.com/xpdustry/nohorny/commit/99ff1bde82bbfbcb389a6ed9460828b2bd8ccf79))
+- Refactored logging to make slf4md optional (#65) ([`cf14a90`](https://github.com/xpdustry/nohorny/commit/cf14a90ef9e333ed81f1e1b5bceab3ab8366eac7))
+- Better auto-mod logging (#64) ([`97d4c92`](https://github.com/xpdustry/nohorny/commit/97d4c92722bd786cefb877efb6c17896c3f25157))
+- Increase group range of CanvasTracker ([`2300fe9`](https://github.com/xpdustry/nohorny/commit/2300fe9d47070915dbd0b687e008104e003d5bc7))
+- Disable tileable displays support ([`c9015ec`](https://github.com/xpdustry/nohorny/commit/c9015ec8fd78f048f4d92cf913d27d9c989e39cf))
+
+### Bugfixes
+
+- Fix possible NPE in GroupingVirtualBuildingIndex ([`a6a4893`](https://github.com/xpdustry/nohorny/commit/a6a4893aaf748dd0d581c9bbdeb6988d9c79d35d))
+- Fix nohorny-common not being bundled as "api" in client and server ([`1aa8bda`](https://github.com/xpdustry/nohorny/commit/1aa8bdab60db18aa075bebab539541077c967451))
+
+### Maintenance
+
+- Moved ConfigUtils#registerSafeSettingEntry to MindustryUtils ([`741d1a4`](https://github.com/xpdustry/nohorny/commit/741d1a4d4cfe56fbe454e6833011b481fd191121))
+- Removed stale gson relocation ([`753ef65`](https://github.com/xpdustry/nohorny/commit/753ef65d35718249abdb3b04159b0e5aa8093745))
+
 ## v4.0.0-beta.1 - 2026-04-13
 
 ### Changes & New features
