@@ -6,7 +6,7 @@ on:
 jobs:
   action:
     name: "Action"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
     steps:
