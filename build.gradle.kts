@@ -133,7 +133,7 @@ project(":nohorny-client") {
             java = true,
             hidden = true,
             minGameVersion = "157",
-            dependencies = mutableListOf(ModDependency("slf4md")),
+            dependencies = mutableListOf(ModDependency("slf4md", soft = true)),
         )
 
     val toxopid = extensions.getByType<ToxopidExtension>()
@@ -153,10 +153,6 @@ project(":nohorny-client") {
         "testImplementation"(toxopid.dependencies.arcCore)
         "compileOnly"(toxopid.dependencies.mindustryHeadless)
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
-
-        "compileOnly"("org.slf4j:slf4j-api:2.0.17")
-        "testImplementation"("org.slf4j:slf4j-api:2.0.17")
-        "testRuntimeOnly"("org.slf4j:slf4j-simple:2.0.17")
     }
 
     configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) {

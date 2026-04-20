@@ -4,12 +4,10 @@ package com.xpdustry.nohorny.client;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import mindustry.net.Administration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class ConfigUtils {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigUtils.class);
+    private static final MiniLogger log = MiniLogger.forClass(ConfigUtils.class);
 
     public static <T> Supplier<T> registerSafeSettingEntry(
             final String name, final String desc, final T def, final Function<String, T> parser) {
@@ -21,20 +19,14 @@ final class ConfigUtils {
                         final var _ = parser.apply(string);
                         super.set(string);
                     } catch (final Exception e) {
-                        LOGGER.atError()
-                                .setMessage("The value '{}' for the '{}' config entry is not valid")
-                                .addArgument(string)
-                                .addArgument(this.name)
-                                .setCause(e)
-                                .log();
+                        log.error("The value '{}' for the '{}' config entry is not valid", string, this.name, e);
                     }
                 } else {
-                    LOGGER.atError()
-                            .setMessage("The value '{}' for the '{}' config entry is not a string")
-                            .addArgument(value)
-                            .addArgument(this.name)
-                            .setCause(new Throwable())
-                            .log();
+                    log.error(
+                            "The value '{}' for the '{}' config entry is not a string",
+                            value,
+                            this.name,
+                            new IllegalArgumentException());
                 }
             }
         };

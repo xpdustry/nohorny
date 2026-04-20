@@ -7,14 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 import mindustry.Vars;
 import mindustry.mod.Plugin;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public final class NoHornyPlugin extends Plugin {
 
     static final String MESSAGE_PREFIX = "[pink][[NoHorny]: [white]";
 
-    private static final Logger logger = LoggerFactory.getLogger(NoHornyPlugin.class);
+    private static final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
     private final List<LifecycleListener> listeners = new ArrayList<>();
 
     @Override
@@ -63,7 +61,7 @@ public final class NoHornyPlugin extends Plugin {
                 throw new RuntimeException("Failed to initialize NoHorny", e1);
             }
         }
-        logger.info("NoHorny successfully initialized");
+        log.info("NoHorny successfully initialized");
     }
 
     private void exit0() {
@@ -71,7 +69,7 @@ public final class NoHornyPlugin extends Plugin {
             try {
                 listener.onExit();
             } catch (final Throwable e) {
-                logger.error(
+                log.error(
                         "NoHorny failed to exit {} gracefully",
                         listener.getClass().getSimpleName(),
                         e);

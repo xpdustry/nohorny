@@ -14,12 +14,9 @@ import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.world.blocks.logic.CanvasBlock;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class CanvasTracker implements LifecycleListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CanvasTracker.class);
     private static final int MAX_GROUP_RANGE = 6 * 2; // 6 regular canvases around the anchor
 
     final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();

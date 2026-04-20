@@ -29,12 +29,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class NoHornyClient implements LifecycleListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NoHornyClient.class);
+    private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
     private static final List<Duration> RETRY_DELAYS =
             List.of(Duration.ZERO, Duration.ofSeconds(10), Duration.ofMinutes(2));
 
@@ -58,16 +56,16 @@ final class NoHornyClient implements LifecycleListener {
         try {
             response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (final ConnectException e) {
-            LOGGER.error("The configured NoHorny server ({}) is not reachable, is it running?", this.resolve(""));
+            log.error("The configured NoHorny server ({}) is not reachable, is it running?", this.resolve(""));
             return;
         } catch (final Exception e) {
-            LOGGER.error("Failed to check the status of {}", this.resolve(""), e);
+            log.error("Failed to check the status of {}", this.resolve(""), e);
             return;
         }
         if (response.statusCode() != 200) {
-            LOGGER.error("The NoHorny server returned {} on status check: {}", response.statusCode(), response.body());
+            log.error("The NoHorny server returned {} on status check: {}", response.statusCode(), response.body());
         } else {
-            LOGGER.info("The NoHorny server is operational: {}", response.body());
+            log.info("The NoHorny server is operational: {}", response.body());
         }
     }
 
@@ -82,14 +80,14 @@ final class NoHornyClient implements LifecycleListener {
                     Thread.currentThread().interrupt();
                     return;
                 } catch (final ConnectException e) {
-                    LOGGER.error(
+                    log.error(
                             "Failed to rate group at ({}, {}), attempt {}/{}: The NoHorny server is not reachable",
                             group.x(),
                             group.y(),
                             attempt + 1,
                             RETRY_DELAYS.size());
                 } catch (final Exception e) {
-                    LOGGER.error(
+                    log.error(
                             "Failed to rate group at ({}, {}), attempt {}/{}",
                             group.x(),
                             group.y(),
@@ -117,7 +115,7 @@ final class NoHornyClient implements LifecycleListener {
                         try (out) {
                             MindustryImageIO.writeImageGroup(out, group);
                         } catch (final IOException e) {
-                            LOGGER.warn("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
+                            log.warn("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
                         }
                     });
                     return in;
@@ -135,7 +133,7 @@ final class NoHornyClient implements LifecycleListener {
                 jval.getString("classifier"), Rating.valueOf(jval.getString("rating")), jval.getString("identifier"));
 
         final var author = computeAuthor(group);
-        LOGGER.trace(
+        log.trace(
                 "Received classification response for group by {} at ({}, {}): {} ({}/id={})",
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),

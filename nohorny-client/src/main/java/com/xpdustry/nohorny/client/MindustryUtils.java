@@ -9,20 +9,20 @@ import mindustry.gen.Building;
 import mindustry.gen.Player;
 import mindustry.world.blocks.ConstructBlock;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.LoggerFactory;
 
 import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileX;
 import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileY;
 
 final class MindustryUtils {
 
+    private static final MiniLogger log = MiniLogger.forClass(MindustryUtils.class);
+
     public static <T> void onEvent(final Class<T> type, final EventListener<T> listener) {
         Events.on(type, event -> {
             try {
                 listener.onEvent(event);
             } catch (final Throwable e) {
-                LoggerFactory.getLogger(NoHornyPlugin.class)
-                        .error("An error occurred while handling event {}", type, e);
+                log.error("An error occurred while handling event {}", type, e);
             }
         });
     }
@@ -32,8 +32,7 @@ final class MindustryUtils {
             try {
                 listener.onEvent(type);
             } catch (final Throwable e) {
-                LoggerFactory.getLogger(NoHornyPlugin.class)
-                        .error("An error occurred while handling event {}", type, e);
+                log.error("An error occurred while handling event {}", type, e);
             }
         });
     }
