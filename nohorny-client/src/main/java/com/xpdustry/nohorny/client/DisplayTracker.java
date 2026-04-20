@@ -22,6 +22,7 @@ import mindustry.game.EventType;
 import mindustry.logic.LExecutor;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
+import mindustry.world.blocks.logic.TileableLogicDisplay;
 import org.jspecify.annotations.Nullable;
 
 final class DisplayTracker implements LifecycleListener {
@@ -48,6 +49,10 @@ final class DisplayTracker implements LifecycleListener {
             @Override
             public void onCreate(
                     final LogicDisplay.LogicDisplayBuild building, final @Nullable MindustryAuthor author) {
+                // TODO Add proper support for tileable display
+                if (building instanceof TileableLogicDisplay.TileableLogicDisplayBuild) {
+                    return;
+                }
                 final int x = BuildingUtils.anchorTileX(building);
                 final int y = BuildingUtils.anchorTileY(building);
                 final int size = building.block.size;
