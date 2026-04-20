@@ -102,7 +102,12 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
             final var iterator = set.iterator();
             while (iterator.hasNext) {
                 final var neighborPacked = iterator.next();
-                final var neighbor = Objects.requireNonNull(this.index.get(neighborPacked));
+                final var neighbor = this.index.get(neighborPacked);
+                // That's not supposed to happen, but we never know...
+                if (neighbor == null) {
+                    iterator.remove();
+                    continue;
+                }
                 if (!overlaps(
                         initialX - halfRange,
                         initialY - halfRange,
