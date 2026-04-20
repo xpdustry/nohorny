@@ -86,11 +86,12 @@ final class CanvasTracker implements LifecycleListener {
             final int point = this.queue.removeFirst();
             final var x = GeometryUtils.x(point);
             final var y = GeometryUtils.y(point);
-            final var group = this.canvases.groupAt(x, y, MAX_GROUP_RANGE, visited);
-            if (group == null) {
+            final var anchor = this.canvases.select(x, y);
+            if (anchor == null || !this.isEligible(anchor)) {
                 continue;
             }
-            if (group.elements().stream().noneMatch(this::isEligible)) {
+            final var group = this.canvases.groupAt(x, y, MAX_GROUP_RANGE, visited);
+            if (group == null) {
                 continue;
             }
             this.client.accept(group);

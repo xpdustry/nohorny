@@ -199,6 +199,10 @@ final class DisplayTracker implements LifecycleListener {
             final int point = this.queue.removeFirst();
             final var x = GeometryUtils.x(point);
             final var y = GeometryUtils.y(point);
+            final var anchor = this.displays.select(x, y);
+            if (anchor == null || !this.isEligible(anchor)) {
+                continue;
+            }
             final var group = this.displays.groupAt(x, y, MAX_GROUP_RANGE, visited);
             if (group == null) {
                 continue;
@@ -231,6 +235,10 @@ final class DisplayTracker implements LifecycleListener {
                     new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
             this.queue.addLast(GeometryUtils.pack(display.x(), display.y()));
         }
+    }
+
+    private boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
+        return !building.data().processors().isEmpty();
     }
 
     private enum LinkUpdateKind {
