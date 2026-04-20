@@ -12,7 +12,7 @@ public final class NoHornyPlugin extends Plugin {
 
     static final String MESSAGE_PREFIX = "[pink][[NoHorny]: [white]";
 
-    private static final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
+    private final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
     private final List<LifecycleListener> listeners = new ArrayList<>();
 
     @Override

@@ -38,11 +38,7 @@ final class AutoModerator implements LifecycleListener {
     }
 
     private void onClassificationEvent(final ClassificationEvent event) {
-        final var policy = this.policy.get();
-        if (policy == Policy.DISABLED) {
-            return;
-        }
-        switch (policy) {
+        switch (this.policy.get()) {
             case BAN_NSFW -> {
                 if (event.rating().isWorseOrEqualThan(Rating.NSFW)) {
                     this.delete(event.group());
@@ -62,6 +58,7 @@ final class AutoModerator implements LifecycleListener {
                     this.delete(event.group());
                 }
             }
+            case DISABLED -> {}
         }
     }
 
