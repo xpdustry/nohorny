@@ -69,10 +69,9 @@ final class AutoModerator implements LifecycleListener {
 
     private void ban(final MindustryAuthor author, final int groupX, final int groupY) {
         log.info(
-                "Banning {} (uuid={},ip={}) for NSFW buildings at ({}, {})",
+                "Banning ({}/{}) for NSFW buildings at ({}, {})",
                 Vars.netServer.admins.getInfo(author.uuid()).plainLastName(),
                 author.uuid(),
-                author.ip(),
                 groupX,
                 groupY);
         Vars.netServer.admins.banPlayerIP(author.ip());
