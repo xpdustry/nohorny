@@ -127,7 +127,7 @@ final class AutoModerator implements LifecycleListener {
         }
 
         Call.setTileBlocks(Blocks.air, Team.derelict, positions.toArray());
-        log.info("Deleted {} buildings", group.elements().size());
+        log.info("Deleted {} buildings out of {}", positions.size, group.elements().size());
 
         if (Vars.state.rules.infiniteResources) {
             return;
