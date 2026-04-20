@@ -122,7 +122,7 @@ final class DebugHelper implements LifecycleListener {
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");
-            log.error("Failed to process group at ({}, {}}) for debugging", x, y, e);
+            log.error("Failed to process group at ({}, {}) for debugging", x, y, e);
             return;
         }
         player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + file);
