@@ -40,7 +40,7 @@ final class NoHornyClient implements LifecycleListener {
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
-    private final Supplier<URI> endpoint = ConfigUtils.registerSafeSettingEntry(
+    private final Supplier<URI> endpoint = MindustryUtils.registerSafeSettingEntry(
             "nohorny-api-endpoint",
             "The NoHorny API endpoint to query for image rating.",
             URI.create("https://nohorny.xpdustry.com/api"),

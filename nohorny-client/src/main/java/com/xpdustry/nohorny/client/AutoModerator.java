@@ -26,7 +26,7 @@ final class AutoModerator implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(AutoModerator.class);
 
-    private final Supplier<Policy> policy = ConfigUtils.registerSafeSettingEntry(
+    private final Supplier<Policy> policy = MindustryUtils.registerSafeSettingEntry(
             "nohorny-automod-policy",
             "Then policy to adopt when a group of buildings is classified. Valid values are 'disabled', 'delete_nsfw', 'delete_warn', 'ban_nsfw'.",
             Policy.BAN_NSFW,
