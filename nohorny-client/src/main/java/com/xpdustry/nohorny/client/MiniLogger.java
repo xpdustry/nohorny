@@ -21,9 +21,9 @@ sealed interface MiniLogger {
         return fallback;
     }
 
-    void debug(final String message, final Object... args);
-
     void trace(final String message, final Object... args);
+
+    void debug(final String message, final Object... args);
 
     void info(final String message, final Object... args);
 
@@ -51,13 +51,13 @@ sealed interface MiniLogger {
         }
 
         @Override
-        public void debug(final String message, final Object... args) {
-            this.log0(Level.DEBUG, message, args);
+        public void trace(final String message, final Object... args) {
+            this.log0(Level.TRACE, message, args);
         }
 
         @Override
-        public void trace(final String message, final Object... args) {
-            this.log0(Level.TRACE, message, args);
+        public void debug(final String message, final Object... args) {
+            this.log0(Level.DEBUG, message, args);
         }
 
         @Override
@@ -100,15 +100,15 @@ sealed interface MiniLogger {
     enum MindustryMiniLogger implements MiniLogger {
         INSTANCE;
 
-        private final String prefix = "[" + Vars.mods.getMod(NoHornyPlugin.class).meta.displayName + "] ";
+        private static final String PREFIX = "[NoHorny] ";
 
         @Override
-        public void debug(final String message, final Object... args) {
+        public void trace(final String message, final Object... args) {
             this.log0(Log.LogLevel.debug, message, args);
         }
 
         @Override
-        public void trace(final String message, final Object... args) {
+        public void debug(final String message, final Object... args) {
             this.log0(Log.LogLevel.debug, message, args);
         }
 
@@ -133,9 +133,9 @@ sealed interface MiniLogger {
                 args = Arrays.copyOf(args, args.length - 1);
                 error = throwable;
             }
-            Log.log(level, this.prefix + message.replace("{}", "@"), args);
+            Log.log(level, PREFIX + message.replace("{}", "@"), args);
             if (error != null) {
-                Log.log(level, this.prefix + Strings.getStackTrace(error));
+                Log.log(level, PREFIX + Strings.getStackTrace(error));
             }
         }
     }
