@@ -27,7 +27,7 @@ import org.springframework.web.client.RestClient;
 @Component
 public final class ViTClassifier implements Classifier {
 
-    private static final Logger logger = LoggerFactory.getLogger(ViTClassifier.class);
+    private static final Logger log = LoggerFactory.getLogger(ViTClassifier.class);
     private final RestClient restClient;
     private final ViTClassifierProperties properties;
 
@@ -62,7 +62,7 @@ public final class ViTClassifier implements Classifier {
         if (Files.notExists(target)) {
             final var url = "https://huggingface.co/" + this.properties.repository() + "/resolve/"
                     + this.properties.revision() + "/" + this.properties.file();
-            logger.info("Model {} does not exists locally, downloading from hugging face at {}", name, url);
+            log.info("Model {} does not exists locally, downloading from hugging face at {}", name, url);
             final var request = this.restClient.get().uri(url);
             if (this.properties.token() != null) {
                 request.header("Authorization", "Bearer " + this.properties.token());

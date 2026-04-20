@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public final class NoHornyController {
 
-    private static final Logger logger = LoggerFactory.getLogger(NoHornyController.class);
+    private static final Logger log = LoggerFactory.getLogger(NoHornyController.class);
 
     private final Classifier classifier;
 
@@ -54,12 +54,12 @@ public final class NoHornyController {
     private ResponseEntity<?> classify(final BufferedImage image) {
         final var uuid = UUID.randomUUID().toString();
         try {
-            logger.trace("Processing image {} (png/w={},h={})", uuid, image.getWidth(), image.getHeight());
+            log.trace("Processing image {} (png/w={},h={})", uuid, image.getWidth(), image.getHeight());
             final var result = this.classifier.classify(image);
-            logger.trace("Processed image {}, got {}", uuid, result);
+            log.trace("Processed image {}, got {}", uuid, result);
             return ResponseEntity.ok(new ClassificationResponse(this.classifier.name(), result.rating(), uuid));
         } catch (final Exception exception) {
-            logger.error("Classification request {} has failed", uuid, exception);
+            log.error("Classification request {} has failed", uuid, exception);
             return ResponseEntity.internalServerError().body("internal server error");
         }
     }
