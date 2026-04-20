@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 
 final class CanvasTracker implements LifecycleListener {
 
-    private static final int MAX_GROUP_RANGE = 6 * 2; // 6 regular canvases around the anchor
+    private static final int MAX_GROUP_RANGE = 10 * 3; // 10 large canvases around the anchor
 
     final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
     private final NoHornyClient client;
