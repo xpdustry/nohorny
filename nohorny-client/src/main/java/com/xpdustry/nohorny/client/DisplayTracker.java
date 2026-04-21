@@ -191,7 +191,7 @@ final class DisplayTracker implements LifecycleListener {
     }
 
     private void collect() {
-        if (!Vars.state.isGame()) {
+        if (!Vars.state.isGame() || this.client.shouldNotAccept()) {
             return;
         }
         final var visited = new IntSet();
