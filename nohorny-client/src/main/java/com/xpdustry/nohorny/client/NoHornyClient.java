@@ -78,36 +78,37 @@ final class NoHornyClient implements LifecycleListener {
 
     public <T extends MindustryImage> void accept(final VirtualBuilding.Group<T> group) {
         this.executor.execute(() -> {
-            for (int attempt = 0; attempt < RETRY_DELAYS.size(); attempt++) {
-                try {
+            try {
+                for (int attempt = 0; attempt < RETRY_DELAYS.size(); attempt++) {
                     final var delay = RETRY_DELAYS.get(attempt);
                     if (delay.isPositive()) {
                         Thread.sleep(delay);
                     }
                     this.semaphore.acquire();
-                    this.classify(group);
-                    return;
-                } catch (final InterruptedException _) {
-                    Thread.currentThread().interrupt();
-                    return;
-                } catch (final ConnectException e) {
-                    log.error(
-                            "Failed to rate group at ({}, {}), attempt {}/{}: The NoHorny server is not reachable",
-                            group.x(),
-                            group.y(),
-                            attempt + 1,
-                            RETRY_DELAYS.size());
-                } catch (final Exception e) {
-                    log.error(
-                            "Failed to rate group at ({}, {}), attempt {}/{}",
-                            group.x(),
-                            group.y(),
-                            attempt + 1,
-                            RETRY_DELAYS.size(),
-                            e);
-                } finally {
-                    this.semaphore.release();
+                    try {
+                        this.classify(group);
+                        return;
+                    } catch (final ConnectException e) {
+                        log.error(
+                                "Failed to rate group at ({}, {}), attempt {}/{}: The NoHorny server is not reachable",
+                                group.x(),
+                                group.y(),
+                                attempt + 1,
+                                RETRY_DELAYS.size());
+                    } catch (final Exception e) {
+                        log.error(
+                                "Failed to rate group at ({}, {}), attempt {}/{}",
+                                group.x(),
+                                group.y(),
+                                attempt + 1,
+                                RETRY_DELAYS.size(),
+                                e);
+                    } finally {
+                        this.semaphore.release();
+                    }
                 }
+            } catch (final InterruptedException _) {
+                Thread.currentThread().interrupt();
             }
         });
     }
