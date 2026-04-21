@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
@@ -37,6 +38,7 @@ final class NoHornyClient implements LifecycleListener {
             List.of(Duration.ZERO, Duration.ofSeconds(10), Duration.ofMinutes(2));
 
     private final HttpClient http = HttpClient.newHttpClient();
+    private final Semaphore semaphore = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
@@ -69,11 +71,20 @@ final class NoHornyClient implements LifecycleListener {
         }
     }
 
+    // This is not a perfect concurrency guard, but it's simple, and it's also ok if a few groups slip through
+    public boolean shouldNotAccept() {
+        return this.semaphore.availablePermits() == 0;
+    }
+
     public <T extends MindustryImage> void accept(final VirtualBuilding.Group<T> group) {
         this.executor.execute(() -> {
             for (int attempt = 0; attempt < RETRY_DELAYS.size(); attempt++) {
                 try {
-                    Thread.sleep(RETRY_DELAYS.get(attempt));
+                    final var delay = RETRY_DELAYS.get(attempt);
+                    if (delay.isPositive()) {
+                        Thread.sleep(delay);
+                    }
+                    this.semaphore.acquire();
                     this.classify(group);
                     return;
                 } catch (final InterruptedException _) {
@@ -94,6 +105,8 @@ final class NoHornyClient implements LifecycleListener {
                             attempt + 1,
                             RETRY_DELAYS.size(),
                             e);
+                } finally {
+                    this.semaphore.release();
                 }
             }
         });
