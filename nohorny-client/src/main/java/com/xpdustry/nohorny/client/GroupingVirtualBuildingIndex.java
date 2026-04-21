@@ -55,7 +55,7 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
             final var iterator = buildingSet.iterator();
             while (iterator.hasNext) {
                 final var linkPacked = iterator.next();
-                final var linkSet = this.adjacencyUnion.get(iterator.next());
+                final var linkSet = this.adjacencyUnion.get(linkPacked);
                 if (linkSet == null) {
                     continue;
                 }
