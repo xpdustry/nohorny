@@ -146,16 +146,24 @@ final class NoHornyClient implements LifecycleListener {
             // If 500, do not bother retrying, since something really wrong
             // is going on with the server and might need manual intervention
             if (response.statusCode() == 500) {
-                log.error("Remote nohorny server had an internal error: {}", response.body());
+                log.error("The remote nohorny server had an internal error: {}", response.body());
                 return;
             }
             throw new IllegalStateException(
-                    "Remote nohorny server returned " + response.statusCode() + ": " + response.body());
+                    "The remote nohorny server returned " + response.statusCode() + ": " + response.body());
         }
 
-        final var jval = Jval.read(response.body());
-        final var classification = new ClassificationResponse(
-                jval.getString("classifier"), Rating.valueOf(jval.getString("rating")), jval.getString("identifier"));
+        final ClassificationResponse classification;
+        try {
+            final var jval = Jval.read(response.body());
+            classification = new ClassificationResponse(
+                    jval.getString("classifier"),
+                    Rating.valueOf(jval.getString("rating")),
+                    jval.getString("identifier"));
+        } catch (final Exception e) {
+            log.error("The remote nohorny server returned a malformed response: {}", response.body(), e);
+            return;
+        }
 
         final var author = computeAuthor(group);
         log.trace(
