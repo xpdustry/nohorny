@@ -76,6 +76,7 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
         return (x1 < x2 + size2 && x2 < x1 + size1) && (y1 < y2 + size2 && y2 < y1 + size1);
     }
 
+    // NOTE: We are not dealing with deleted buildings, this solution is good enough...
     public final class Grouper {
 
         private final int initialX;

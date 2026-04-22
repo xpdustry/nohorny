@@ -116,12 +116,9 @@ final class DebugHelper implements LifecycleListener {
             return;
         }
         this.render(player, group);
-        final var png = this.directory
-                .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".png")
-                .toAbsolutePath();
-        final var bin = this.directory
-                .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".bin")
-                .toAbsolutePath();
+        final var prefix = x + "_" + y + "_" + System.currentTimeMillis();
+        final var png = this.directory.resolve(prefix + ".png").toAbsolutePath();
+        final var bin = this.directory.resolve(prefix + ".bin").toAbsolutePath();
         try (final var pngStream = Files.newOutputStream(png);
                 final var binStream = Files.newOutputStream(bin)) {
             ImageIO.write(MindustryImageRenderer.render(group), "png", pngStream);
