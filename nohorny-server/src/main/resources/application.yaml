@@ -1,0 +1,53 @@
+spring:
+  application.name: nohorny
+  # Disable the default HTML error page.
+  web.error.whitelabel.enabled: false
+
+server:
+  # Listen on localhost. Use 0.0.0.0 to expose the API on your network.
+  address: 127.0.0.1
+  # HTTP port used for the app
+  port: 8080
+  # Uncomment to serve the API under a prefix such as /api.
+  # That would change the endpoints to /api/status and /api/classify.
+  # servlet.context-path: /api
+
+nohorny:
+  classifier:
+    # Use vit for the bundled local model, or sightengine to classify through SightEngine.
+    type: vit
+    vit:
+      # Hugging Face repository that contains the model file.
+      repository: phinner/nsfw_image_detection
+      # Repository revision to download from. Pinning a commit keeps deployments reproducible.
+      revision: aab8ebd004112c8358a8ff9709c0492c2ba96bdc
+      # Model file loaded from the repository and revision above.
+      file: falconsai_nsfw_image_detection.pt
+      # Only needed for private or gated Hugging Face models.
+      # token: ${HF_TOKEN}
+      # Labels returned by the model, in the same order as its output probabilities.
+      labels:
+        - normal
+        - nsfw
+      # Which label from the list above is treated as the NSFW score.
+      nsfw-label: nsfw
+      # Local cache directory for downloaded model files.
+      directory: .cached-models
+      # DJL engine used to load the model. The bundled model uses PyTorch.
+      # Switch to OnnxRuntime only if you also point file to a compatible ONNX model.
+      engine: PyTorch
+      thresholds:
+        # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.
+        warn: 0.4
+        # Scores at or above nsfw are NSFW. Keep this greater than or equal to warn.
+        nsfw: 0.7
+    sightengine:
+      # SightEngine API user. Only used when type is sightengine.
+      # user: ${SIGHTENGINE_USER}
+      # SightEngine API secret. Only used when type is sightengine.
+      # secret: ${SIGHTENGINE_SECRET}
+      thresholds:
+        # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.
+        warn: 0.4
+        # Scores at or above nsfw are NSFW. Keep this greater than or equal to warn.
+        nsfw: 0.55
