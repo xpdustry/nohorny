@@ -52,8 +52,9 @@ public final class SightEngineClassifier implements Classifier {
                 .body(request)
                 .retrieve()
                 .requiredBody(SightEngineResponse.class);
-        if (!"success".equals(response.status()) || response.nudity() == null) {
-            throw new IOException("SightEngine API returned error or missing nudity data: " + this.jsonMapper.writeValueAsString(response));
+        if (!"success".equals(response.status())) {
+            throw new IOException("SightEngine API returned error or missing nudity data: "
+                    + this.jsonMapper.writeValueAsString(response));
         }
         final var score = response.nudity().maxScore();
         return new Result(this.properties.thresholds().apply(score), this.jsonMapper.writeValueAsString(response));
