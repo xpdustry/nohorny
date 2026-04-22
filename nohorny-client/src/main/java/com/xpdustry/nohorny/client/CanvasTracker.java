@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.ImmutableByteArray;
 import com.xpdustry.nohorny.common.ImmutableIntArray;
@@ -9,6 +8,7 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.SequencedSet;
 import mindustry.Vars;
 import mindustry.game.EventType;
@@ -17,11 +17,13 @@ import org.jspecify.annotations.Nullable;
 
 final class CanvasTracker implements LifecycleListener {
 
-    private static final int MAX_GROUP_RANGE = 10 * 3; // 10 large canvases around the anchor
+    private static final int MAX_GROUP_RANGE = 50 * 3; // 50 large canvases around the anchor
+    private static final int MAX_GROUP_STEPS = 50;
 
     final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
+    private GroupingVirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
 
     public CanvasTracker(final NoHornyClient client) {
         this.client = client;
@@ -38,13 +40,14 @@ final class CanvasTracker implements LifecycleListener {
                 final var size = building.block.size;
                 final var data = CanvasTracker.this.data(building, author);
                 final var added = CanvasTracker.this.canvases.upsert(x, y, size, data);
-                CanvasTracker.this.queue.addLast(added.packed());
+                CanvasTracker.this.enqueue(added.packed());
             }
 
             @Override
             public void onRemoveAll() {
                 CanvasTracker.this.canvases.removeAll();
                 CanvasTracker.this.queue.clear();
+                CanvasTracker.this.grouper = null;
             }
 
             @Override
@@ -78,10 +81,15 @@ final class CanvasTracker implements LifecycleListener {
     }
 
     private void collect() {
-        if (!Vars.state.isGame() || this.client.shouldNotAccept()) {
+        if (!Vars.state.isGame()) {
             return;
         }
-        final var visited = new IntSet();
+
+        if (this.grouper != null) {
+            this.continueGrouperProcessing();
+            return;
+        }
+
         while (!this.queue.isEmpty()) {
             final int point = this.queue.removeFirst();
             final var x = GeometryUtils.x(point);
@@ -90,14 +98,8 @@ final class CanvasTracker implements LifecycleListener {
             if (anchor == null || !this.isEligible(anchor)) {
                 continue;
             }
-            final var group = this.canvases.groupAt(x, y, MAX_GROUP_RANGE, visited);
-            if (group == null) {
-                continue;
-            }
-            this.client.accept(group);
-            for (final var building : group.elements()) {
-                this.queue.remove(building.packed());
-            }
+            this.grouper = this.canvases.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
+            this.continueGrouperProcessing();
             break;
         }
     }
@@ -112,5 +114,25 @@ final class CanvasTracker implements LifecycleListener {
             }
         }
         return !isSolidColor;
+    }
+
+    private void continueGrouperProcessing() {
+        Objects.requireNonNull(this.grouper);
+        this.grouper.progress();
+        this.queue.removeIf(this.grouper::isVisited);
+        if (this.grouper.isCompleted() && !this.client.shouldNotAccept()) {
+            final var group = this.grouper.create();
+            this.grouper = null;
+            if (group != null) {
+                this.client.accept(group);
+            }
+        }
+    }
+
+    private void enqueue(final int packed) {
+        if (this.grouper != null && this.grouper.isVisited(packed)) {
+            return;
+        }
+        this.queue.addLast(packed);
     }
 }

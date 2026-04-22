@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.DrawInstruction;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
@@ -14,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.SequencedSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,14 +27,16 @@ import org.jspecify.annotations.Nullable;
 
 final class DisplayTracker implements LifecycleListener {
 
-    private static final int MIN_DRAW_INSTRUCTION_COUNT = 40;
+    private static final int MIN_DRAW_INSTRUCTION_COUNT = 100;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
-    private static final int MAX_GROUP_RANGE = 4 * 6; // 4 large displays around the anchor
+    private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
+    private static final int MAX_GROUP_STEPS = 50;
 
     final GroupingVirtualBuildingIndex<MindustryDisplay> displays = new GroupingVirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
+    private GroupingVirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
     private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
@@ -94,7 +96,7 @@ final class DisplayTracker implements LifecycleListener {
                                         : b));
                 final var added =
                         DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
-                DisplayTracker.this.queue.addLast(added.packed());
+                DisplayTracker.this.enqueue(added.packed());
             }
 
             @Override
@@ -108,6 +110,7 @@ final class DisplayTracker implements LifecycleListener {
             public void onRemoveAll() {
                 DisplayTracker.this.displays.removeAll();
                 DisplayTracker.this.queue.clear();
+                DisplayTracker.this.grouper = null;
             }
         });
 
@@ -191,10 +194,15 @@ final class DisplayTracker implements LifecycleListener {
     }
 
     private void collect() {
-        if (!Vars.state.isGame() || this.client.shouldNotAccept()) {
+        if (!Vars.state.isGame()) {
             return;
         }
-        final var visited = new IntSet();
+
+        if (this.grouper != null) {
+            this.continueGrouperProcessing();
+            return;
+        }
+
         while (!this.queue.isEmpty()) {
             final int point = this.queue.removeFirst();
             final var x = GeometryUtils.x(point);
@@ -203,14 +211,8 @@ final class DisplayTracker implements LifecycleListener {
             if (anchor == null || !this.isEligible(anchor)) {
                 continue;
             }
-            final var group = this.displays.groupAt(x, y, MAX_GROUP_RANGE, visited);
-            if (group == null) {
-                continue;
-            }
-            this.client.accept(group);
-            for (final var building : group.elements()) {
-                this.queue.remove(building.packed());
-            }
+            this.grouper = this.displays.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
+            this.continueGrouperProcessing();
             break;
         }
     }
@@ -233,12 +235,32 @@ final class DisplayTracker implements LifecycleListener {
                     display.y(),
                     display.size(),
                     new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
-            this.queue.addLast(GeometryUtils.pack(display.x(), display.y()));
+            this.enqueue(GeometryUtils.pack(display.x(), display.y()));
         }
     }
 
     private boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
         return !building.data().processors().isEmpty();
+    }
+
+    private void continueGrouperProcessing() {
+        Objects.requireNonNull(this.grouper);
+        this.grouper.progress();
+        this.queue.removeIf(this.grouper::isVisited);
+        if (this.grouper.isCompleted() && !this.client.shouldNotAccept()) {
+            final var group = this.grouper.create();
+            this.grouper = null;
+            if (group != null) {
+                this.client.accept(group);
+            }
+        }
+    }
+
+    private void enqueue(final int packed) {
+        if (this.grouper != null && this.grouper.isVisited(packed)) {
+            return;
+        }
+        this.queue.addLast(packed);
     }
 
     private enum LinkUpdateKind {

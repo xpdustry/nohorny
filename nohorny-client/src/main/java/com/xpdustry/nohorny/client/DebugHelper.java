@@ -4,11 +4,11 @@ package com.xpdustry.nohorny.client;
 import arc.graphics.Color;
 import arc.math.geom.Point2;
 import arc.struct.IntMap;
-import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
@@ -108,24 +108,31 @@ final class DebugHelper implements LifecycleListener {
 
     private <T extends MindustryImage> void groupDebugSnapshotAt(
             final Player player, final GroupingVirtualBuildingIndex<T> index, final int x, final int y) {
-        final var group = index.groupAt(x, y, 999, new IntSet());
+        final var grouper = index.startGrouperAt(x, y, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        grouper.progress();
+        final var group = grouper.create();
         if (group == null) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]No group at (" + x + ", " + y + ")");
             return;
         }
         this.render(player, group);
-        final var file = this.directory
+        final var png = this.directory
                 .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".png")
                 .toAbsolutePath();
-        try (final var stream = Files.newOutputStream(file)) {
-            ImageIO.write(MindustryImageRenderer.render(group), "png", stream);
+        final var bin = this.directory
+                .resolve(x + "_" + y + "_" + System.currentTimeMillis() + ".bin")
+                .toAbsolutePath();
+        try (final var pngStream = Files.newOutputStream(png);
+                final var binStream = Files.newOutputStream(bin)) {
+            ImageIO.write(MindustryImageRenderer.render(group), "png", pngStream);
+            MindustryImageIO.writeImageGroup(binStream, group);
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");
             log.error("Failed to process group at ({}, {}) for debugging", x, y, e);
             return;
         }
-        player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + file);
+        player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + png);
     }
 
     @SuppressWarnings("fallthrough")

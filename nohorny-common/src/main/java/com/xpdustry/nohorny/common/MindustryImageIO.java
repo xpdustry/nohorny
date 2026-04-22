@@ -14,7 +14,7 @@ public final class MindustryImageIO {
 
     public static final String MEDIA_TYPE = "application/vnd.nohorny.image";
 
-    static final int MAXIMUM_GROUP_ELEMENT_COUNT = 30 * 30;
+    static final int MAXIMUM_GROUP_ELEMENT_COUNT = 100 * 100;
     static final int MAXIMUM_INSTRUCTION_COUNT = 1000;
     static final int MAXIMUM_PROCESSOR_COUNT = 500;
 
