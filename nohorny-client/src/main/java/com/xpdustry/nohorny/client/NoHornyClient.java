@@ -143,8 +143,14 @@ final class NoHornyClient implements LifecycleListener {
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
+            // If 500, do not bother retrying, since something really wrong
+            // is going on with the server and might need manual intervention
+            if (response.statusCode() == 500) {
+                log.error("Remote nohorny server had an internal error: {}", response.body());
+                return;
+            }
             throw new IllegalStateException(
-                    "Remote detector returned " + response.statusCode() + ": " + response.body());
+                    "Remote nohorny server returned " + response.statusCode() + ": " + response.body());
         }
 
         final var jval = Jval.read(response.body());
