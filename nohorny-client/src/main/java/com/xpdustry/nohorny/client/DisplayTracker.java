@@ -29,7 +29,7 @@ final class DisplayTracker implements LifecycleListener {
 
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 40;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
-    private static final int MAX_GROUP_RANGE = 3 * 6; // 3 large displays around the anchor
+    private static final int MAX_GROUP_RANGE = 4 * 6; // 4 large displays around the anchor
 
     final GroupingVirtualBuildingIndex<MindustryDisplay> displays = new GroupingVirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
