@@ -108,7 +108,16 @@ final class MindustryUtils {
 
     public static <T> Supplier<T> registerSafeSettingEntry(
             final String name, final String desc, final T def, final Function<String, T> parser) {
-        final var entry = new Administration.Config(name, desc, def.toString()) {
+        return registerSafeSettingEntry(name, desc, def, parser, () -> {});
+    }
+
+    public static <T> Supplier<T> registerSafeSettingEntry(
+            final String name,
+            final String desc,
+            final T def,
+            final Function<String, T> parser,
+            final Runnable onChange) {
+        final var entry = new Administration.Config(name, desc, def.toString(), onChange) {
             @Override
             public void set(final Object value) {
                 if (value instanceof String string) {

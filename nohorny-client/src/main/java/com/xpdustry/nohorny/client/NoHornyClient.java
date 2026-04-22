@@ -46,10 +46,15 @@ final class NoHornyClient implements LifecycleListener {
             "nohorny-api-endpoint",
             "The NoHorny API endpoint to query for image rating.",
             URI.create("https://nohorny.xpdustry.com/api"),
-            URI::create);
+            URI::create,
+            this::checkEndpointStatus);
 
     @Override
     public void onInit() {
+        this.checkEndpointStatus();
+    }
+
+    private void checkEndpointStatus() {
         final var request = HttpRequest.newBuilder(this.resolve("status"))
                 .timeout(Duration.ofSeconds(5L))
                 .GET()
@@ -58,16 +63,16 @@ final class NoHornyClient implements LifecycleListener {
         try {
             response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (final ConnectException e) {
-            log.error("The configured NoHorny server ({}) is not reachable, is it running?", this.resolve(""));
+            log.error("The NoHorny server {} is not reachable, is it running?", this.resolve(""));
             return;
         } catch (final Exception e) {
             log.error("Failed to check the status of {}", this.resolve(""), e);
             return;
         }
         if (response.statusCode() != 200) {
-            log.error("The NoHorny server returned {} on status check: {}", response.statusCode(), response.body());
+            log.error("The NoHorny server {} returned {} on status check: {}", response.statusCode(), response.body());
         } else {
-            log.info("The NoHorny server is operational: {}", response.body());
+            log.info("The NoHorny server {} is operational: {}", this.resolve(""), response.body());
         }
     }
 
