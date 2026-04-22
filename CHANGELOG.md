@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.3 - 2026-04-22
+
+### Changes & New features
+
+- Implemented an iterative grouping algorithm (#71) ([`5fb96e8`](https://github.com/xpdustry/nohorny/commit/5fb96e861f565331666e561da55990b352aa7e67))
+  - Allowing much larger groups, to be processed across several ticks.
+  - Therefore, confusing less the classification models.
+  
+- Added status check if the nohorny server endpoint is updated ([`cc8df5d`](https://github.com/xpdustry/nohorny/commit/cc8df5da338f5fd43f4e26eeb747601c3ddf184e))
+- Add sight-engine image classification backend (#70) ([`403d0bb`](https://github.com/xpdustry/nohorny/commit/403d0bbf56c657d18f348e11b253402c1ccbab2e))
+- Restrict the number of concurrent nohorny requests to one (#69) ([`f6cfa5d`](https://github.com/xpdustry/nohorny/commit/f6cfa5d7254cbbb869f20b9335f0a992ae892cc7))
+- Include trace id in ClassificationEvent ([`ee91a3e`](https://github.com/xpdustry/nohorny/commit/ee91a3e183cec0ba5337a684c0d4064d114294b4))
+
+### Bugfixes
+
+- Fix startup crash when using the ViT classifier in the norhorny server ([`8a2ce74`](https://github.com/xpdustry/nohorny/commit/8a2ce7481aafa21b60e0448da22ca935e2760465))
+- Added validation for malformed nohorny server responses in client ([`81aae77`](https://github.com/xpdustry/nohorny/commit/81aae7717dc917b43134d1af35ad1ac2d2c5de98))
+- Do not retry requests if the nohorny server had an internal error ([`9645e8b`](https://github.com/xpdustry/nohorny/commit/9645e8b54d8ce6338e28e8d7dfca3a7a49b4f032))
+- Fix GroupingVirtualBuildingIndex#remove leaving stale links ([`cb5eb1f`](https://github.com/xpdustry/nohorny/commit/cb5eb1fd90d917aa823501201a2cc5f9e0bcddab))
+- Add timeouts to rest client ([`70f0383`](https://github.com/xpdustry/nohorny/commit/70f03836c954ddc5b93e4daef8f953110a6169e9))
+
 ## v4.0.0-beta.2 - 2026-04-20
 
 ### Changes & New features
