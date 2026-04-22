@@ -6,6 +6,7 @@ import java.time.Duration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -26,8 +27,9 @@ public class NoHornyConfiguration {
                 .build());
         requestFactory.setReadTimeout(Duration.ofSeconds(30));
         return RestClient.builder()
-                .configureMessageConverters(
-                        converters -> converters.addCustomConverter(new JacksonJsonHttpMessageConverter(mapper)))
+                .configureMessageConverters(converters -> converters
+                        .addCustomConverter(new JacksonJsonHttpMessageConverter(mapper))
+                        .addCustomConverter(new ResourceHttpMessageConverter()))
                 .requestFactory(requestFactory)
                 .build();
     }
