@@ -27,7 +27,7 @@ This plugin requires at least:
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
-Put `nohorny-client.jar` in your `config/mods` directory and start your server.
+Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) (and [`slf4md.jar`](https://github.com/xpdustry/slf4md/releases/latest) if needed) in your `config/mods` directory and start your mindustry server.
 
 ### Server (Classification API)
 
@@ -66,50 +66,29 @@ config nohorny-debug-tap true
 
 ## Server Configuration
 
-In most cases, just run `nohorny-server.jar`. The bundled defaults are already set up for the built-in classifier and
-for serving the API on port `8080`.
+To customize the nohorny server configuration, see [`nohorny-server/src/main/resources/application.yaml`](nohorny-server/src/main/resources/application.yaml).
 
-For localhost deployments, the server exposes `GET /status` and `POST /classify` at the root by default, so the client
-should usually point to `http://127.0.0.1:8080/`. If you want the server to live under `/api` instead, set
-`server.servlet.context-path=/api`.
+Then, use one of the following to apply your configuration:
 
-Spring Boot lets you override settings in a few different ways. For example, these all change the server port to
-`9090`:
+- A `application.yaml` file
 
-```properties
-# application.properties
-server.port=9090
+```yaml
+# application.yaml
+server:
+  port: 9090
 ```
+
+- Env variables
 
 ```text
 SERVER_PORT=9090 java -jar nohorny-server.jar
 ```
 
+- Or jvm properties
+
 ```text
 java -jar nohorny-server.jar --server.port=9090
 ```
-
-### Properties
-
-The server currently exposes:
-
-| Property | Description | Default |
-| --- | --- | --- |
-| `server.address` | Bind address for the HTTP server. | Spring Boot default |
-| `server.port` | HTTP port. | `8080` |
-| `server.servlet.context-path` | Optional path prefix for all endpoints. | Empty |
-| `nohorny.classifier.vit.repository` | Hugging Face repository to download the model from. | `phinner/nsfw_image_detection` |
-| `nohorny.classifier.vit.revision` | Repository revision or commit to download. | `aab8ebd004112c8358a8ff9709c0492c2ba96bdc` |
-| `nohorny.classifier.vit.file` | Model file to load. | `falconsai_nsfw_image_detection.pt` |
-| `nohorny.classifier.vit.token` | Hugging Face token for private or gated models. | None |
-| `nohorny.classifier.vit.labels` | Output labels returned by the model. | `normal,nsfw` |
-| `nohorny.classifier.vit.nsfw-label` | Which label is interpreted as NSFW. | `nsfw` |
-| `nohorny.classifier.vit.directory` | Directory where the downloaded model is cached. | `.cached-models` |
-| `nohorny.classifier.vit.engine` | DJL engine name used to load the model. | `PyTorch` |
-| `nohorny.classifier.vit.thresholds.warn` | Confidence threshold for a `WARN` rating. | `0.4` |
-| `nohorny.classifier.vit.thresholds.nsfw` | Confidence threshold for an `NSFW` rating. | `0.7` |
-
-The model is downloaded from Hugging Face on first startup and cached under `.cached-models/`.
 
 ## Client Debugging
 

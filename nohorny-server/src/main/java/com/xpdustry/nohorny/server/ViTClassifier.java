@@ -19,12 +19,9 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-@Component
 public final class ViTClassifier implements Classifier {
 
     private static final Logger log = LoggerFactory.getLogger(ViTClassifier.class);
@@ -33,7 +30,6 @@ public final class ViTClassifier implements Classifier {
 
     private @Nullable ZooModel<Image, Classifications> model;
 
-    @Autowired
     public ViTClassifier(final RestClient restClient, final ViTClassifierProperties properties) {
         this.restClient = restClient;
         this.properties = properties;
@@ -51,7 +47,7 @@ public final class ViTClassifier implements Classifier {
         try (final var predictor = model.newPredictor()) {
             final var prediction = predictor.predict(converted);
             final var score = prediction.get(this.properties.nsfwLabel()).getProbability();
-            return new Result(this.properties.thresholds().apply(score), prediction.serialize());
+            return new Result(this.properties.thresholds().apply(score), prediction.toString());
         }
     }
 
