@@ -101,7 +101,7 @@ sealed class VirtualBuildingIndex<T> permits GroupingVirtualBuildingIndex {
         return removing;
     }
 
-    private void remove0(final VirtualBuilding<T> building) {
+    protected void remove0(final VirtualBuilding<T> building) {
         for (int i = building.x(); i < building.x() + building.size(); i++) {
             for (int j = building.y(); j < building.y() + building.size(); j++) {
                 this.index.remove(GeometryUtils.pack(i, j));

@@ -43,28 +43,34 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
     }
 
     @Override
-    public @Nullable VirtualBuilding<T> remove(int x, int y) {
-        final var building = super.remove(x, y);
-        if (building != null) {
-            final var buildingPacked = GeometryUtils.pack(building.x(), building.y());
-            final var buildingSet = this.adjacencyUnion.remove(buildingPacked);
-            if (buildingSet == null) {
-                return building;
+    protected void remove0(final VirtualBuilding<T> building) {
+        super.remove0(building);
+        this.unlink(GeometryUtils.pack(building.x(), building.y()));
+    }
+
+    @Override
+    public void removeAll() {
+        super.removeAll();
+        this.adjacencyUnion.clear();
+    }
+
+    private void unlink(final int buildingPacked) {
+        final var buildingSet = this.adjacencyUnion.remove(buildingPacked);
+        if (buildingSet == null) {
+            return;
+        }
+        final var iterator = buildingSet.iterator();
+        while (iterator.hasNext) {
+            final var linkPacked = iterator.next();
+            final var linkSet = this.adjacencyUnion.get(linkPacked);
+            if (linkSet == null) {
+                continue;
             }
-            final var iterator = buildingSet.iterator();
-            while (iterator.hasNext) {
-                final var linkPacked = iterator.next();
-                final var linkSet = this.adjacencyUnion.get(linkPacked);
-                if (linkSet == null) {
-                    continue;
-                }
-                linkSet.remove(buildingPacked);
-                if (linkSet.isEmpty()) {
-                    this.adjacencyUnion.remove(linkPacked);
-                }
+            linkSet.remove(buildingPacked);
+            if (linkSet.isEmpty()) {
+                this.adjacencyUnion.remove(linkPacked);
             }
         }
-        return building;
     }
 
     public Grouper startGrouperAt(final int initialX, final int initialY, final int range, final int steps) {
