@@ -14,9 +14,6 @@ import mindustry.net.Administration;
 import mindustry.world.blocks.ConstructBlock;
 import org.jspecify.annotations.Nullable;
 
-import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileX;
-import static com.xpdustry.nohorny.client.BuildingUtils.anchorTileY;
-
 final class MindustryUtils {
 
     private static final MiniLogger log = MiniLogger.forClass(MindustryUtils.class);
@@ -181,6 +178,14 @@ final class MindustryUtils {
                 return def;
             }
         };
+    }
+
+    public static int anchorTileX(final Building building) {
+        return building.tileX() + building.block.sizeOffset;
+    }
+
+    public static int anchorTileY(final Building building) {
+        return building.tileY() + building.block.sizeOffset;
     }
 
     private static final class TileChangeState {

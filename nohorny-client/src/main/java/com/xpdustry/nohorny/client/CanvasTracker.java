@@ -38,8 +38,8 @@ final class CanvasTracker implements LifecycleListener {
                     final CanvasBlock.CanvasBuild building,
                     final @Nullable MindustryAuthor author,
                     final boolean queue) {
-                final var x = BuildingUtils.anchorTileX(building);
-                final var y = BuildingUtils.anchorTileY(building);
+                final var x = MindustryUtils.anchorTileX(building);
+                final var y = MindustryUtils.anchorTileY(building);
                 final var size = building.block.size;
                 final var data = CanvasTracker.this.data(building, author);
                 final var added = CanvasTracker.this.canvases.upsert(x, y, size, data);

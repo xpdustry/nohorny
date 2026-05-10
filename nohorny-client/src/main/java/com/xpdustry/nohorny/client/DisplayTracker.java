@@ -51,8 +51,8 @@ final class DisplayTracker implements LifecycleListener {
             @Override
             public void onCreate(
                     final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
-                final var x = BuildingUtils.anchorTileX(building);
-                final var y = BuildingUtils.anchorTileY(building);
+                final var x = MindustryUtils.anchorTileX(building);
+                final var y = MindustryUtils.anchorTileY(building);
                 final var size = building.block.size;
                 final var links = new HashSet<Integer>(building.links.size);
                 for (final var link : building.links) {
@@ -91,8 +91,8 @@ final class DisplayTracker implements LifecycleListener {
                 if (building instanceof TileableLogicDisplay.TileableLogicDisplayBuild) {
                     return;
                 }
-                final int x = BuildingUtils.anchorTileX(building);
-                final int y = BuildingUtils.anchorTileY(building);
+                final int x = MindustryUtils.anchorTileX(building);
+                final int y = MindustryUtils.anchorTileY(building);
                 final int size = building.block.size;
                 final int resolution = ((LogicDisplay) building.block).displaySize;
                 final var processors = DisplayTracker.this
