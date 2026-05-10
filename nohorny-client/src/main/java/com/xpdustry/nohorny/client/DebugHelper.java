@@ -99,7 +99,7 @@ final class DebugHelper implements LifecycleListener {
                 case CanvasBlock.CanvasBuild _ -> this.groupDebugSnapshotAt(player, this.canvases.canvases, x, y);
                 case LogicDisplay.LogicDisplayBuild _ ->
                     this.groupDebugSnapshotAt(player, this.displays.displays, x, y);
-                default -> {}
+                case null, default -> {}
             }
 
             this.taps.remove(event.player.id);
