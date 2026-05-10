@@ -170,6 +170,7 @@ project(":nohorny-client") {
     tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
         archiveFileName = "${project.name}.jar"
         archiveClassifier = "shaded"
+        relocate("com.github.mizosoft.methanol", "com.xpdustry.nohorny.client.shadow.gestalt")
         from(rootProject.file("LICENSE.md")) { into("META-INF") }
         mergeServiceFiles()
         from(generateMetadataFile)
