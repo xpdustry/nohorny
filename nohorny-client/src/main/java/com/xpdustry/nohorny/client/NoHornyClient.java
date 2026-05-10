@@ -160,7 +160,7 @@ final class NoHornyClient implements LifecycleListener {
 
         final var author = computeAuthor(group);
         log.trace(
-                "Received classification response for group by {} at ({}, {}): {} rating at {} confidence from ({}/id={})",
+                "Received classification response for group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={})",
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
                 group.y(),
