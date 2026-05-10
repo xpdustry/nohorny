@@ -21,6 +21,8 @@ final class MindustryUtils {
 
     private static final MiniLogger log = MiniLogger.forClass(MindustryUtils.class);
 
+    private MindustryUtils() {}
+
     public static <T> void onEvent(final Class<T> type, final EventListener<T> listener) {
         Events.on(type, event -> {
             try {
@@ -81,7 +83,7 @@ final class MindustryUtils {
             if (type.isInstance(event.build)) {
                 final var casted = type.cast(event.build);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, null, true);
+                listener.onCreate(casted, null, false);
             }
         });
 
@@ -105,13 +107,39 @@ final class MindustryUtils {
                 }
             }
         });
+
+        // For server side map modifications, e.g. AutoModerator#delete
+
+        final var state = new TileChangeState[] {new TileChangeState()};
+
+        MindustryUtils.onEvent(EventType.TilePreChangeEvent.class, event -> {
+            state[0].pos = event.tile.pos();
+            state[0].wasTrackedTypePreChange = type.isInstance(event.tile.build);
+        });
+
+        MindustryUtils.onEvent(EventType.TileChangeEvent.class, event -> {
+            try {
+                if (event.tile.pos() != state[0].pos) {
+                    // This should never happen...
+                    return;
+                }
+                if (type.isInstance(event.tile.build)) {
+                    final var casted = type.cast(event.tile.build);
+                    listener.onCreate(casted, null, false);
+                } else {
+                    if (state[0].wasTrackedTypePreChange) {
+                        listener.onRemove(event.tile.x, event.tile.y, 1);
+                    }
+                }
+            } finally {
+                state[0].reset();
+            }
+        });
     }
 
     private static @Nullable MindustryAuthor asAuthor(final @Nullable Player player) {
         return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
     }
-
-    private MindustryUtils() {}
 
     public static <T> Supplier<T> registerSafeSettingEntry(
             final String name, final String desc, final T def, final Function<String, T> parser) {
@@ -153,5 +181,19 @@ final class MindustryUtils {
                 return def;
             }
         };
+    }
+
+    private static final class TileChangeState {
+        int pos;
+        boolean wasTrackedTypePreChange;
+
+        {
+            reset();
+        }
+
+        private void reset() {
+            this.pos = -1;
+            this.wasTrackedTypePreChange = false;
+        }
     }
 }
