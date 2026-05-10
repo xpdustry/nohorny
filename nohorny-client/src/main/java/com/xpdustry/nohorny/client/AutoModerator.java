@@ -134,7 +134,7 @@ final class AutoModerator implements LifecycleListener {
             final var team = Team.get(entry.key);
             if (team.active() && !team.rules().infiniteResources) {
                 team.items().add(entry.value);
-                log.info("Refunded team {} for deleted buildings: {}", team.name, entry.value);
+                log.info("Refunded team {} for deleted buildings: {}", team.name, JsonIO.write(entry.value));
             }
         }
     }
