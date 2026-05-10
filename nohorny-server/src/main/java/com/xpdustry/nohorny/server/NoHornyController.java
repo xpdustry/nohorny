@@ -5,12 +5,14 @@ import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
+import com.xpdustry.nohorny.common.SimpleServerMessage;
 import com.xpdustry.nohorny.common.VirtualBuilding;
+import com.xpdustry.nohorny.server.classifier.Classifier;
 import java.awt.image.BufferedImage;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,21 +20,23 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+@EnableConfigurationProperties(StatusProperties.class)
 @RestController
 public final class NoHornyController {
 
     private static final Logger log = LoggerFactory.getLogger(NoHornyController.class);
 
+    private final StatusProperties status;
     private final Classifier classifier;
 
-    @Autowired
-    public NoHornyController(final Classifier classifier) {
+    public NoHornyController(final StatusProperties status, final Classifier classifier) {
+        this.status = status;
         this.classifier = classifier;
     }
 
-    @GetMapping(path = "/status", produces = MediaType.TEXT_PLAIN_VALUE)
-    public String onStatus() {
-        return "ok";
+    @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    public SimpleServerMessage onStatus() {
+        return new SimpleServerMessage(this.status.motd());
     }
 
     @PostMapping(
@@ -40,7 +44,13 @@ public final class NoHornyController {
             consumes = MindustryImageIO.MEDIA_TYPE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> onClassify(final @RequestBody VirtualBuilding.Group<? extends MindustryImage> group) {
-        return this.classify(MindustryImageRenderer.render(group));
+        final BufferedImage image;
+        try {
+            image = MindustryImageRenderer.render(group);
+        } catch (final Exception e) {
+            return ResponseEntity.badRequest().body(new SimpleServerMessage("failed to parse and render the group"));
+        }
+        return this.classify(image);
     }
 
     @PostMapping(
@@ -60,7 +70,7 @@ public final class NoHornyController {
             return ResponseEntity.ok(new ClassificationResponse(this.classifier.name(), result.rating(), uuid));
         } catch (final Exception exception) {
             log.error("Classification request {} has failed", uuid, exception);
-            return ResponseEntity.internalServerError().body("internal server error");
+            return ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));
         }
     }
 }

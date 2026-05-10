@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.server;
+package com.xpdustry.nohorny.server.classifier;
 
 import ai.djl.modality.Classifications;
 import ai.djl.modality.cv.Image;
@@ -13,31 +13,24 @@ import ai.djl.translate.TranslatorContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
-import org.springframework.web.client.RestClient;
 
 public final class ViTClassifier implements Classifier {
 
-    private static final Logger log = LoggerFactory.getLogger(ViTClassifier.class);
-    private final RestClient restClient;
     private final ViTClassifierProperties properties;
+    private final ViTModelSource source;
 
     private @Nullable ZooModel<Image, Classifications> model;
 
-    public ViTClassifier(final RestClient restClient, final ViTClassifierProperties properties) {
-        this.restClient = restClient;
+    public ViTClassifier(final ViTClassifierProperties properties, final ViTModelSource source) {
         this.properties = properties;
+        this.source = source;
     }
 
     @Override
     public String name() {
-        return "vit/" + this.properties.repository() + ":" + this.properties.revision() + "/" + this.properties.file();
+        return "vit/" + this.source.name();
     }
 
     @Override
@@ -55,39 +48,22 @@ public final class ViTClassifier implements Classifier {
 
     @PostConstruct
     void onInit() {
-        final var name = this.name().replace('/', '-').replace(':', '-');
-        final var target = this.properties.directory().resolve(name);
-        if (Files.notExists(target)) {
-            final var url = "https://huggingface.co/" + this.properties.repository() + "/resolve/"
-                    + this.properties.revision() + "/" + this.properties.file();
-            log.info("Model {} does not exists locally, downloading from hugging face at {}", name, url);
-            final var request = this.restClient.get().uri(url);
-            if (this.properties.token() != null) {
-                request.header("Authorization", "Bearer " + this.properties.token());
-            }
-            final var resource = request.retrieve().requiredBody(Resource.class);
-            try (final var in = resource.getInputStream()) {
-                Files.createDirectories(target.getParent());
-                Files.copy(in, target);
-            } catch (final IOException e) {
-                throw new RuntimeException("Failed to copy hugging face model " + name, e);
-            }
-        }
+        final var file = this.source.retrieve();
         try {
             this.model = Criteria.builder()
                     .setTypes(Image.class, Classifications.class)
-                    .optModelPath(target)
+                    .optModelPath(file)
                     .optEngine(this.properties.engine())
                     .optTranslator(new ViTImageTranslator())
                     .build()
                     .loadModel();
         } catch (final Exception e) {
-            throw new RuntimeException("Failed to load model from " + target, e);
+            throw new RuntimeException("Failed to load model from " + file, e);
         }
     }
 
     @PreDestroy
-    public void onExit() {
+    void onExit() {
         if (this.model != null) {
             this.model.close();
         }

@@ -34,6 +34,7 @@ import org.jspecify.annotations.Nullable;
 final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
+
     private static final List<Duration> RETRY_DELAYS =
             List.of(Duration.ZERO, Duration.ofSeconds(10), Duration.ofMinutes(2));
 
@@ -69,10 +70,11 @@ final class NoHornyClient implements LifecycleListener {
             log.error("Failed to check the status of {}", this.resolve(""), e);
             return;
         }
+        final var message = getGenericServerMessage(response);
         if (response.statusCode() != 200) {
-            log.error("The NoHorny server {} returned {} on status check: {}", response.statusCode(), response.body());
+            log.error("The NoHorny server {} returned {} on status check: {}", response.statusCode(), message);
         } else {
-            log.info("The NoHorny server {} is operational: {}", this.resolve(""), response.body());
+            log.info("The NoHorny server {} is operational: {}", this.resolve(""), message);
         }
     }
 
@@ -143,10 +145,15 @@ final class NoHornyClient implements LifecycleListener {
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
-            // If 500, do not bother retrying, since something really wrong
-            // is going on with the server and might need manual intervention
+            final var message = getGenericServerMessage(response);
+            // Do not bother retrying, since something really wrong
+            // is going on with the server that might need manual intervention
             if (response.statusCode() == 500) {
-                log.error("The remote nohorny server had an internal error: {}", response.body());
+                log.error("The remote nohorny server had an internal error: {}", message);
+                return;
+            }
+            if (response.statusCode() == 400) {
+                log.error("The remote nohorny server failed to parse the group: {}", message);
                 return;
             }
             throw new IllegalStateException(
@@ -223,5 +230,14 @@ final class NoHornyClient implements LifecycleListener {
         }
 
         return best;
+    }
+
+    private static String getGenericServerMessage(final HttpResponse<String> request) {
+        final var value = request.body();
+        try {
+            return Jval.read(request.body()).getString("message", value);
+        } catch (final Exception _) {
+            return value;
+        }
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package com.xpdustry.nohorny.server;
+package com.xpdustry.nohorny.server.classifier;
 
 import com.xpdustry.nohorny.common.Rating;
 import java.awt.image.BufferedImage;
