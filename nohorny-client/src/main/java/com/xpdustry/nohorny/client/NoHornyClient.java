@@ -23,7 +23,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -46,31 +48,44 @@ final class NoHornyClient implements LifecycleListener {
             URI::create,
             this::checkEndpointStatus);
 
+    private final Supplier<AuthType> authType = MindustryUtils.registerSafeSettingEntry(
+            "nohorny-api-auth-type",
+            "The auth type to use against the NoHorny API. Valid values are 'disabled', 'basic', 'bearer'.",
+            AuthType.DISABLED,
+            value -> AuthType.valueOf(value.toUpperCase(Locale.ROOT)),
+            this::checkEndpointStatus);
+
+    private final Supplier<String> authValue = MindustryUtils.registerSafeSettingEntry(
+            "nohorny-api-auth-value",
+            "The auth value to use against the NoHorny API. For basic auth, use 'username:password'. For bearer auth, use the raw token.",
+            "",
+            value -> value,
+            this::checkEndpointStatus);
+
     @Override
     public void onInit() {
         this.checkEndpointStatus();
     }
 
     private void checkEndpointStatus() {
-        final var request = HttpRequest.newBuilder(this.resolve("status"))
-                .timeout(Duration.ofSeconds(5L))
-                .GET()
-                .build();
+        final var endpoint = this.endpoint.get();
+        final var request = this.request("status", Duration.ofSeconds(5L)).GET().build();
         final HttpResponse<String> response;
         try {
             response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (final ConnectException e) {
-            log.error("The NoHorny server {} is not reachable, is it running?", this.resolve(""));
+            log.error("The NoHorny server {} is not reachable, is it running?", endpoint);
             return;
         } catch (final Exception e) {
-            log.error("Failed to check the status of {}", this.resolve(""), e);
+            log.error("Failed to check the status of {}", endpoint, e);
             return;
         }
         final var message = getGenericServerMessage(response);
         if (response.statusCode() != 200) {
-            log.error("The NoHorny server {} returned {} on status check: {}", response.statusCode(), message);
+            log.error(
+                    "The NoHorny server {} returned {} on status check: {}", endpoint, response.statusCode(), message);
         } else {
-            log.info("The NoHorny server {} is operational: {}", this.resolve(""), message);
+            log.info("The NoHorny server {} is operational: {}", endpoint, message);
         }
     }
 
@@ -102,8 +117,7 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
-        final var request = HttpRequest.newBuilder(this.resolve("classify"))
-                .timeout(Duration.ofSeconds(15L))
+        final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", MindustryImageIO.MEDIA_TYPE)
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> {
                     final var in = new PipedInputStream(4 * 1024);
@@ -156,10 +170,34 @@ final class NoHornyClient implements LifecycleListener {
                 group, classification.rating(), computeAuthor(group), classification.identifier())));
     }
 
-    private URI resolve(final String path) {
+    private HttpRequest.Builder request(final String path, final Duration timeout) {
         final var base = this.endpoint.get().toString();
-        final var normalizedBase = base.endsWith("/") ? base : base + "/";
-        return URI.create(normalizedBase).resolve(path);
+        final var normalized = base.endsWith("/") ? base : base + "/";
+        final var uri = URI.create(normalized).resolve(path);
+        final var request = HttpRequest.newBuilder(uri).timeout(timeout);
+        final var authorization = this.authorization();
+        if (authorization != null) {
+            request.header("Authorization", authorization);
+        }
+        return request;
+    }
+
+    private @Nullable String authorization() {
+        final var value = this.authValue.get();
+        if (value.isBlank()) {
+            return null;
+        }
+        return switch (this.authType.get()) {
+            case DISABLED -> null;
+            case BASIC -> "Basic " + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+            case BEARER -> "Bearer " + value;
+        };
+    }
+
+    private enum AuthType {
+        DISABLED,
+        BASIC,
+        BEARER,
     }
 
     @SuppressWarnings("NullAway")
