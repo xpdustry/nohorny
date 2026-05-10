@@ -5,18 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.4 - 2026-05-10
+
+### Changes & New features
+
+**:warning: BREAKING :warning:**
+
+- If your plugin depend on nohorny, this release is not compatible with beta 3.
+  - `ClassificationResponse` and `ClassificationEvent` have been changed to be more practical.
+  
+- Major improvements for the ViT classifier ([`5ac7b1c`](https://github.com/xpdustry/nohorny/commit/5ac7b1c7eda9a04bb07d710567bd75521647b0c7))
+  - Added support for loading local models, alongside downloadable Hugging Face models.
+  - Reworked the server classifier configuration layout and internals.
+  
+- Rebuild virtual building indexes on map load ([`dd8c11b`](https://github.com/xpdustry/nohorny/commit/dd8c11b388705d2a2dafae99da5b407cf97011f8))
+- Added basic and bearer auth to the nohorny client ([`754a3d9`](https://github.com/xpdustry/nohorny/commit/754a3d911637560ad0f0cbd88c04ede58e4df707))
+- Include confidence score in `ClassificationResponse` ([`e8a0b09`](https://github.com/xpdustry/nohorny/commit/e8a0b096dbeed3ece0d0d882a090b42313067a38))
+- Added a basic discord webhook utility ([`aacc753`](https://github.com/xpdustry/nohorny/commit/aacc7537e9084279296a8c971a1de3255ee69219))
+  - Reports WARN and NSFW classifications with a rendered image, confidence score, and trace id.
+  
+
+### Bugfixes
+
+- Added rate limits to sight-engine ([`ff9492e`](https://github.com/xpdustry/nohorny/commit/ff9492ea9eea1ecb47afa485a2238a9377e6e5c9))
+- Make `NoHornyPreconditions#positive` actually positive ([`c8d4715`](https://github.com/xpdustry/nohorny/commit/c8d47154e9e3b5682fa75f2db6660ac823b53039))
+- Cap size of rendered images to avoid DOS and OOMs ([`b4a90ea`](https://github.com/xpdustry/nohorny/commit/b4a90eaed92c4eec99a8a0f2ffcb2398a03a364a))
+- Fixed stale links in `GroupingVirtualBuildingIndex` ([`20b8f6b`](https://github.com/xpdustry/nohorny/commit/20b8f6b6c789ee98ce6654e6e894f11000b7335d))
+- Fixed ghost buildings due to server side map modifications not being tracked ([`6aa2018`](https://github.com/xpdustry/nohorny/commit/6aa201872f1a9f545c86f724c34f55b994ca8dc3)).
+  - Thank kuko from esco for making this possible.
+  
+- Report the correct number of scanned buildings in AutoModerator auto delete ([`6118f09`](https://github.com/xpdustry/nohorny/commit/6118f093e93198fdd20e730202bdde6c706bbe48))
+- Fixed NPE in `DebugHelper` ([`42ee859`](https://github.com/xpdustry/nohorny/commit/42ee8590b14181497c0dbb6db1584ff45a9c7290))
+
+### Maintenance
+
+- Ditch retries in nohorny client ([`fee1a77`](https://github.com/xpdustry/nohorny/commit/fee1a776142693875323013b5ac5285ad2d054fe))
+- Improved the README
+- Do not pretty print the refunded items stack in `AutoModerator` ([`e6a17e7`](https://github.com/xpdustry/nohorny/commit/e6a17e7aed0580171a31adae5aa666c87f865104))
+- Clearer classification tracing in `NoHornyClient` ([`8b660d4`](https://github.com/xpdustry/nohorny/commit/8b660d489ac40e1667217c88fe8154459a59aab9))
+- Properly wire methanol ([`60bed17`](https://github.com/xpdustry/nohorny/commit/60bed17fef4fb929a67485b668b4e93d83ad3b32))
+
 ## v4.0.0-beta.3 - 2026-04-22
 
 ### Changes & New features
 
 - Implemented an iterative grouping algorithm (#71) ([`5fb96e8`](https://github.com/xpdustry/nohorny/commit/5fb96e861f565331666e561da55990b352aa7e67))
+  
   - Allowing much larger groups, to be processed across several ticks.
   - Therefore, confusing less the classification models.
   
 - Added status check if the nohorny server endpoint is updated ([`cc8df5d`](https://github.com/xpdustry/nohorny/commit/cc8df5da338f5fd43f4e26eeb747601c3ddf184e))
+  
 - Add sight-engine image classification backend (#70) ([`403d0bb`](https://github.com/xpdustry/nohorny/commit/403d0bbf56c657d18f348e11b253402c1ccbab2e))
+  
 - Restrict the number of concurrent nohorny requests to one (#69) ([`f6cfa5d`](https://github.com/xpdustry/nohorny/commit/f6cfa5d7254cbbb869f20b9335f0a992ae892cc7))
+  
 - Include trace id in ClassificationEvent ([`ee91a3e`](https://github.com/xpdustry/nohorny/commit/ee91a3e183cec0ba5337a684c0d4064d114294b4))
+  
 
 ### Bugfixes
 
