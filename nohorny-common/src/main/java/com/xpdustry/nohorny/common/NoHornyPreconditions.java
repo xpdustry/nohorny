@@ -20,7 +20,14 @@ public final class NoHornyPreconditions {
     }
 
     public static int positive(final int value, final String name) {
-        if (value < 0) {
+        if (value <= 0) {
+            throw new IllegalArgumentException(name + " must be positive, got " + value);
+        }
+        return value;
+    }
+
+    public static long positive(final long value, final String name) {
+        if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive, got " + value);
         }
         return value;
