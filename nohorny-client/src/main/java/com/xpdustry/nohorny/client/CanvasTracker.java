@@ -125,7 +125,7 @@ final class CanvasTracker implements LifecycleListener {
         Objects.requireNonNull(this.grouper);
         this.grouper.progress();
         this.queue.removeIf(this.grouper::isVisited);
-        if (this.grouper.isCompleted() && !this.client.shouldNotAccept()) {
+        if (this.grouper.isCompleted() && this.client.canAccept()) {
             final var group = this.grouper.create();
             this.grouper = null;
             if (group != null) {

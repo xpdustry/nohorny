@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -34,9 +33,6 @@ import org.jspecify.annotations.Nullable;
 final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
-
-    private static final List<Duration> RETRY_DELAYS =
-            List.of(Duration.ZERO, Duration.ofSeconds(10), Duration.ofMinutes(2));
 
     private final HttpClient http = HttpClient.newHttpClient();
     private final Semaphore semaphore = new Semaphore(1);
@@ -79,40 +75,25 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     // This is not a perfect concurrency guard, but it's simple, and it's also ok if a few groups slip through
-    public boolean shouldNotAccept() {
-        return this.semaphore.availablePermits() == 0;
+    public boolean canAccept() {
+        return this.semaphore.availablePermits() != 0;
     }
 
     public <T extends MindustryImage> void accept(final VirtualBuilding.Group<T> group) {
         this.executor.execute(() -> {
             try {
-                for (int attempt = 0; attempt < RETRY_DELAYS.size(); attempt++) {
-                    final var delay = RETRY_DELAYS.get(attempt);
-                    if (delay.isPositive()) {
-                        Thread.sleep(delay);
-                    }
-                    this.semaphore.acquire();
-                    try {
-                        this.classify(group);
-                        return;
-                    } catch (final ConnectException e) {
-                        log.error(
-                                "Failed to rate group at ({}, {}), attempt {}/{}: The NoHorny server is not reachable",
-                                group.x(),
-                                group.y(),
-                                attempt + 1,
-                                RETRY_DELAYS.size());
-                    } catch (final Exception e) {
-                        log.error(
-                                "Failed to rate group at ({}, {}), attempt {}/{}",
-                                group.x(),
-                                group.y(),
-                                attempt + 1,
-                                RETRY_DELAYS.size(),
-                                e);
-                    } finally {
-                        this.semaphore.release();
-                    }
+                this.semaphore.acquire();
+                try {
+                    this.classify(group);
+                } catch (final ConnectException e) {
+                    log.error(
+                            "Failed to rate group at ({}, {}): The NoHorny server is not reachable",
+                            group.x(),
+                            group.y());
+                } catch (final Exception e) {
+                    log.error("Failed to rate group at ({}, {})", group.x(), group.y(), e);
+                } finally {
+                    this.semaphore.release();
                 }
             } catch (final InterruptedException _) {
                 Thread.currentThread().interrupt();
@@ -146,18 +127,8 @@ final class NoHornyClient implements LifecycleListener {
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
             final var message = getGenericServerMessage(response);
-            // Do not bother retrying, since something really wrong
-            // is going on with the server that might need manual intervention
-            if (response.statusCode() == 500) {
-                log.error("The remote nohorny server had an internal error: {}", message);
-                return;
-            }
-            if (response.statusCode() == 400) {
-                log.error("The remote nohorny server failed to parse the group: {}", message);
-                return;
-            }
-            throw new IllegalStateException(
-                    "The remote nohorny server returned " + response.statusCode() + ": " + response.body());
+            log.error("The remote nohorny returned http code {}: {}", response.statusCode(), message);
+            return;
         }
 
         final ClassificationResponse classification;
