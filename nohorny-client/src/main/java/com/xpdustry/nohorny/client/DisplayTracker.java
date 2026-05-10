@@ -47,10 +47,46 @@ final class DisplayTracker implements LifecycleListener {
     @SuppressWarnings("FutureReturnValueIgnored")
     @Override
     public void onInit() {
+        MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
+            @Override
+            public void onCreate(
+                    final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
+                final var x = BuildingUtils.anchorTileX(building);
+                final var y = BuildingUtils.anchorTileY(building);
+                final var size = building.block.size;
+                final var links = new HashSet<Integer>(building.links.size);
+                for (final var link : building.links) {
+                    links.add(GeometryUtils.pack(link.x, link.y));
+                }
+                final var instructions = DisplayTracker.this.instructions(building.executor);
+                if (instructions == null || instructions.size() < MIN_DRAW_INSTRUCTION_COUNT) {
+                    return;
+                }
+                final var data = new MindustryDisplay.Processor(instructions, author);
+                final var processor = DisplayTracker.this.processors.upsert(
+                        x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
+                DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE, queue);
+            }
+
+            @Override
+            public void onRemove(final int x, final int y, final int size) {
+                for (final var processor : DisplayTracker.this.processors.removeAllWithinSquare(x, y, size)) {
+                    DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.REMOVE, false);
+                }
+            }
+
+            @Override
+            public void onRemoveAll() {
+                DisplayTracker.this.processors.removeAll();
+            }
+        });
+
         MindustryUtils.onEvent(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
             public void onCreate(
-                    final LogicDisplay.LogicDisplayBuild building, final @Nullable MindustryAuthor author) {
+                    final LogicDisplay.LogicDisplayBuild building,
+                    final @Nullable MindustryAuthor author,
+                    final boolean queue) {
                 // TODO Add proper support for tileable display
                 if (building instanceof TileableLogicDisplay.TileableLogicDisplayBuild) {
                     return;
@@ -96,7 +132,9 @@ final class DisplayTracker implements LifecycleListener {
                                         : b));
                 final var added =
                         DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
-                DisplayTracker.this.enqueue(added.packed());
+                if (queue) {
+                    DisplayTracker.this.enqueue(added.packed());
+                }
             }
 
             @Override
@@ -111,39 +149,6 @@ final class DisplayTracker implements LifecycleListener {
                 DisplayTracker.this.displays.removeAll();
                 DisplayTracker.this.queue.clear();
                 DisplayTracker.this.grouper = null;
-            }
-        });
-
-        MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
-            @Override
-            public void onCreate(final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author) {
-                final var x = BuildingUtils.anchorTileX(building);
-                final var y = BuildingUtils.anchorTileY(building);
-                final var size = building.block.size;
-                final var links = new HashSet<Integer>(building.links.size);
-                for (final var link : building.links) {
-                    links.add(GeometryUtils.pack(link.x, link.y));
-                }
-                final var instructions = DisplayTracker.this.instructions(building.executor);
-                if (instructions == null || instructions.size() < MIN_DRAW_INSTRUCTION_COUNT) {
-                    return;
-                }
-                final var data = new MindustryDisplay.Processor(instructions, author);
-                final var processor = DisplayTracker.this.processors.upsert(
-                        x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
-                DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE);
-            }
-
-            @Override
-            public void onRemove(final int x, final int y, final int size) {
-                for (final var processor : DisplayTracker.this.processors.removeAllWithinSquare(x, y, size)) {
-                    DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.REMOVE);
-                }
-            }
-
-            @Override
-            public void onRemoveAll() {
-                DisplayTracker.this.processors.removeAll();
             }
         });
 
@@ -218,7 +223,7 @@ final class DisplayTracker implements LifecycleListener {
     }
 
     private void forEachLinkUpdateDisplay(
-            final VirtualBuilding<ProcessorWithLinks> processor, final LinkUpdateKind kind) {
+            final VirtualBuilding<ProcessorWithLinks> processor, final LinkUpdateKind kind, final boolean queue) {
         for (final var link : processor.data().links()) {
             var display = this.displays.select(GeometryUtils.x(link), GeometryUtils.y(link));
             if (display == null) {
@@ -235,7 +240,9 @@ final class DisplayTracker implements LifecycleListener {
                     display.y(),
                     display.size(),
                     new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
-            this.enqueue(GeometryUtils.pack(display.x(), display.y()));
+            if (queue) {
+                this.enqueue(GeometryUtils.pack(display.x(), display.y()));
+            }
         }
     }
 

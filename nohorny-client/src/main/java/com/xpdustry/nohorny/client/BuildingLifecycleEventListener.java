@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 interface BuildingLifecycleEventListener<B extends Building> {
 
-    void onCreate(final B building, final @Nullable MindustryAuthor author);
+    void onCreate(final B building, final @Nullable MindustryAuthor author, final boolean queue);
 
     void onRemove(final int x, final int y, final int size);
 

@@ -5,6 +5,7 @@ import arc.Events;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import mindustry.Vars;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
 import mindustry.gen.Building;
@@ -58,7 +59,7 @@ final class MindustryUtils {
                 if (event.breaking) {
                     listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
                 } else {
-                    listener.onCreate(casted, asAuthor(event.unit == null ? null : event.unit.getPlayer()));
+                    listener.onCreate(casted, asAuthor(event.unit == null ? null : event.unit.getPlayer()), true);
                 }
             }
         });
@@ -80,7 +81,7 @@ final class MindustryUtils {
             if (type.isInstance(event.build)) {
                 final var casted = type.cast(event.build);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, null);
+                listener.onCreate(casted, null, true);
             }
         });
 
@@ -88,7 +89,7 @@ final class MindustryUtils {
             if (type.isInstance(event.tile)) {
                 final var casted = type.cast(event.tile);
                 listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, asAuthor(event.player));
+                listener.onCreate(casted, asAuthor(event.player), true);
             }
         });
 
@@ -96,6 +97,12 @@ final class MindustryUtils {
             if (event.from == GameState.State.menu
                     && (event.to == GameState.State.playing || event.to == GameState.State.paused)) {
                 listener.onRemoveAll();
+                for (final var tile : Vars.world.tiles) {
+                    if (type.isInstance(tile.build)) {
+                        final var casted = type.cast(tile.build);
+                        listener.onCreate(casted, null, false);
+                    }
+                }
             }
         });
     }

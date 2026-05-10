@@ -34,13 +34,18 @@ final class CanvasTracker implements LifecycleListener {
     public void onInit() {
         MindustryUtils.onEvent(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {
             @Override
-            public void onCreate(final CanvasBlock.CanvasBuild building, final @Nullable MindustryAuthor author) {
+            public void onCreate(
+                    final CanvasBlock.CanvasBuild building,
+                    final @Nullable MindustryAuthor author,
+                    final boolean queue) {
                 final var x = BuildingUtils.anchorTileX(building);
                 final var y = BuildingUtils.anchorTileY(building);
                 final var size = building.block.size;
                 final var data = CanvasTracker.this.data(building, author);
                 final var added = CanvasTracker.this.canvases.upsert(x, y, size, data);
-                CanvasTracker.this.enqueue(added.packed());
+                if (queue) {
+                    CanvasTracker.this.enqueue(added.packed());
+                }
             }
 
             @Override
