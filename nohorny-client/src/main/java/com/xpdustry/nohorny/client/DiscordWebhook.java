@@ -23,8 +23,8 @@ final class DiscordWebhook implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(DiscordWebhook.class);
 
+    private final Methanol http;
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
-    private final Methanol http = Methanol.create();
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
 
@@ -33,6 +33,10 @@ final class DiscordWebhook implements LifecycleListener {
             "A basic discord webhook to send WARN and NSFW classifications.",
             "",
             value -> value.isBlank() ? "" : URI.create(value).toString());
+
+    DiscordWebhook(final Methanol http) {
+        this.http = http;
+    }
 
     @Override
     public void onInit() {

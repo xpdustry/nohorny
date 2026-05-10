@@ -4,6 +4,7 @@ package com.xpdustry.nohorny.client;
 import arc.Core;
 import arc.Events;
 import arc.util.serialization.Jval;
+import com.github.mizosoft.methanol.Methanol;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
@@ -17,7 +18,6 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +36,7 @@ final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
-    private final HttpClient http = HttpClient.newHttpClient();
+    private final Methanol http;
     private final Semaphore semaphore = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
@@ -61,6 +61,10 @@ final class NoHornyClient implements LifecycleListener {
             "",
             value -> value,
             this::checkEndpointStatus);
+
+    NoHornyClient(final Methanol http) {
+        this.http = http;
+    }
 
     @Override
     public void onInit() {

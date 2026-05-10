@@ -3,6 +3,7 @@ package com.xpdustry.nohorny.client;
 
 import arc.ApplicationListener;
 import arc.Core;
+import com.github.mizosoft.methanol.Methanol;
 import java.util.ArrayList;
 import java.util.List;
 import mindustry.Vars;
@@ -19,7 +20,9 @@ public final class NoHornyPlugin extends Plugin {
     public void init() {
         final var directory = Vars.mods.getConfigFolder(this).file().toPath();
 
-        final var client = new NoHornyClient();
+        final var http = Methanol.create();
+
+        final var client = new NoHornyClient(http);
         this.addListener(client);
 
         final var displays = new DisplayTracker(client);
@@ -31,7 +34,7 @@ public final class NoHornyPlugin extends Plugin {
         final var debug = new DebugHelper(directory.resolve("debug"), canvases, displays);
         this.addListener(debug);
 
-        this.addListener(new DiscordWebhook());
+        this.addListener(new DiscordWebhook(http));
 
         this.addListener(new AutoModerator());
 
@@ -40,6 +43,7 @@ public final class NoHornyPlugin extends Plugin {
             @Override
             public void dispose() {
                 NoHornyPlugin.this.exit0();
+                http.close();
             }
         });
     }
