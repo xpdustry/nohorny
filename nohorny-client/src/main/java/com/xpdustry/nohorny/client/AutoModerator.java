@@ -17,6 +17,7 @@ import mindustry.content.Blocks;
 import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
+import mindustry.io.JsonIO;
 import mindustry.type.ItemSeq;
 import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicBlock;
@@ -92,7 +93,9 @@ final class AutoModerator implements LifecycleListener {
 
         final var refunds = new IntMap<ItemSeq>();
         final var positions = new IntSeq();
+        var actualGroupSize = 0;
         for (final var element : group.elements()) {
+            actualGroupSize++;
             switch (element.data()) {
                 case MindustryCanvas _ -> {
                     if (!(Vars.world.build(element.x(), element.y()) instanceof CanvasBlock.CanvasBuild canvas)) {
@@ -102,6 +105,7 @@ final class AutoModerator implements LifecycleListener {
                     refunds.get(canvas.team().id, ItemSeq::new).add(canvas.block.requirements);
                 }
                 case MindustryDisplay data -> {
+                    actualGroupSize += data.processors().size();
                     if (!(Vars.world.build(element.x(), element.y())
                             instanceof LogicDisplay.LogicDisplayBuild display)) {
                         continue;
@@ -121,10 +125,7 @@ final class AutoModerator implements LifecycleListener {
         }
 
         Call.setTileBlocks(Blocks.air, Team.derelict, positions.toArray());
-        log.info(
-                "Deleted {} buildings out of {}",
-                positions.size,
-                group.elements().size());
+        log.info("Deleted {} buildings out of {}", positions.size, actualGroupSize);
 
         if (Vars.state.rules.infiniteResources) {
             return;
