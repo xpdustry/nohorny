@@ -10,20 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changes & New features
 
 **:warning: BREAKING :warning:**
-
-- If your plugin depend on nohorny, this release is not compatible with beta 3.
+- If your plugin depends on nohorny, this release is not compatible with beta 3.
   - `ClassificationResponse` and `ClassificationEvent` have been changed to be more practical.
-  
 - Major improvements for the ViT classifier ([`5ac7b1c`](https://github.com/xpdustry/nohorny/commit/5ac7b1c7eda9a04bb07d710567bd75521647b0c7))
   - Added support for loading local models, alongside downloadable Hugging Face models.
+  - Read the default config file for more info.
   - Reworked the server classifier configuration layout and internals.
-  
 - Rebuild virtual building indexes on map load ([`dd8c11b`](https://github.com/xpdustry/nohorny/commit/dd8c11b388705d2a2dafae99da5b407cf97011f8))
 - Added basic and bearer auth to the nohorny client ([`754a3d9`](https://github.com/xpdustry/nohorny/commit/754a3d911637560ad0f0cbd88c04ede58e4df707))
 - Include confidence score in `ClassificationResponse` ([`e8a0b09`](https://github.com/xpdustry/nohorny/commit/e8a0b096dbeed3ece0d0d882a090b42313067a38))
 - Added a basic discord webhook utility ([`aacc753`](https://github.com/xpdustry/nohorny/commit/aacc7537e9084279296a8c971a1de3255ee69219))
   - Reports WARN and NSFW classifications with a rendered image, confidence score, and trace id.
-  
 
 ### Bugfixes
 
@@ -33,7 +30,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed stale links in `GroupingVirtualBuildingIndex` ([`20b8f6b`](https://github.com/xpdustry/nohorny/commit/20b8f6b6c789ee98ce6654e6e894f11000b7335d))
 - Fixed ghost buildings due to server side map modifications not being tracked ([`6aa2018`](https://github.com/xpdustry/nohorny/commit/6aa201872f1a9f545c86f724c34f55b994ca8dc3)).
   - Thank kuko from esco for making this possible.
-  
 - Report the correct number of scanned buildings in AutoModerator auto delete ([`6118f09`](https://github.com/xpdustry/nohorny/commit/6118f093e93198fdd20e730202bdde6c706bbe48))
 - Fixed NPE in `DebugHelper` ([`42ee859`](https://github.com/xpdustry/nohorny/commit/42ee8590b14181497c0dbb6db1584ff45a9c7290))
 
