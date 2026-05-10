@@ -43,13 +43,14 @@ Then, you can simply run `java -jar nohorny-server.jar`.
 
 The client uses Mindustry's built-in server configuration system. Use the `config` command in the server console:
 
-| Key                      | Description                                                                              | Default                            |
-|--------------------------|------------------------------------------------------------------------------------------|------------------------------------|
-| `nohorny-api-endpoint`   | Base URL used by the plugin. The client resolves `status` and `classify` relative to it. | `https://nohorny.xpdustry.com/api` |
-| `nohorny-automod-policy` | The policy to apply when a group of buildings is classified.                             | `BAN_NSFW`                         |
-| `nohorny-debug-tap`      | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
-| `nohorny-api-auth-type`  | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                 | `DISABLED`                         |
-| `nohorny-api-auth-value` | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.     | empty                              |
+| Key                       | Description                                                                              | Default                            |
+|---------------------------|------------------------------------------------------------------------------------------|------------------------------------|
+| `nohorny-api-endpoint`    | Base URL used by the plugin. The client resolves `status` and `classify` relative to it. | `https://nohorny.xpdustry.com/api` |
+| `nohorny-api-auth-type`   | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                 | `DISABLED`                         |
+| `nohorny-api-auth-value`  | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.     | empty                              |
+| `nohorny-automod-policy`  | The policy to apply when a group of buildings is classified.                             | `BAN_NSFW`                         |
+| `nohorny-discord-webhook` | Discord webhook used to report WARN or NSFW classifications.                             | empty                              |
+| `nohorny-debug-tap`       | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
 
 ### Auto-Mod Policies
 
@@ -68,6 +69,7 @@ config nohorny-automod-policy ban_nsfw
 config nohorny-debug-tap true
 config nohorny-api-auth-type bearer
 config nohorny-api-auth-value my-token
+config nohorny-discord-webhook https://discord.com/api/webhooks/.../...
 ```
 
 ## Server Configuration

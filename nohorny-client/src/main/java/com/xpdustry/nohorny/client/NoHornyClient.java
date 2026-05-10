@@ -168,8 +168,7 @@ final class NoHornyClient implements LifecycleListener {
                 "%.2f".formatted(classification.confidence() * 100),
                 classification.classifier(),
                 classification.identifier());
-        Core.app.post(() -> Events.fire(new ClassificationEvent(
-                group, classification.rating(), computeAuthor(group), classification.identifier())));
+        Core.app.post(() -> Events.fire(new ClassificationEvent(group, computeAuthor(group), classification)));
     }
 
     private HttpRequest.Builder request(final String path, final Duration timeout) {

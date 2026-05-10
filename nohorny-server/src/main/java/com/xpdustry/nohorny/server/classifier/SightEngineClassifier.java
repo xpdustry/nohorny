@@ -2,12 +2,12 @@
 package com.xpdustry.nohorny.server.classifier;
 
 import com.xpdustry.nohorny.common.GraphicsScope;
+import com.xpdustry.nohorny.common.MonoRateLimiter;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
 import javax.imageio.ImageIO;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -21,13 +21,11 @@ public final class SightEngineClassifier implements Classifier {
 
     private static final URI API_ENDPOINT = URI.create("https://api.sightengine.com/1.0/check.json");
     private static final String MODELS = "nudity-2.1";
-    private static final Duration REQUEST_INTERVAL = Duration.ofSeconds(1);
 
     private final RestClient restClient;
     private final SightEngineClassifierProperties properties;
     private final JsonMapper jsonMapper;
-    private final Object lock = new Object();
-    private Instant nextRequestAt = Instant.MIN;
+    private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
 
     public SightEngineClassifier(
             final RestClient restClient,
@@ -45,7 +43,7 @@ public final class SightEngineClassifier implements Classifier {
 
     @Override
     public Result classify(final BufferedImage image) throws Exception {
-        this.waitIfRateLimited();
+        this.rateLimiter.waitIfRateLimited();
         final var request = new LinkedMultiValueMap<String, Object>();
         request.add("api_user", this.properties.user());
         request.add("api_secret", this.properties.secret());
@@ -65,19 +63,6 @@ public final class SightEngineClassifier implements Classifier {
         final var score = response.nudity().maxScore();
         return new Result(
                 this.properties.thresholds().apply(score), score, this.jsonMapper.writeValueAsString(response));
-    }
-
-    private void waitIfRateLimited() throws InterruptedException {
-        final var now = Instant.now();
-        final Instant sendAt;
-        synchronized (this.lock) {
-            sendAt = now.isAfter(this.nextRequestAt) ? now : this.nextRequestAt;
-            this.nextRequestAt = sendAt.plus(REQUEST_INTERVAL);
-        }
-        final var timeToWait = Duration.between(now, sendAt);
-        if (timeToWait.isPositive()) {
-            Thread.sleep(timeToWait.toMillis());
-        }
     }
 
     private static HttpHeaders jpegHeaders() {

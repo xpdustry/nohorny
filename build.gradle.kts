@@ -146,7 +146,7 @@ project(":nohorny-client") {
 
     dependencies {
         "api"(project(":nohorny-common"))
-
+        "implementation"("com.github.mizosoft.methanol:methanol:1.8.2")
         "compileOnly"(toxopid.dependencies.mindustryCore)
         "testImplementation"(toxopid.dependencies.mindustryCore)
         "compileOnly"(toxopid.dependencies.arcCore)
