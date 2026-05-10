@@ -10,5 +10,5 @@ public interface Classifier {
 
     Result classify(final BufferedImage image) throws Exception;
 
-    record Result(Rating rating, String metadata) {}
+    record Result(Rating rating, double confidence, String metadata) {}
 }

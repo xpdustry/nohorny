@@ -67,7 +67,8 @@ public final class NoHornyController {
             log.trace("Processing image {} (png/w={},h={})", uuid, image.getWidth(), image.getHeight());
             final var result = this.classifier.classify(image);
             log.trace("Processed image {}, got {}", uuid, result);
-            return ResponseEntity.ok(new ClassificationResponse(this.classifier.name(), result.rating(), uuid));
+            return ResponseEntity.ok(
+                    new ClassificationResponse(this.classifier.name(), result.rating(), result.confidence(), uuid));
         } catch (final Exception exception) {
             log.error("Classification request {} has failed", uuid, exception);
             return ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));

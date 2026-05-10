@@ -151,6 +151,7 @@ final class NoHornyClient implements LifecycleListener {
             classification = new ClassificationResponse(
                     jval.getString("classifier"),
                     Rating.valueOf(jval.getString("rating")),
+                    jval.getFloat("confidence", 0F),
                     jval.getString("identifier"));
         } catch (final Exception e) {
             log.error("The remote nohorny server returned a malformed response: {}", response.body(), e);
@@ -159,11 +160,12 @@ final class NoHornyClient implements LifecycleListener {
 
         final var author = computeAuthor(group);
         log.trace(
-                "Received classification response for group by {} at ({}, {}): {} ({}/id={})",
+                "Received classification response for group by {} at ({}, {}): {} rating at {} confidence from ({}/id={})",
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
                 group.y(),
                 classification.rating(),
+                "%.2f".formatted(classification.confidence() * 100),
                 classification.classifier(),
                 classification.identifier());
         Core.app.post(() -> Events.fire(new ClassificationEvent(

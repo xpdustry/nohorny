@@ -42,6 +42,7 @@ public final class ViTClassifier implements Classifier {
             final var score = prediction.get(this.properties.nsfwLabel()).getProbability();
             return new Result(
                     this.properties.thresholds().apply(score),
+                    score,
                     prediction.serialize().toString());
         }
     }

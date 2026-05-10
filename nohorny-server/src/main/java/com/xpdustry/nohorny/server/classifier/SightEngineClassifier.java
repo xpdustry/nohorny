@@ -63,7 +63,8 @@ public final class SightEngineClassifier implements Classifier {
                     + this.jsonMapper.writeValueAsString(response));
         }
         final var score = response.nudity().maxScore();
-        return new Result(this.properties.thresholds().apply(score), this.jsonMapper.writeValueAsString(response));
+        return new Result(
+                this.properties.thresholds().apply(score), score, this.jsonMapper.writeValueAsString(response));
     }
 
     private void waitIfRateLimited() throws InterruptedException {
