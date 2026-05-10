@@ -7,13 +7,13 @@
 
 ## Description
 
-Are you sick of players turning your awesome server into a NSFW gallery ?
-Do you wish to bring back your logic displays without the fear of seing anime girls in questionable situations ?
-Well, worry no more, xpdustry cooked another banger plugin for just this situation.
+Are you sick of players turning your awesome server into a NSFW gallery?
+Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
+Well, worry no more, xpdustry cooked another plugin just for this situation.
 
 Introducing **nohorny**, the successor of [BMI](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage).
 This project consists of a Mindustry plugin client that automatically tracks logic displays and canvases,
-and a standalone classification server that processes them.
+and a standalone classification server that processes them, for automatic NSFW moderation.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
@@ -28,6 +28,8 @@ This plugin requires at least:
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
 Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) (and [`slf4md.jar`](https://github.com/xpdustry/slf4md/releases/latest) if needed) in your `config/mods` directory and start your mindustry server.
+
+Your server is now protected against NSFW buildings.
 
 ### Server (Classification API)
 
@@ -70,11 +72,11 @@ config nohorny-api-auth-value my-token
 
 ## Server Configuration
 
-To customize the nohorny server configuration, see [`nohorny-server/src/main/resources/application.yaml`](nohorny-server/src/main/resources/application.yaml).
+See [`nohorny-server/src/main/resources/application.yaml`](nohorny-server/src/main/resources/application.yaml).
 
-Then, use one of the following to apply your configuration:
+Then, you can configure the server using:
 
-- A `application.yaml` file
+- An `application.yaml` file
 
 ```yaml
 # application.yaml
