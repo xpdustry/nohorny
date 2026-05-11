@@ -160,7 +160,7 @@ final class DiscordWebhook implements LifecycleListener {
     private Jval createEmbedJsonPayload(
             final String title, final String content, final @Nullable String image, final @Nullable String footer) {
         final var embed = Jval.newObject()
-                .put("color", Color.PINK.getRGB())
+                .put("color", Color.PINK.getRGB() & 0xFFFFFF)
                 .put("title", title)
                 .put("description", content);
         if (image != null) {
