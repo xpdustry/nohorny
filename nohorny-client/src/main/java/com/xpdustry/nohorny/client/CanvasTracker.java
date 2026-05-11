@@ -19,6 +19,7 @@ final class CanvasTracker implements LifecycleListener {
 
     private static final int MAX_GROUP_RANGE = 50 * 3; // 50 large canvases around the anchor
     private static final int MAX_GROUP_STEPS = 50;
+    private static final int MIN_CANVAS_GROUP_SIZE = 2 * 4;
 
     final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
     private final NoHornyClient client;
@@ -128,7 +129,7 @@ final class CanvasTracker implements LifecycleListener {
         if (this.grouper.isCompleted() && this.client.canAccept()) {
             final var group = this.grouper.create();
             this.grouper = null;
-            if (group != null) {
+            if (group != null && group.w() >= MIN_CANVAS_GROUP_SIZE && group.h() >= MIN_CANVAS_GROUP_SIZE) {
                 this.client.accept(group);
             }
         }
