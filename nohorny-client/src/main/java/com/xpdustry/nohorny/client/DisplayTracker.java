@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
 
 final class DisplayTracker implements LifecycleListener {
 
-    private static final int MIN_DRAW_INSTRUCTION_COUNT = 100;
+    private static final int MIN_DRAW_INSTRUCTION_COUNT = 20;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
     private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
     private static final int MAX_GROUP_STEPS = 50;
