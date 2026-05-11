@@ -10,6 +10,8 @@ import com.github.mizosoft.methanol.MutableRequest;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.MonoRateLimiter;
 import com.xpdustry.nohorny.common.Rating;
+import java.awt.Color;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
+import org.jspecify.annotations.Nullable;
 
 final class DiscordWebhook implements LifecycleListener {
 
@@ -32,7 +35,8 @@ final class DiscordWebhook implements LifecycleListener {
             "nohorny-discord-webhook",
             "A basic discord webhook to send WARN and NSFW classifications.",
             "",
-            value -> value.isBlank() ? "" : URI.create(value).toString());
+            value -> value.isBlank() ? "" : URI.create(value).toString(),
+            this::onWebhookConfigure);
 
     DiscordWebhook(final Methanol http) {
         this.http = http;
@@ -58,7 +62,7 @@ final class DiscordWebhook implements LifecycleListener {
         }
         this.executor.execute(() -> {
             try {
-                this.sendWarning(URI.create(webhook), event);
+                this.send(URI.create(webhook), this.createClassificationFormPayload(event));
             } catch (final Exception e) {
                 log.error(
                         "Failed to send Discord warning for group at ({}, {})",
@@ -69,13 +73,54 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
-    private void sendWarning(final URI webhook, final ClassificationEvent event) throws Exception {
+    private void send(final URI webhook, final MultipartBodyPublisher form) throws Exception {
         this.rateLimiter.waitIfRateLimited();
-        final var multipart = MultipartBodyPublisher.newBuilder()
-                .textPart("payload_json", this.payload(event).toString())
+        final var response = this.http.send(
+                MutableRequest.POST(webhook, form).timeout(Duration.ofSeconds(15L)),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() > 299) {
+            throw new IOException(
+                    "Discord webhook returned http code " + response.statusCode() + ": " + response.body());
+        }
+    }
+
+    private void onWebhookConfigure() {
+        final var webhook = this.webhook.get();
+        if (webhook.isBlank()) {
+            return;
+        }
+        this.executor.execute(() -> {
+            try {
+                this.send(URI.create(webhook), this.createConfigurationSuccessFormPayload());
+            } catch (final Exception e) {
+                log.error("Failed to test the Discord webhook", e);
+            }
+        });
+    }
+
+    private MultipartBodyPublisher createConfigurationSuccessFormPayload() {
+        return MultipartBodyPublisher.newBuilder()
+                .textPart(
+                        "payload_json",
+                        this.createEmbedJsonPayload(
+                                        "NoHorny has successfuly been configured",
+                                        "NSFW alerts will now be sent here",
+                                        null,
+                                        null)
+                                .toString())
+                .build();
+    }
+
+    private MultipartBodyPublisher createClassificationFormPayload(final ClassificationEvent event) {
+        final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png";
+        return MultipartBodyPublisher.newBuilder()
+                .textPart(
+                        "payload_json",
+                        this.createClassificationJsonPayload(event, "attachment://" + imageName)
+                                .toString())
                 .formPart(
                         "files[0]",
-                        "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png",
+                        imageName,
                         MoreBodyPublishers.ofMediaType(
                                 MoreBodyPublishers.ofOutputStream(
                                         stream -> ImageIO.write(
@@ -83,27 +128,10 @@ final class DiscordWebhook implements LifecycleListener {
                                         this.executor),
                                 MediaType.IMAGE_PNG))
                 .build();
-        final var response = this.http.send(
-                MutableRequest.POST(webhook, multipart).timeout(Duration.ofSeconds(15L)),
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() > 299) {
-            log.error(
-                    "Discord webhook returned http code {} for group at ({}, {}): {}",
-                    response.statusCode(),
-                    event.group().x(),
-                    event.group().y(),
-                    response.body());
-        }
     }
 
-    private Jval payload(final ClassificationEvent event) {
+    private Jval createClassificationJsonPayload(final ClassificationEvent event, final String image) {
         final var message = new StringBuilder();
-        message.append("**NoHorny detected unsafe buildings at (")
-                .append(event.group().x())
-                .append(", ")
-                .append(event.group().y())
-                .append("):**\n");
-
         if (event.author() == null) {
             message.append("- Author: **unknown**\n");
         } else {
@@ -113,15 +141,36 @@ final class DiscordWebhook implements LifecycleListener {
                     .append(event.author().ip())
                     .append("`**\n");
         }
-
+        message.append("- Coordinates: **(")
+                .append(event.group().x())
+                .append(", ")
+                .append(event.group().y())
+                .append(")**\n");
         message.append("- Rating: **").append(event.response().rating()).append("**\n");
         message.append("- Confidence: **")
                 .append((int) (event.response().confidence() * 100))
                 .append("%**\n");
-        message.append("-# Trace ID: **`").append(event.response().identifier()).append("`**");
+        return this.createEmbedJsonPayload(
+                "NoHorny has detected unsafe buildings",
+                message.toString(),
+                image,
+                event.response().identifier());
+    }
 
+    private Jval createEmbedJsonPayload(
+            final String title, final String content, final @Nullable String image, final @Nullable String footer) {
+        final var embed = Jval.newObject()
+                .put("color", Color.PINK.getRGB() & 0xFFFFFF)
+                .put("title", title)
+                .put("description", content);
+        if (image != null) {
+            embed.put("image", Jval.newObject().put("url", image));
+        }
+        if (footer != null) {
+            embed.put("footer", Jval.newObject().put("text", footer));
+        }
         return Jval.newObject()
-                .put("content", message.toString())
-                .put("allowed_mentions", Jval.newObject().put("parse", Jval.newArray()));
+                .put("allowed_mentions", Jval.newObject().put("parse", Jval.newArray()))
+                .put("embeds", Jval.newArray().add(embed));
     }
 }
