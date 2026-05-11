@@ -33,7 +33,7 @@ Your server is now protected against NSFW buildings.
 
 ### Configuration
 
-You can configure NoHorny using the Mindustry built-in `config` command, with `config key value`.
+You can configure nohorny using the Mindustry built-in `config` command, with `config key value`.
 
 #### Available settings
 
@@ -58,7 +58,7 @@ You can configure NoHorny using the Mindustry built-in `config` command, with `c
 #### Discord Webhook
 
 Set `nohorny-discord-webhook` to a discord webhook url, such as `https://discord.com/api/webhooks/999999/abcdefgh`.
-NoHorny will automatically try to validate it.
+Nohorny will automatically try to validate it.
 If all goes well, [you will see a success message in your webhook channel](.github/discord-example.png).
 
 #### Debugging
@@ -68,7 +68,7 @@ canvas group labels the detected group in-game, then creates a PNG render and bi
 
 ### Developping
 
-Other plugins can depend on the NoHorny client to be able to listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
+Other plugins can depend on the nohorny client to be able to listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
 
 Add the following to your `build.gradle`:
 
