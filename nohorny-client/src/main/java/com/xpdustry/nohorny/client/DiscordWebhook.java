@@ -151,7 +151,7 @@ final class DiscordWebhook implements LifecycleListener {
                 .append((int) (event.response().confidence() * 100))
                 .append("%**\n");
         return this.createEmbedJsonPayload(
-                "NoHorny detected unsafe buildings",
+                "NoHorny has detected unsafe buildings",
                 message.toString(),
                 image,
                 event.response().identifier());
