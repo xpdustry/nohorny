@@ -17,9 +17,9 @@ and a standalone classification server that processes them, for automatic NSFW m
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
-## Installation
+## Client (Mindustry Plugin)
 
-### Client (Mindustry Plugin)
+### Installation
 
 This plugin requires at least:
 
@@ -31,17 +31,11 @@ Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) 
 
 Your server is now protected against NSFW buildings.
 
-### Server (Classification API)
+### Configuration
 
-This is a standalone Java application requiring:
+You can configure nohorny using the Mindustry built-in `config` command, with `config key value`.
 
-- Java 25
-
-Then, you can simply run `java -jar nohorny-server.jar`.
-
-## Client Configuration
-
-The client uses Mindustry's built-in server configuration system. Use the `config` command in the server console:
+#### Available settings
 
 | Key                       | Description                                                                              | Default                            |
 |---------------------------|------------------------------------------------------------------------------------------|------------------------------------|
@@ -49,10 +43,10 @@ The client uses Mindustry's built-in server configuration system. Use the `confi
 | `nohorny-api-auth-type`   | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                 | `DISABLED`                         |
 | `nohorny-api-auth-value`  | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.     | empty                              |
 | `nohorny-automod-policy`  | The policy to apply when a group of buildings is classified.                             | `BAN_NSFW`                         |
-| `nohorny-discord-webhook` | Discord webhook used to report WARN or NSFW classifications.                             | empty                              |
+| `nohorny-discord-webhook` | Discord webhook used to report unsafe buildings.                                         | empty                              |
 | `nohorny-debug-tap`       | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
 
-### Auto-Mod Policies
+#### Auto-Mod Policies
 
 | Policy        | Behavior                                                |
 |---------------|---------------------------------------------------------|
@@ -61,51 +55,20 @@ The client uses Mindustry's built-in server configuration system. Use the `confi
 | `DELETE_WARN` | Delete buildings rated WARN or NSFW.                    |
 | `BAN_NSFW`    | Ban the author and delete buildings rated WARN or NSFW. |
 
-### Example
+#### Discord Webhook
 
-```text
-config nohorny-api-endpoint http://127.0.0.1:8080/
-config nohorny-automod-policy ban_nsfw
-config nohorny-debug-tap true
-config nohorny-api-auth-type bearer
-config nohorny-api-auth-value my-token
-config nohorny-discord-webhook https://discord.com/api/webhooks/.../...
-```
+Set `nohorny-discord-webhook` to a discord webhook url, such as `https://discord.com/api/webhooks/999999/abcdefgh`.
+Nohorny will automatically try to validate it.
+If all goes well, [you will see a success message in your webhook channel](.github/discord-example.png).
 
-## Server Configuration
-
-See [`nohorny-server/src/main/resources/application.yaml`](nohorny-server/src/main/resources/application.yaml).
-
-Then, you can configure the server using:
-
-- An `application.yaml` file
-
-```yaml
-# application.yaml
-server:
-  port: 9090
-```
-
-- Env variables
-
-```text
-SERVER_PORT=9090 java -jar nohorny-server.jar
-```
-
-- Or jvm properties
-
-```text
-java -jar nohorny-server.jar --server.port=9090
-```
-
-## Client Debugging
+#### Debugging
 
 Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display or
-canvas group labels the detected group in-game and dumps a rendered PNG to `config/mods/nohorny/debug/`.
+canvas group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
 
-## Developers
+### Developping
 
-Other plugins can depend on nohorny-client and listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
+Other plugins can depend on the nohorny client to be able to listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
 
 Add the following to your `build.gradle`:
 
@@ -136,6 +99,42 @@ public final class MyPlugin extends Plugin {
         });
     }
 }
+```
+
+## Server
+
+### Installation
+
+This is a standalone Java application requiring:
+
+- Java 25
+
+Then, you can simply run `java -jar nohorny-server.jar`.
+
+### Configuration
+
+See [`nohorny-server/src/main/resources/application.yaml`](nohorny-server/src/main/resources/application.yaml).
+
+Then, you can configure the server using:
+
+- An `application.yaml` file
+
+```yaml
+# application.yaml
+server:
+  port: 9090
+```
+
+- Env variables
+
+```text
+SERVER_PORT=9090 java -jar nohorny-server.jar
+```
+
+- Or jvm properties
+
+```text
+java -jar nohorny-server.jar --server.port=9090
 ```
 
 ## Building
