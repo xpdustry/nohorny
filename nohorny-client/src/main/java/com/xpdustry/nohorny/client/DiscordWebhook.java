@@ -33,7 +33,7 @@ final class DiscordWebhook implements LifecycleListener {
 
     private final Supplier<String> webhook = MindustryUtils.registerSafeSettingEntry(
             "nohorny-discord-webhook",
-            "A basic discord webhook to send WARN and NSFW classifications.",
+            "Send warnings to a discord webhook when unsafe buildings are detected.",
             "",
             value -> value.isBlank() ? "" : URI.create(value).toString(),
             this::onWebhookConfigure);
@@ -103,7 +103,7 @@ final class DiscordWebhook implements LifecycleListener {
                 .textPart(
                         "payload_json",
                         this.createEmbedJsonPayload(
-                                        "NoHorny has successfuly been configured",
+                                        "NoHorny has successfully been configured",
                                         "NSFW alerts will now be sent here",
                                         null,
                                         null)
