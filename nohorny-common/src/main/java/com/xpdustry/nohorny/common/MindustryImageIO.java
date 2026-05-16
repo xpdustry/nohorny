@@ -87,18 +87,18 @@ public final class MindustryImageIO {
                         | MindustryImageIO.packRGB(a, 3);
             case DrawInstruction.DrawRect(int x, int y, int w, int h) ->
                 MindustryImageIO.packInstructionType(INSTRUCTION_DRAW_RECT)
-                        | MindustryImageIO.packingCoordinate(x, 0)
-                        | MindustryImageIO.packingCoordinate(y, 1)
-                        | MindustryImageIO.packingCoordinate(w, 2)
-                        | MindustryImageIO.packingCoordinate(h, 3);
+                        | MindustryImageIO.packCoordinate(x, 0)
+                        | MindustryImageIO.packCoordinate(y, 1)
+                        | MindustryImageIO.packCoordinate(w, 2)
+                        | MindustryImageIO.packCoordinate(h, 3);
             case DrawInstruction.DrawTrig(int x1, int y1, int x2, int y2, int x3, int y3) ->
                 MindustryImageIO.packInstructionType(INSTRUCTION_DRAW_TRIG)
-                        | MindustryImageIO.packingCoordinate(x1, 0)
-                        | MindustryImageIO.packingCoordinate(y1, 1)
-                        | MindustryImageIO.packingCoordinate(x2, 2)
-                        | MindustryImageIO.packingCoordinate(y2, 3)
-                        | MindustryImageIO.packingCoordinate(x3, 4)
-                        | MindustryImageIO.packingCoordinate(y3, 5);
+                        | MindustryImageIO.packCoordinate(x1, 0)
+                        | MindustryImageIO.packCoordinate(y1, 1)
+                        | MindustryImageIO.packCoordinate(x2, 2)
+                        | MindustryImageIO.packCoordinate(y2, 3)
+                        | MindustryImageIO.packCoordinate(x3, 4)
+                        | MindustryImageIO.packCoordinate(y3, 5);
         };
     }
 
@@ -106,7 +106,7 @@ public final class MindustryImageIO {
         return MindustryImageIO.pack(type, INSTRUCTION_TYPE_BITS, 0, 0);
     }
 
-    private static long packingCoordinate(final int value, final int index) {
+    private static long packCoordinate(final int value, final int index) {
         return MindustryImageIO.pack(Math.clamp(value, 0, 511), 9, index, INSTRUCTION_TYPE_BITS);
     }
 
