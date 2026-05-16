@@ -38,12 +38,18 @@ public final class NoHornyPlugin extends Plugin {
 
         this.addListener(new AutoModerator());
 
+        this.addListener(new LifecycleListener() {
+            @Override
+            public void onExit() {
+                http.close();
+            }
+        });
+
         this.init0();
         Core.app.addListener(new ApplicationListener() {
             @Override
             public void dispose() {
                 NoHornyPlugin.this.exit0();
-                http.close();
             }
         });
     }
