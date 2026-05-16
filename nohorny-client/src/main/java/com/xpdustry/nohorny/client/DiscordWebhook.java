@@ -154,7 +154,7 @@ final class DiscordWebhook implements LifecycleListener {
                 "NoHorny has detected unsafe buildings",
                 message.toString(),
                 image,
-                event.response().identifier());
+                "Trace ID: " + event.response().identifier());
     }
 
     private Jval createEmbedJsonPayload(
