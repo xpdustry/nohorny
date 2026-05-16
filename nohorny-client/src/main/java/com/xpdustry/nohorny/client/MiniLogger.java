@@ -21,26 +21,27 @@ sealed interface MiniLogger {
         return fallback;
     }
 
-    void trace(final String message, final Object... args);
+    enum Level {
+        DEBUG,
+        INFO,
+        ERROR
+    }
 
-    void debug(final String message, final Object... args);
+    default void debug(final String message, final Object... args) {
+        this.log(Level.DEBUG, message, args);
+    }
 
-    void info(final String message, final Object... args);
+    default void info(final String message, final Object... args) {
+        this.log(Level.INFO, message, args);
+    }
 
-    void warn(final String message, final Object... args);
+    default void error(final String message, final Object... args) {
+        this.log(Level.ERROR, message, args);
+    }
 
-    void error(final String message, final Object... args);
+    void log(final Level level, final String message, final Object... args);
 
     final class SLF4MDMiniLogger implements MiniLogger {
-
-        private enum Level {
-            TRACE,
-            DEBUG,
-            INFO,
-            WARN,
-            ERROR
-        }
-
         private final Object logger;
         private boolean isFailureReported = false;
 
@@ -51,31 +52,7 @@ sealed interface MiniLogger {
         }
 
         @Override
-        public void trace(final String message, final Object... args) {
-            this.log0(Level.TRACE, message, args);
-        }
-
-        @Override
-        public void debug(final String message, final Object... args) {
-            this.log0(Level.DEBUG, message, args);
-        }
-
-        @Override
-        public void info(final String message, final Object... args) {
-            this.log0(Level.INFO, message, args);
-        }
-
-        @Override
-        public void warn(final String message, final Object... args) {
-            this.log0(Level.WARN, message, args);
-        }
-
-        @Override
-        public void error(final String message, final Object... args) {
-            this.log0(Level.ERROR, message, args);
-        }
-
-        private void log0(final Level level, final String message, final Object... args) {
+        public void log(final Level level, final String message, final Object... args) {
             try {
                 final var log = Class.forName("org.slf4j.Logger")
                         .getMethod(level.name().toLowerCase(Locale.ROOT), String.class, Object[].class);
@@ -86,13 +63,7 @@ sealed interface MiniLogger {
                     fallback.error("Failed to log message using slf4md", e);
                     this.isFailureReported = true;
                 }
-                switch (level) {
-                    case TRACE -> fallback.trace(message, args);
-                    case DEBUG -> fallback.debug(message, args);
-                    case INFO -> fallback.info(message, args);
-                    case WARN -> fallback.warn(message, args);
-                    case ERROR -> fallback.error(message, args);
-                }
+                fallback.log(level, message, args);
             }
         }
     }
@@ -103,39 +74,21 @@ sealed interface MiniLogger {
         private static final String PREFIX = "[NoHorny] ";
 
         @Override
-        public void trace(final String message, final Object... args) {
-            this.log0(Log.LogLevel.debug, message, args);
-        }
-
-        @Override
-        public void debug(final String message, final Object... args) {
-            this.log0(Log.LogLevel.debug, message, args);
-        }
-
-        @Override
-        public void info(final String message, final Object... args) {
-            this.log0(Log.LogLevel.info, message, args);
-        }
-
-        @Override
-        public void warn(final String message, final Object... args) {
-            this.log0(Log.LogLevel.warn, message, args);
-        }
-
-        @Override
-        public void error(final String message, final Object... args) {
-            this.log0(Log.LogLevel.err, message, args);
-        }
-
-        private void log0(final Log.LogLevel level, final String message, Object... args) {
+        public void log(final Level level, final String message, Object... args) {
+            final var arcLevel =
+                    switch (level) {
+                        case DEBUG -> Log.LogLevel.debug;
+                        case INFO -> Log.LogLevel.info;
+                        case ERROR -> Log.LogLevel.err;
+                    };
             Throwable error = null;
             if (args.length != 0 && args[args.length - 1] instanceof Throwable throwable) {
                 args = Arrays.copyOf(args, args.length - 1);
                 error = throwable;
             }
-            Log.log(level, PREFIX + message.replace("{}", "@"), args);
+            Log.log(arcLevel, PREFIX + message.replace("{}", "@"), args);
             if (error != null) {
-                Log.log(level, PREFIX + Strings.getStackTrace(error));
+                Log.log(arcLevel, PREFIX + Strings.getStackTrace(error));
             }
         }
     }

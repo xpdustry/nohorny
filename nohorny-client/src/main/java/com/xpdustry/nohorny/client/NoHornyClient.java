@@ -135,7 +135,7 @@ final class NoHornyClient implements LifecycleListener {
                         try (out) {
                             MindustryImageIO.writeImageGroup(out, group);
                         } catch (final IOException e) {
-                            log.warn("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
+                            log.error("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
                         }
                     });
                     return in;
@@ -163,7 +163,7 @@ final class NoHornyClient implements LifecycleListener {
         }
 
         final var author = computeAuthor(group);
-        log.trace(
+        log.debug(
                 "Received classification response for group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={})",
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
