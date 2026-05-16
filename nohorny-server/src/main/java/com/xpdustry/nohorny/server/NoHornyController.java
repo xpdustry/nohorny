@@ -64,7 +64,7 @@ public final class NoHornyController {
     private ResponseEntity<?> classify(final BufferedImage image) {
         final var uuid = UUID.randomUUID().toString();
         try {
-            log.trace("Processing image {} (png/w={},h={})", uuid, image.getWidth(), image.getHeight());
+            log.trace("Processing image {} (w={},h={})", uuid, image.getWidth(), image.getHeight());
             final var result = this.classifier.classify(image);
             log.trace("Processed image {}, got {}", uuid, result);
             return ResponseEntity.ok(
