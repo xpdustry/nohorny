@@ -30,7 +30,6 @@ final class CanvasTracker implements LifecycleListener {
         this.client = client;
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
     @Override
     public void onInit() {
         MindustryUtils.onEvent(CanvasBlock.CanvasBuild.class, new BuildingLifecycleEventListener<>() {

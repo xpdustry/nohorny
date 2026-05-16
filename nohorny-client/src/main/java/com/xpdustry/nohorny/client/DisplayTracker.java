@@ -44,7 +44,6 @@ final class DisplayTracker implements LifecycleListener {
         this.client = client;
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
     @Override
     public void onInit() {
         MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
