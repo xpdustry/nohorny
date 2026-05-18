@@ -14,7 +14,7 @@ import net.ltgt.gradle.errorprone.errorprone
 import org.springframework.boot.gradle.tasks.run.BootRun
 
 plugins {
-    id("com.diffplug.spotless") version "8.4.0" apply false
+    id("com.diffplug.spotless") version "8.5.1" apply false
     id("net.kyori.indra") version "4.0.0" apply false
     id("net.kyori.indra.publishing") version "4.0.0" apply false
     id("com.gradleup.shadow") version "9.4.1" apply false
