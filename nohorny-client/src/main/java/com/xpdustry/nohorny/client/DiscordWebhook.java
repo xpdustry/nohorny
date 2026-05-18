@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.Core;
 import arc.util.serialization.Jval;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
@@ -16,9 +17,12 @@ import java.net.URI;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
+import mindustry.Vars;
 import org.jspecify.annotations.Nullable;
 
 final class DiscordWebhook implements LifecycleListener {
@@ -129,14 +133,22 @@ final class DiscordWebhook implements LifecycleListener {
 
     private Jval createClassificationJsonPayload(final ClassificationEvent event, final String image) {
         final var message = new StringBuilder();
-        if (event.author() == null) {
+        final var author = event.author();
+        if (author == null) {
             message.append("- Author: **unknown**\n");
         } else {
-            message.append("- Author: **`")
-                    .append(event.author().uuid())
-                    .append("`/`")
-                    .append(event.author().ip())
-                    .append("`**\n");
+            final var name = CompletableFuture.supplyAsync(
+                            () -> {
+                                final var info = Vars.netServer.admins.getInfoOptional(author.uuid());
+                                return info == null ? "unknown" : info.plainLastName();
+                            },
+                            Core.app::post)
+                    .orTimeout(1, TimeUnit.SECONDS)
+                    .exceptionally(_ -> "unknown")
+                    .join();
+            message.append("- Author Name: **").append(name).append("**\n");
+            message.append("- Author UUID: **`").append(author.uuid()).append("`**\n");
+            message.append("- Author IP: **`").append(author.ip()).append("`**\n");
         }
         message.append("- Coordinates: **(")
                 .append(event.group().x())
