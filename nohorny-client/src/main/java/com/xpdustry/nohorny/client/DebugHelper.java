@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
-import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
 import mindustry.game.EventType;
@@ -52,12 +51,6 @@ final class DebugHelper implements LifecycleListener {
         new Color(0x232C16FF), // Dark Olive Green
     };
 
-    private final Supplier<Boolean> debugging = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-debug-tap",
-            "Toggle nohorny debug tap for admins, if you double tap on a group of logic displays of canvases, it will show you how it is tracked by nohorny and also create a file of the rendering result of said group.",
-            false,
-            Boolean::parseBoolean);
-
     private final IntMap<DebugTap> taps = new IntMap<>();
     private final Path directory;
     private final CanvasTracker canvases;
@@ -81,7 +74,8 @@ final class DebugHelper implements LifecycleListener {
         });
 
         MindustryUtils.onEvent(EventType.TapEvent.class, event -> {
-            if (!event.player.admin() || !this.debugging.get()) {
+            final var enabled = NoHornySetting.DEBUG_TAP.get();
+            if (enabled == null || !enabled || !event.player.admin()) {
                 return;
             }
             final var tap = this.taps.get(event.player.id, DebugTap::new);

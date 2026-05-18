@@ -3,14 +3,11 @@ package com.xpdustry.nohorny.client;
 
 import arc.Events;
 import com.xpdustry.nohorny.common.MindustryAuthor;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import mindustry.Vars;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
 import mindustry.gen.Building;
 import mindustry.gen.Player;
-import mindustry.net.Administration;
 import mindustry.world.blocks.ConstructBlock;
 import org.jspecify.annotations.Nullable;
 
@@ -136,48 +133,6 @@ final class MindustryUtils {
 
     private static @Nullable MindustryAuthor asAuthor(final @Nullable Player player) {
         return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
-    }
-
-    public static <T> Supplier<T> registerSafeSettingEntry(
-            final String name, final String desc, final T def, final Function<String, T> parser) {
-        return registerSafeSettingEntry(name, desc, def, parser, () -> {});
-    }
-
-    public static <T> Supplier<T> registerSafeSettingEntry(
-            final String name,
-            final String desc,
-            final T def,
-            final Function<String, T> parser,
-            final Runnable onChange) {
-        final var entry = new Administration.Config(name, desc, def.toString(), onChange) {
-            @Override
-            public void set(final Object value) {
-                if (value instanceof String string) {
-                    try {
-                        final var _ = parser.apply(string);
-                        super.set(string);
-                    } catch (final Exception e) {
-                        log.error("The value '{}' for the '{}' config entry is not valid", string, this.name, e);
-                    }
-                } else {
-                    log.error(
-                            "The value '{}' for the '{}' config entry is not a string",
-                            value,
-                            this.name,
-                            new IllegalArgumentException());
-                }
-            }
-        };
-        return () -> {
-            if (!entry.isString()) {
-                return def;
-            }
-            try {
-                return parser.apply(entry.string());
-            } catch (final Exception _) {
-                return def;
-            }
-        };
     }
 
     public static int anchorTileX(final Building building) {

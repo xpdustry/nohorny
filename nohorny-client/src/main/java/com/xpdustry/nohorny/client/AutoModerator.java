@@ -10,8 +10,6 @@ import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import java.util.Locale;
-import java.util.function.Supplier;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.game.Team;
@@ -27,19 +25,17 @@ final class AutoModerator implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(AutoModerator.class);
 
-    private final Supplier<Policy> policy = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-automod-policy",
-            "Then policy to adopt when a group of buildings is classified. Valid values are 'disabled', 'delete_nsfw', 'delete_warn', 'ban_nsfw'.",
-            Policy.BAN_NSFW,
-            value -> Policy.valueOf(value.toUpperCase(Locale.ROOT)));
-
     @Override
     public void onInit() {
         MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
     }
 
     private void onClassificationEvent(final ClassificationEvent event) {
-        switch (this.policy.get()) {
+        final var policy = NoHornySetting.AUTOMOD_POLICY.get();
+        if (policy == null) {
+            return;
+        }
+        switch (policy) {
             case BAN_NSFW -> {
                 if (event.response().rating().isWorseOrEqualThan(Rating.NSFW)) {
                     this.delete(event.group());
@@ -137,12 +133,5 @@ final class AutoModerator implements LifecycleListener {
                 log.info("Refunded team {} for deleted buildings: {}", team.name, JsonIO.write(entry.value));
             }
         }
-    }
-
-    private enum Policy {
-        DISABLED,
-        DELETE_NSFW,
-        DELETE_WARN,
-        BAN_NSFW
     }
 }

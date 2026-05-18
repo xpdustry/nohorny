@@ -18,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import org.jspecify.annotations.Nullable;
 
@@ -31,15 +30,13 @@ final class DiscordWebhook implements LifecycleListener {
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
 
-    private final Supplier<String> webhook = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-discord-webhook",
-            "Send warnings to a discord webhook when unsafe buildings are detected.",
-            "",
-            value -> value.isBlank() ? "" : URI.create(value).toString(),
-            this::onWebhookConfigure);
-
     DiscordWebhook(final Methanol http) {
         this.http = http;
+        MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
+            if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
+                this.onWebhookConfigure();
+            }
+        });
     }
 
     @Override
@@ -56,13 +53,13 @@ final class DiscordWebhook implements LifecycleListener {
         if (!event.response().rating().isWorseOrEqualThan(Rating.WARN)) {
             return;
         }
-        final var webhook = this.webhook.get();
-        if (webhook.isBlank()) {
+        final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
+        if (webhook == null) {
             return;
         }
         this.executor.execute(() -> {
             try {
-                this.send(URI.create(webhook), this.createClassificationFormPayload(event));
+                this.send(webhook, this.createClassificationFormPayload(event));
             } catch (final Exception e) {
                 log.error(
                         "Failed to send Discord warning for group at ({}, {})",
@@ -85,13 +82,13 @@ final class DiscordWebhook implements LifecycleListener {
     }
 
     private void onWebhookConfigure() {
-        final var webhook = this.webhook.get();
-        if (webhook.isBlank()) {
+        final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
+        if (webhook == null) {
             return;
         }
         this.executor.execute(() -> {
             try {
-                this.send(URI.create(webhook), this.createConfigurationSuccessFormPayload());
+                this.send(webhook, this.createConfigurationSuccessFormPayload());
             } catch (final Exception e) {
                 log.error("Failed to test the Discord webhook", e);
             }

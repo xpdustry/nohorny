@@ -25,11 +25,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 final class NoHornyClient implements LifecycleListener {
@@ -41,29 +39,15 @@ final class NoHornyClient implements LifecycleListener {
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
-    private final Supplier<URI> endpoint = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-api-endpoint",
-            "The NoHorny API endpoint to query for image rating.",
-            URI.create("https://nohorny.xpdustry.com/api"),
-            URI::create,
-            this::checkEndpointStatus);
-
-    private final Supplier<AuthType> authType = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-api-auth-type",
-            "The auth type to use against the NoHorny API. Valid values are 'disabled', 'basic', 'bearer'.",
-            AuthType.DISABLED,
-            value -> AuthType.valueOf(value.toUpperCase(Locale.ROOT)),
-            this::checkEndpointStatus);
-
-    private final Supplier<String> authValue = MindustryUtils.registerSafeSettingEntry(
-            "nohorny-api-auth-value",
-            "The auth value to use against the NoHorny API. For basic auth, use 'username:password'. For bearer auth, use the raw token.",
-            "",
-            value -> value,
-            this::checkEndpointStatus);
-
     NoHornyClient(final Methanol http) {
         this.http = http;
+        MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
+            if (event.key().equals(NoHornySetting.API_ENDPOINT)
+                    || event.key().equals(NoHornySetting.API_AUTH_TYPE)
+                    || event.key().equals(NoHornySetting.API_AUTH_VALUE)) {
+                this.checkEndpointStatus();
+            }
+        });
     }
 
     @Override
@@ -72,7 +56,10 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     private void checkEndpointStatus() {
-        final var endpoint = this.endpoint.get();
+        final var endpoint = NoHornySetting.API_ENDPOINT.get();
+        if (endpoint == null) {
+            return;
+        }
         final var request = this.request("status", Duration.ofSeconds(5L)).GET().build();
         final HttpResponse<String> response;
         try {
@@ -176,7 +163,11 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     private HttpRequest.Builder request(final String path, final Duration timeout) {
-        final var base = this.endpoint.get().toString();
+        final var endpoint = NoHornySetting.API_ENDPOINT.get();
+        if (endpoint == null) {
+            throw new IllegalStateException("NoHorny API endpoint is disabled");
+        }
+        final var base = endpoint.toString();
         final var normalized = base.endsWith("/") ? base : base + "/";
         final var uri = URI.create(normalized).resolve(path);
         final var request = HttpRequest.newBuilder(uri).timeout(timeout);
@@ -188,21 +179,19 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     private @Nullable String authorization() {
-        final var value = this.authValue.get();
-        if (value.isBlank()) {
+        final var type = NoHornySetting.API_AUTH_TYPE.get();
+        if (type == null) {
             return null;
         }
-        return switch (this.authType.get()) {
+        final var value = NoHornySetting.API_AUTH_VALUE.get();
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return switch (type) {
             case DISABLED -> null;
             case BASIC -> "Basic " + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
             case BEARER -> "Bearer " + value;
         };
-    }
-
-    private enum AuthType {
-        DISABLED,
-        BASIC,
-        BEARER,
     }
 
     @SuppressWarnings("NullAway")
