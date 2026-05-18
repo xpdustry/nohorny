@@ -41,7 +41,7 @@ public interface NoHornySetting<T> {
 
     NoHornySetting<AutoModeratorPolicy> AUTOMOD_POLICY = new AdminConfigNoHornySetting<>(
             "automod-policy",
-            "Then policy to adopt when a group of buildings is classified."
+            "The policy to adopt when a group of buildings is classified."
                     + Arrays.stream(AutoModeratorPolicy.values())
                             .map(p -> "\"" + p.name().toLowerCase(Locale.ROOT) + "\"")
                             .sorted()

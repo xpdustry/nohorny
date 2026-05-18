@@ -28,7 +28,7 @@ final class AdminConfigNoHornySetting<T> implements NoHornySetting<T> {
                 new Administration.Config(
                         "nohorny-" + name,
                         description.replace("\n", " "),
-                        def == null ? "" : codec.encode(def),
+                        def == null ? "null" : codec.encode(def),
                         () -> Events.fire(new SettingChangeEvent(AdminConfigNoHornySetting.this))) {
                     @Override
                     public void set(final @Nullable Object value) {
