@@ -38,10 +38,10 @@ final class DiscordWebhook implements LifecycleListener {
         this.http = http;
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
-                this.onWebhookConfigure("NSFW alerts will now be sent here");
+                this.onWebhookConfigure("NSFW alerts will now be sent here.");
             } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
                 this.onWebhookConfigure(
-                        "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get());
+                        "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get() + ".");
             }
         });
     }
@@ -106,7 +106,7 @@ final class DiscordWebhook implements LifecycleListener {
         return MultipartBodyPublisher.newBuilder()
                 .textPart(
                         "payload_json",
-                        this.createEmbedJsonPayload("NoHorny has been successfully re-configured", message, null, null)
+                        this.createEmbedJsonPayload("NoHorny has been re-configured", message, null, null)
                                 .toString())
                 .build();
     }
