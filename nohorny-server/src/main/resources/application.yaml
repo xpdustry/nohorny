@@ -43,9 +43,9 @@ nohorny:
       engine: PyTorch
       thresholds:
         # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.
-        warn: 0.4
+        warn: 0.6
         # Scores at or above nsfw are NSFW. Keep this greater than or equal to warn.
-        nsfw: 0.7
+        nsfw: 0.9
     # Enable sight-engine by setting nohorny.classifier.type to sight-engine
     sight-engine:
       # SightEngine API user.
