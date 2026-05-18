@@ -29,7 +29,8 @@ This plugin requires at least:
 
 Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) (and [`slf4md.jar`](https://github.com/xpdustry/slf4md/releases/latest) if needed) in your `config/mods` directory and start your mindustry server.
 
-Your server is now protected against NSFW buildings.
+Now, players placing unsafe buildings will be automatically banned.
+Then the buildings will be deleted and refunded to the player's team.
 
 ### Configuration
 
@@ -67,11 +68,9 @@ If all goes well, [you will see a success message in your webhook channel](.gith
 Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display or
 canvas group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
 
-### Developping
+### Developing
 
-Other plugins can depend on the nohorny client to be able to listen for [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java).
-
-Add the following to your `build.gradle`:
+You can integrate your plugin with the nohorny client by just adding the following to your `build.gradle`:
 
 ```gradle
 repositories {
@@ -84,7 +83,9 @@ dependencies {
 }
 ```
 
-Then subscribe to [`ClassificationEvent`](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) through Mindustry's event bus:
+You will then be able to:
+
+- Subscribe to [classifications events](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) to handle unsafe buildings with your own logic:
 
 ```java
 import arc.Events;
@@ -98,6 +99,27 @@ public final class MyPlugin extends Plugin {
             System.out.println(
                     "The group at " + event.group().x() + ", " + event.group().y() + " has been classified");
         });
+    }
+}
+```
+
+- Programmatically configure nohorny using its [setting system](nohorny-client/src/main/java/com/xpdustry/nohorny/client/NoHornySetting.java):
+
+```java
+import com.xpdustry.nohorny.client.AutoModeratorPolicy;
+import com.xpdustry.nohorny.client.NoHornyClientAuthType;
+import com.xpdustry.nohorny.client.NoHornySetting;
+import java.net.URI;
+import mindustry.mod.Plugin;
+
+public final class MyPlugin extends Plugin {
+
+    @Override
+    public void init() {
+        NoHornySetting.API_AUTH_TYPE.set(NoHornyClientAuthType.BEARER);
+        NoHornySetting.API_AUTH_VALUE.set("my-token");
+        NoHornySetting.API_ENDPOINT.set(URI.create("https://localhost:8080"));
+        NoHornySetting.AUTOMOD_POLICY.set(AutoModeratorPolicy.DELETE_WARN);
     }
 }
 ```
