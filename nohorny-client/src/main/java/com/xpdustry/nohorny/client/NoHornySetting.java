@@ -39,6 +39,12 @@ public interface NoHornySetting<T> {
             eg: "https://discord.com/api/webhooks/999999/abcdefgh".
             """, null, URI.class, SettingCodec.OfURI);
 
+    NoHornySetting<String> DISCORD_WEBHOOK_NAME =
+            new AdminConfigNoHornySetting<>("discord-webhook-name", """
+            The username to use when sending messages to the discord webhook.
+            eg: "NoHorny".
+            """, null, String.class, SettingCodec.OfString);
+
     NoHornySetting<AutoModeratorPolicy> AUTOMOD_POLICY = new AdminConfigNoHornySetting<>(
             "automod-policy",
             "The policy to adopt when a group of buildings is classified."
@@ -59,8 +65,14 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
-    List<NoHornySetting<?>> ALL =
-            List.of(API_ENDPOINT, API_AUTH_TYPE, API_AUTH_VALUE, DISCORD_WEBHOOK, AUTOMOD_POLICY, DEBUG_TAP);
+    List<NoHornySetting<?>> ALL = List.of(
+            API_ENDPOINT,
+            API_AUTH_TYPE,
+            API_AUTH_VALUE,
+            DISCORD_WEBHOOK,
+            DISCORD_WEBHOOK_NAME,
+            AUTOMOD_POLICY,
+            DEBUG_TAP);
 
     String name();
 

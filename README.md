@@ -37,14 +37,15 @@ You can configure nohorny using the Mindustry built-in `config` command, with `c
 
 #### Available settings
 
-| Key                       | Description                                                                              | Default                            |
-|---------------------------|------------------------------------------------------------------------------------------|------------------------------------|
-| `nohorny-api-endpoint`    | Base URL used by the plugin. The client resolves `status` and `classify` relative to it. | `https://nohorny.xpdustry.com/api` |
-| `nohorny-api-auth-type`   | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                 | `DISABLED`                         |
-| `nohorny-api-auth-value`  | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.     | empty                              |
-| `nohorny-automod-policy`  | The policy to apply when a group of buildings is classified.                             | `BAN_NSFW`                         |
-| `nohorny-discord-webhook` | Discord webhook used to report unsafe buildings.                                         | empty                              |
-| `nohorny-debug-tap`       | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
+| Key                            | Description                                                                              | Default                            |
+|--------------------------------|------------------------------------------------------------------------------------------|------------------------------------|
+| `nohorny-api-endpoint`         | Base URL used by the plugin. The client resolves `status` and `classify` relative to it. | `https://nohorny.xpdustry.com/api` |
+| `nohorny-api-auth-type`        | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                 | `DISABLED`                         |
+| `nohorny-api-auth-value`       | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.     | empty                              |
+| `nohorny-automod-policy`       | The policy to apply when a group of buildings is classified.                             | `BAN_NSFW`                         |
+| `nohorny-discord-webhook`      | Discord webhook used to report unsafe buildings.                                         | empty                              |
+| `nohorny-discord-webhook-name` | Username used for messages sent through the Discord webhook.                             | `NoHorny`                          |
+| `nohorny-debug-tap`            | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
 
 #### Auto-Mod Policies
 

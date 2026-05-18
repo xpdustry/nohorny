@@ -38,7 +38,10 @@ final class DiscordWebhook implements LifecycleListener {
         this.http = http;
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
-                this.onWebhookConfigure();
+                this.onWebhookConfigure("NSFW alerts will now be sent here");
+            } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
+                this.onWebhookConfigure(
+                        "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get());
             }
         });
     }
@@ -85,29 +88,25 @@ final class DiscordWebhook implements LifecycleListener {
         }
     }
 
-    private void onWebhookConfigure() {
+    private void onWebhookConfigure(final String message) {
         final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
         if (webhook == null) {
             return;
         }
         this.executor.execute(() -> {
             try {
-                this.send(webhook, this.createConfigurationSuccessFormPayload());
+                this.send(webhook, this.createConfigurationSuccessFormPayload(message));
             } catch (final Exception e) {
                 log.error("Failed to test the Discord webhook", e);
             }
         });
     }
 
-    private MultipartBodyPublisher createConfigurationSuccessFormPayload() {
+    private MultipartBodyPublisher createConfigurationSuccessFormPayload(final String message) {
         return MultipartBodyPublisher.newBuilder()
                 .textPart(
                         "payload_json",
-                        this.createEmbedJsonPayload(
-                                        "NoHorny has successfully been configured",
-                                        "NSFW alerts will now be sent here",
-                                        null,
-                                        null)
+                        this.createEmbedJsonPayload("NoHorny has been successfully re-configured", message, null, null)
                                 .toString())
                 .build();
     }
@@ -178,8 +177,13 @@ final class DiscordWebhook implements LifecycleListener {
         if (footer != null) {
             embed.put("footer", Jval.newObject().put("text", footer));
         }
-        return Jval.newObject()
+        final var payload = Jval.newObject()
                 .put("allowed_mentions", Jval.newObject().put("parse", Jval.newArray()))
                 .put("embeds", Jval.newArray().add(embed));
+        final var username = NoHornySetting.DISCORD_WEBHOOK_NAME.get();
+        if (username != null) {
+            payload.put("username", NoHornySetting.DISCORD_WEBHOOK_NAME.get());
+        }
+        return payload;
     }
 }
