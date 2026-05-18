@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.6 - 2026-05-18
+
+### Changes & New features
+
+- Added the ability to change the username of discord webhook messages ([`75d85cd`](https://github.com/xpdustry/nohorny/commit/75d85cd425629ace2f23379f71a490f9971a58d5))
+- Split author info in discord webhook message ([`0a62c55`](https://github.com/xpdustry/nohorny/commit/0a62c55e986d5d111b06e8d1578943750f8c47e5))
+- Added author last name in discord webhook message ([`0a62c55`](https://github.com/xpdustry/nohorny/commit/0a62c55e986d5d111b06e8d1578943750f8c47e5))
+- Refactor nohorny client settings to allow safe programmatic access (#81)
+- Increased the thresholds of the default nohorny server model ([`f88e5dc`](https://github.com/xpdustry/nohorny/commit/f88e5dcdf984de99d8eba82c8fda6bcd658ce7fc))
+
+### Bugfixes
+
+- Fix crash on invalid nohorny server endpoint config ([`24299d8`](https://github.com/xpdustry/nohorny/commit/24299d8e6cdb92d1a2425fd5a3cbd9152573f870))
+- Better trace ID in discord webhook alert footer ([`d81aa21`](https://github.com/xpdustry/nohorny/commit/d81aa21f432c876b3fdfe7aaed2b6277ec8d579c))
+- Fix misleading image format in nohorny-server trace logs ([`f5e1518`](https://github.com/xpdustry/nohorny/commit/f5e151827c4a541956bcab59b841cdf3f608c5ee))
+- Ceil confidence score in discord webhook message ([`4155496`](https://github.com/xpdustry/nohorny/commit/415549609320196c32e766239ff20b7a5f6110e6))
+
+### Maintenance
+
+- Fixed typos in `DiscordWebhook` ([`b771c7d`](https://github.com/xpdustry/nohorny/commit/b771c7d2261c0a16e82c125bcb911a7dd6c145be))
+- Added Javadoc for ClassificationResponse and ClassificationEvent ([`73fc92d`](https://github.com/xpdustry/nohorny/commit/73fc92d4d2f612a69ae47069de6613d670164dd0))
+
 ## v4.0.0-beta.5 - 2026-05-11
 
 ### Changes & New features
@@ -24,31 +46,44 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 **:warning: BREAKING :warning:**
 
 - If your plugin depends on nohorny, this release is not compatible with beta 3.
+  
   - `ClassificationResponse` and `ClassificationEvent` have been changed to be more practical.
   
 - Major improvements for the ViT classifier ([`5ac7b1c`](https://github.com/xpdustry/nohorny/commit/5ac7b1c7eda9a04bb07d710567bd75521647b0c7))
+  
   - Added support for loading local models, alongside downloadable Hugging Face models.
   - Read the default config file for more info.
   - Reworked the server classifier configuration layout and internals.
   
 - Rebuild virtual building indexes on map load ([`dd8c11b`](https://github.com/xpdustry/nohorny/commit/dd8c11b388705d2a2dafae99da5b407cf97011f8))
+  
 - Added basic and bearer auth to the nohorny client ([`754a3d9`](https://github.com/xpdustry/nohorny/commit/754a3d911637560ad0f0cbd88c04ede58e4df707))
+  
 - Include confidence score in `ClassificationResponse` ([`e8a0b09`](https://github.com/xpdustry/nohorny/commit/e8a0b096dbeed3ece0d0d882a090b42313067a38))
+  
 - Added a basic discord webhook utility ([`aacc753`](https://github.com/xpdustry/nohorny/commit/aacc7537e9084279296a8c971a1de3255ee69219))
+  
   - Reports WARN and NSFW classifications with a rendered image, confidence score, and trace id.
   
 
 ### Bugfixes
 
 - Added rate limits to sight-engine ([`ff9492e`](https://github.com/xpdustry/nohorny/commit/ff9492ea9eea1ecb47afa485a2238a9377e6e5c9))
+  
 - Make `NoHornyPreconditions#positive` actually positive ([`c8d4715`](https://github.com/xpdustry/nohorny/commit/c8d47154e9e3b5682fa75f2db6660ac823b53039))
+  
 - Cap size of rendered images to avoid DOS and OOMs ([`b4a90ea`](https://github.com/xpdustry/nohorny/commit/b4a90eaed92c4eec99a8a0f2ffcb2398a03a364a))
+  
 - Fixed stale links in `GroupingVirtualBuildingIndex` ([`20b8f6b`](https://github.com/xpdustry/nohorny/commit/20b8f6b6c789ee98ce6654e6e894f11000b7335d))
+  
 - Fixed ghost buildings due to server side map modifications not being tracked ([`6aa2018`](https://github.com/xpdustry/nohorny/commit/6aa201872f1a9f545c86f724c34f55b994ca8dc3)).
+  
   - Thank kuko from esco for making this possible.
   
 - Report the correct number of scanned buildings in AutoModerator auto delete ([`6118f09`](https://github.com/xpdustry/nohorny/commit/6118f093e93198fdd20e730202bdde6c706bbe48))
+  
 - Fixed NPE in `DebugHelper` ([`42ee859`](https://github.com/xpdustry/nohorny/commit/42ee8590b14181497c0dbb6db1584ff45a9c7290))
+  
 
 ### Maintenance
 
