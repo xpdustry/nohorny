@@ -60,9 +60,10 @@ final class NoHornyClient implements LifecycleListener {
         if (endpoint == null) {
             return;
         }
-        final var request = this.request("status", Duration.ofSeconds(5L)).GET().build();
         final HttpResponse<String> response;
         try {
+            final var request =
+                    this.request("status", Duration.ofSeconds(5L)).GET().build();
             response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (final ConnectException e) {
             log.error("The NoHorny server {} is not reachable, is it running?", endpoint);
