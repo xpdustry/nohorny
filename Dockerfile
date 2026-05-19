@@ -3,9 +3,12 @@
 
 FROM docker.io/eclipse-temurin:26-jdk AS build
 
+ARG IS_RELEASE=false
+
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
-    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g"
+    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g" \
+    GRADLE_ARGS="-Prelease=${IS_RELEASE}"
 
 COPY gradle/wrapper/gradle-wrapper.properties .
 
@@ -28,13 +31,13 @@ COPY build.gradle.kts ./
 RUN mkdir nohorny-common nohorny-client nohorny-server
 
 RUN --mount=type=cache,target=/cache/.gradle \
-    gradle dependencies --no-daemon --stacktrace
+    gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
 
 COPY nohorny-common/src/ nohorny-common/src/
 COPY nohorny-server/src/ nohorny-server/src/
 
 RUN --mount=type=cache,target=/cache/.gradle \
-    gradle build -x test --no-daemon --stacktrace --build-cache
+    gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
 
 FROM docker.io/eclipse-temurin:26-jre AS runtime
 
