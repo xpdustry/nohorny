@@ -45,7 +45,7 @@ subprojects {
         "errorprone"("com.google.errorprone:error_prone_core:2.49.0")
         "errorprone"("com.uber.nullaway:nullaway:0.13.4")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
-        "testImplementation"("org.junit.jupiter:junit-jupiter:6.0.3")
+        "testImplementation"("org.junit.jupiter:junit-jupiter:6.1.0")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
