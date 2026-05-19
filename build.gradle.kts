@@ -146,7 +146,6 @@ project(":nohorny-client") {
 
     dependencies {
         "api"(project(":nohorny-common"))
-        "implementation"("com.github.mizosoft.methanol:methanol:1.9.0")
         "compileOnly"(toxopid.dependencies.mindustryCore)
         "testImplementation"(toxopid.dependencies.mindustryCore)
         "compileOnly"(toxopid.dependencies.arcCore)
@@ -170,10 +169,10 @@ project(":nohorny-client") {
     tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME) {
         archiveFileName = "${project.name}.jar"
         archiveClassifier = "plugin"
-        relocate("com.github.mizosoft.methanol", "com.xpdustry.nohorny.client.shadow.methanol")
         from(rootProject.file("LICENSE.md")) { into("META-INF") }
         mergeServiceFiles()
         from(generateMetadataFile)
+        minimize()
     }
 
     tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME) {

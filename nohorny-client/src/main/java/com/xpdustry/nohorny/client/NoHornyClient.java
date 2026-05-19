@@ -4,7 +4,6 @@ package com.xpdustry.nohorny.client;
 import arc.Core;
 import arc.Events;
 import arc.util.serialization.Jval;
-import com.github.mizosoft.methanol.Methanol;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
@@ -13,11 +12,9 @@ import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.net.ConnectException;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -34,12 +31,12 @@ final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
-    private final Methanol http;
+    private final HttpClient http;
     private final Semaphore semaphore = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
-    NoHornyClient(final Methanol http) {
+    NoHornyClient(final HttpClient http) {
         this.http = http;
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.API_ENDPOINT)
@@ -111,23 +108,8 @@ final class NoHornyClient implements LifecycleListener {
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", MindustryImageIO.MEDIA_TYPE)
-                .POST(HttpRequest.BodyPublishers.ofInputStream(() -> {
-                    final var in = new PipedInputStream(4 * 1024);
-                    final PipedOutputStream out;
-                    try {
-                        out = new PipedOutputStream(in);
-                    } catch (final IOException e) {
-                        throw new IllegalStateException("Failed to connect request body pipe", e);
-                    }
-                    this.executor.execute(() -> {
-                        try (out) {
-                            MindustryImageIO.writeImageGroup(out, group);
-                        } catch (final IOException e) {
-                            log.error("Failed to stream request body for group at ({}, {})", group.x(), group.y(), e);
-                        }
-                    });
-                    return in;
-                }))
+                .POST(HttpUtils.ofOutputStream(
+                        this.executor, stream -> MindustryImageIO.writeImageGroup(stream, group)))
                 .build();
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

@@ -3,17 +3,14 @@ package com.xpdustry.nohorny.client;
 
 import arc.Core;
 import arc.util.serialization.Jval;
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.Methanol;
-import com.github.mizosoft.methanol.MoreBodyPublishers;
-import com.github.mizosoft.methanol.MultipartBodyPublisher;
-import com.github.mizosoft.methanol.MutableRequest;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.MonoRateLimiter;
 import com.xpdustry.nohorny.common.Rating;
 import java.awt.Color;
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -23,18 +20,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
+import mindustry.mod.Mods;
 import org.jspecify.annotations.Nullable;
 
 final class DiscordWebhook implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(DiscordWebhook.class);
 
-    private final Methanol http;
+    private final HttpClient http;
+    private final Mods.ModMeta metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
 
-    DiscordWebhook(final Methanol http) {
+    DiscordWebhook(final HttpClient http) {
         this.http = http;
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
@@ -77,10 +76,17 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
-    private void send(final URI webhook, final MultipartBodyPublisher form) throws Exception {
+    private void send(final URI webhook, final MultipartFormBodyPublisher form) throws Exception {
         this.rateLimiter.waitIfRateLimited();
         final var response = this.http.send(
-                MutableRequest.POST(webhook, form).timeout(Duration.ofSeconds(15L)),
+                HttpRequest.newBuilder(webhook)
+                        .timeout(Duration.ofSeconds(15L))
+                        .POST(form)
+                        .header(
+                                "User-Agent",
+                                "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")")
+                        .header("Content-Type", form.contentType())
+                        .build(),
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() > 299) {
             throw new IOException(
@@ -102,8 +108,8 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
-    private MultipartBodyPublisher createConfigurationSuccessFormPayload(final String message) {
-        return MultipartBodyPublisher.newBuilder()
+    private MultipartFormBodyPublisher createConfigurationSuccessFormPayload(final String message) {
+        return new MultipartFormBodyPublisher.Builder()
                 .textPart(
                         "payload_json",
                         this.createEmbedJsonPayload("NoHorny has been re-configured", message, null, null)
@@ -111,9 +117,9 @@ final class DiscordWebhook implements LifecycleListener {
                 .build();
     }
 
-    private MultipartBodyPublisher createClassificationFormPayload(final ClassificationEvent event) {
+    private MultipartFormBodyPublisher createClassificationFormPayload(final ClassificationEvent event) {
         final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png";
-        return MultipartBodyPublisher.newBuilder()
+        return new MultipartFormBodyPublisher.Builder()
                 .textPart(
                         "payload_json",
                         this.createClassificationJsonPayload(event, "attachment://" + imageName)
@@ -121,12 +127,10 @@ final class DiscordWebhook implements LifecycleListener {
                 .formPart(
                         "files[0]",
                         imageName,
-                        MoreBodyPublishers.ofMediaType(
-                                MoreBodyPublishers.ofOutputStream(
-                                        stream -> ImageIO.write(
-                                                MindustryImageRenderer.render(event.group()), "png", stream),
-                                        this.executor),
-                                MediaType.IMAGE_PNG))
+                        "image/png",
+                        HttpUtils.ofOutputStream(
+                                this.executor,
+                                stream -> ImageIO.write(MindustryImageRenderer.render(event.group()), "png", stream)))
                 .build();
     }
 

@@ -3,7 +3,7 @@ package com.xpdustry.nohorny.client;
 
 import arc.ApplicationListener;
 import arc.Core;
-import com.github.mizosoft.methanol.Methanol;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import mindustry.Vars;
@@ -20,7 +20,7 @@ public final class NoHornyPlugin extends Plugin {
     public void init() {
         final var directory = Vars.mods.getConfigFolder(this).file().toPath();
 
-        final var http = Methanol.create();
+        final var http = HttpClient.newHttpClient();
 
         final var client = new NoHornyClient(http);
         this.addListener(client);
