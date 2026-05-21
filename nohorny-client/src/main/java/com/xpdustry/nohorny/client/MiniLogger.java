@@ -6,6 +6,7 @@ import arc.util.Strings;
 import java.util.Arrays;
 import java.util.Locale;
 import mindustry.Vars;
+import org.jspecify.annotations.Nullable;
 
 sealed interface MiniLogger {
 
@@ -27,19 +28,19 @@ sealed interface MiniLogger {
         ERROR
     }
 
-    default void debug(final String message, final Object... args) {
+    default void debug(final String message, final @Nullable Object... args) {
         this.log(Level.DEBUG, message, args);
     }
 
-    default void info(final String message, final Object... args) {
+    default void info(final String message, final @Nullable Object... args) {
         this.log(Level.INFO, message, args);
     }
 
-    default void error(final String message, final Object... args) {
+    default void error(final String message, final @Nullable Object... args) {
         this.log(Level.ERROR, message, args);
     }
 
-    void log(final Level level, final String message, final Object... args);
+    void log(final Level level, final String message, final @Nullable Object... args);
 
     final class SLF4MDMiniLogger implements MiniLogger {
         private final Object logger;
@@ -52,7 +53,7 @@ sealed interface MiniLogger {
         }
 
         @Override
-        public void log(final Level level, final String message, final Object... args) {
+        public void log(final Level level, final String message, final @Nullable Object... args) {
             try {
                 final var log = Class.forName("org.slf4j.Logger")
                         .getMethod(level.name().toLowerCase(Locale.ROOT), String.class, Object[].class);
@@ -74,7 +75,7 @@ sealed interface MiniLogger {
         private static final String PREFIX = "[NoHorny] ";
 
         @Override
-        public void log(final Level level, final String message, Object... args) {
+        public void log(final Level level, final String message, @Nullable Object... args) {
             final var arcLevel =
                     switch (level) {
                         case DEBUG -> Log.LogLevel.debug;
