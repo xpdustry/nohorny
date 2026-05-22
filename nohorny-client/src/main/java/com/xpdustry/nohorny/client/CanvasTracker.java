@@ -24,6 +24,7 @@ final class CanvasTracker implements LifecycleListener {
     final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
+    private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private GroupingVirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
 
     public CanvasTracker(final NoHornyClient client) {
@@ -103,6 +104,7 @@ final class CanvasTracker implements LifecycleListener {
             if (anchor == null || !this.isEligible(anchor)) {
                 continue;
             }
+            this.waiter.estimateWaitTimeFor(block -> block instanceof CanvasBlock);
             this.grouper = this.canvases.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
             this.continueGrouperProcessing();
             break;
@@ -123,6 +125,10 @@ final class CanvasTracker implements LifecycleListener {
 
     private void continueGrouperProcessing() {
         Objects.requireNonNull(this.grouper);
+        if (this.waiter.isNotDone()) {
+            this.waiter.countdown();
+            return;
+        }
         this.grouper.progress();
         this.queue.removeIf(this.grouper::isVisited);
         if (this.grouper.isCompleted() && this.client.canAccept()) {

@@ -35,6 +35,7 @@ final class DisplayTracker implements LifecycleListener {
     final GroupingVirtualBuildingIndex<MindustryDisplay> displays = new GroupingVirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
+    private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
     private GroupingVirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
@@ -215,6 +216,7 @@ final class DisplayTracker implements LifecycleListener {
             if (anchor == null || !this.isEligible(anchor)) {
                 continue;
             }
+            this.waiter.estimateWaitTimeFor(block -> block instanceof LogicBlock || block instanceof LogicDisplay);
             this.grouper = this.displays.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
             this.continueGrouperProcessing();
             break;
@@ -251,6 +253,10 @@ final class DisplayTracker implements LifecycleListener {
 
     private void continueGrouperProcessing() {
         Objects.requireNonNull(this.grouper);
+        if (this.waiter.isNotDone()) {
+            this.waiter.countdown();
+            return;
+        }
         this.grouper.progress();
         this.queue.removeIf(this.grouper::isVisited);
         if (this.grouper.isCompleted() && this.client.canAccept()) {
