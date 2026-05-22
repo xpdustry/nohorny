@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ORG_GRADLE_PROJECT_release: ${{ github.event_name == 'release' }}
+  ORG_GRADLE_PROJECT_is_release: ${{ github.event_name == 'release' }}
 
 jobs:
   action:
@@ -51,7 +51,7 @@ jobs:
         id: version
         run: |
           version="$(./gradlew properties -q | grep '^version:' | cut -d ':' -f 2 | xargs)"
-          .xpdustry-ci/scripts/version-validate.sh "$version" "$ORG_GRADLE_PROJECT_release"
+          .xpdustry-ci/scripts/version-validate.sh "$version" "$ORG_GRADLE_PROJECT_is_release"
           echo "version=${version%-SNAPSHOT}" >> "$GITHUB_OUTPUT"
 
       - name: "Build Gradle"

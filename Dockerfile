@@ -8,7 +8,7 @@ ARG IS_RELEASE=false
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
     GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g" \
-    GRADLE_ARGS="-Prelease=${IS_RELEASE}"
+    GRADLE_ARGS="-Pis_release=${IS_RELEASE}"
 
 COPY gradle/wrapper/gradle-wrapper.properties .
 
