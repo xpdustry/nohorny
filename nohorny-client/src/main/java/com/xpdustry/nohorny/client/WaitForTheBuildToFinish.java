@@ -28,7 +28,7 @@ final class WaitForTheBuildToFinish {
                     final var buildSpeed = unit.type().buildSpeed
                             * unit.buildSpeedMultiplier()
                             * Vars.state.rules.buildSpeed(unit.team());
-                    ticks += (int) Math.ceil(buildTime / buildSpeed);
+                    ticks += (int) Math.ceil(buildTime / Math.max(buildSpeed, 0.1));
                 }
             }
             this.counter = Math.max(this.counter, ticks);
