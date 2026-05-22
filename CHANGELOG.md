@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.7 - 2026-05-22
+
+### Changes & New features
+
+- Added smart delays to maximize image quality, thanks to @BnDLett from MDN for the report ([`f6a36c1`](https://github.com/xpdustry/nohorny/commit/f6a36c1b833f505f790ea3364222d5a95554f00b))
+- Added a docker package ([`538e305`](https://github.com/xpdustry/nohorny/commit/538e305e9c5dda84fc9a6475b55af9f34d76901d))
+
+### Bugfixes
+
+- Fix grouper range calculation dividing effective range by 2 ([`8f02eb3`](https://github.com/xpdustry/nohorny/commit/8f02eb30ff7c31ecf94169c1a29e892158ff7009))
+- Do not fire a setting change event if the value remains the same ([`6c8a6fe`](https://github.com/xpdustry/nohorny/commit/6c8a6fedc6bc15866e167f48afa984f0e6a1ad71))
+- Do not include the file name in the vit model identifier ([`14927fc`](https://github.com/xpdustry/nohorny/commit/14927fc3b894485d8310bcabd7a94f3e9ce273ad))
+
+### Maintenance
+
+- Vendor parts of methanol to reduce nohorny client jar size, went from 600kb to 120kb ([`242d4bf`](https://github.com/xpdustry/nohorny/commit/242d4bf791a952cdadb020b83de2829df5b0517f))
+
 ## v4.0.0-beta.6 - 2026-05-18
 
 ### Changes & New features
