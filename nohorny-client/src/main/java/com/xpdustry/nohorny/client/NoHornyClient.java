@@ -135,9 +135,9 @@ final class NoHornyClient implements LifecycleListener {
         final var author = computeAuthor(group);
         log.debug(
                 "Received classification response for group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={})",
-                author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 group.x(),
                 group.y(),
+                author == null ? "unknown" : author.uuid() + "/" + author.ip(),
                 classification.rating(),
                 "%.2f".formatted(classification.confidence() * 100),
                 classification.classifier(),
