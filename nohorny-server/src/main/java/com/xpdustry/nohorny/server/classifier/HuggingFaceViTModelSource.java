@@ -25,12 +25,13 @@ public final class HuggingFaceViTModelSource implements ViTModelSource {
 
     @Override
     public String name() {
-        return this.properties.repository() + ":" + this.properties.revision() + "/" + this.properties.file();
+        return this.properties.repository() + ":" + this.properties.revision();
     }
 
     @Override
     public Path retrieve() {
-        final var name = this.name().replace('/', '-').replace(':', '-');
+        final var name =
+                (this.name() + "/" + this.properties.file()).replace('/', '-').replace(':', '-');
         final var target = this.properties.downloadDirectory().resolve(name);
         if (Files.notExists(target)) {
             try {
