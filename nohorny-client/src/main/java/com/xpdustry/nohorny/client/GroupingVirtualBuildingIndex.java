@@ -77,11 +77,6 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
         return new Grouper(initialX, initialY, range, steps);
     }
 
-    private static boolean overlaps(
-            final int x1, final int y1, final int size1, final int x2, final int y2, final int size2) {
-        return (x1 < x2 + size2 && x2 < x1 + size1) && (y1 < y2 + size2 && y2 < y1 + size1);
-    }
-
     // NOTE: We are not dealing with deleted buildings, this solution is good enough...
     public final class Grouper {
 
@@ -89,7 +84,6 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
         private final int initialY;
         private final int range;
         private final int maxSteps;
-        private final int halfRange;
         private final IntQueue queue = new IntQueue();
         private final IntSet visited = new IntSet();
         private final List<VirtualBuilding<T>> buildings = new ArrayList<>();
@@ -103,7 +97,6 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
             this.initialX = initialX;
             this.initialY = initialY;
             this.range = range;
-            this.halfRange = Math.floorDiv(range, 2);
             this.maxSteps = maxSteps;
 
             final var building = GroupingVirtualBuildingIndex.this.select(initialX, initialY);
@@ -148,9 +141,9 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
                         continue;
                     }
                     if (!overlaps(
-                            this.initialX - this.halfRange,
-                            this.initialY - this.halfRange,
-                            this.range,
+                            this.initialX - this.range,
+                            this.initialY - this.range,
+                            this.range * 2,
                             neighbor.x(),
                             neighbor.y(),
                             neighbor.size())) {
@@ -177,6 +170,11 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
             }
             return new VirtualBuilding.Group<>(
                     this.minX, this.minY, this.maxX - this.minX, this.maxY - this.minY, List.copyOf(this.buildings));
+        }
+
+        private static boolean overlaps(
+                final int x1, final int y1, final int size1, final int x2, final int y2, final int size2) {
+            return (x1 < x2 + size2 && x2 < x1 + size1) && (y1 < y2 + size2 && y2 < y1 + size1);
         }
     }
 }
