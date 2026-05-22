@@ -133,7 +133,10 @@ final class NoHornyClient implements LifecycleListener {
         }
 
         final var author = computeAuthor(group);
-        log.debug(
+        log.log(
+                classification.rating().isWorseOrEqualThan(Rating.WARN)
+                        ? MiniLogger.Level.INFO
+                        : MiniLogger.Level.DEBUG,
                 "Received classification response for group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={})",
                 group.x(),
                 group.y(),
