@@ -17,6 +17,7 @@ public record ViTClassifierProperties(
         @NotBlank String engine,
         @Valid @NotNull ThresholdProperties thresholds) {
     public ViTClassifierProperties {
+        labels = List.copyOf(labels);
         if (!labels.contains(nsfwLabel)) {
             throw new IllegalArgumentException(
                     "The label list " + labels + " does not contain the nsfw label " + nsfwLabel);
