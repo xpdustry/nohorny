@@ -132,7 +132,7 @@ This is a standalone Java application requiring:
 
 - Java 25
 
-Then, you can simply run `java -jar nohorny-server.jar`.
+Then, you can simply run `java -jar nohorny-server.jar start`.
 
 ### Configuration
 
@@ -151,13 +151,13 @@ server:
 - Env variables
 
 ```text
-SERVER_PORT=9090 java -jar nohorny-server.jar
+SERVER_PORT=9090 java -jar nohorny-server.jar start
 ```
 
 - Or jvm properties
 
 ```text
-java -jar nohorny-server.jar --server.port=9090
+java -jar nohorny-server.jar start -- --server.port=9090
 ```
 
 ## Building

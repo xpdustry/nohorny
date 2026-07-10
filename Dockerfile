@@ -58,4 +58,4 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar start"]

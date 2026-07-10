@@ -205,6 +205,7 @@ project(":nohorny-server") {
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
+        "implementation"("org.springframework.shell:spring-shell-starter:4.0.2")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
 
@@ -225,6 +226,7 @@ project(":nohorny-server") {
     tasks.named<BootRun>("bootRun") {
         workingDir = temporaryDir
         jvmArgs("--enable-native-access=ALL-UNNAMED")
+        args("start")
     }
 }
 

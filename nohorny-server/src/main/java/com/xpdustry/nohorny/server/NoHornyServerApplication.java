@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.shell.core.autoconfigure.SpringShellAutoConfiguration;
 
-@SpringBootApplication
-public class NoHornyServerApplication {
-    static void main(final String[] args) {
-        SpringApplication.run(NoHornyServerApplication.class, args);
-    }
-}
+@SpringBootApplication(exclude = SpringShellAutoConfiguration.class)
+public class NoHornyServerApplication {}
