@@ -131,11 +131,14 @@ final class CanvasTracker implements LifecycleListener {
         }
         this.grouper.progress();
         this.queue.removeIf(this.grouper::isVisited);
-        if (this.grouper.isCompleted() && this.client.canAccept()) {
+        if (this.grouper.isCompleted()) {
             final var group = this.grouper.create();
-            this.grouper = null;
-            if (group != null && group.w() >= MIN_CANVAS_GROUP_SIZE && group.h() >= MIN_CANVAS_GROUP_SIZE) {
-                this.client.accept(group);
+            if (group == null || group.w() < MIN_CANVAS_GROUP_SIZE || group.h() < MIN_CANVAS_GROUP_SIZE) {
+                this.grouper = null;
+                return;
+            }
+            if (this.client.tryAccept(group)) {
+                this.grouper = null;
             }
         }
     }

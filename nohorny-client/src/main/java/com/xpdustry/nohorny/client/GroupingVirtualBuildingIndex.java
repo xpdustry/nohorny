@@ -92,6 +92,7 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
         private int minY;
         private int maxX;
         private int maxY;
+        private VirtualBuilding.@Nullable Group<T> result;
 
         private Grouper(final int initialX, final int initialY, final int range, final int maxSteps) {
             this.initialX = initialX;
@@ -126,6 +127,7 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
                 this.maxX = Math.max(this.maxX, visiting.x() + visiting.size());
                 this.maxY = Math.max(this.maxY, visiting.y() + visiting.size());
                 this.buildings.add(visiting);
+                this.result = null;
 
                 final var set = GroupingVirtualBuildingIndex.this.adjacencyUnion.get(visitingPacked);
                 if (set == null) {
@@ -168,8 +170,15 @@ final class GroupingVirtualBuildingIndex<T> extends VirtualBuildingIndex<T> {
             if (this.buildings.isEmpty()) {
                 return null;
             }
-            return new VirtualBuilding.Group<>(
-                    this.minX, this.minY, this.maxX - this.minX, this.maxY - this.minY, List.copyOf(this.buildings));
+            if (this.result == null) {
+                this.result = new VirtualBuilding.Group<>(
+                        this.minX,
+                        this.minY,
+                        this.maxX - this.minX,
+                        this.maxY - this.minY,
+                        List.copyOf(this.buildings));
+            }
+            return this.result;
         }
 
         private static boolean overlaps(

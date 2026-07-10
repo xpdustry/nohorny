@@ -25,6 +25,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import javax.imageio.ImageIO;
 import org.jspecify.annotations.Nullable;
@@ -34,7 +35,7 @@ final class NoHornyClient implements LifecycleListener {
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
     private final HttpClient http;
-    private final Semaphore semaphore = new Semaphore(1);
+    private final Semaphore classificationPermit = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
 
@@ -80,15 +81,12 @@ final class NoHornyClient implements LifecycleListener {
         }
     }
 
-    // This is not a perfect concurrency guard, but it's simple, and it's also ok if a few groups slip through
-    public boolean canAccept() {
-        return this.semaphore.availablePermits() != 0;
-    }
-
-    public <T extends MindustryImage> void accept(final VirtualBuilding.Group<T> group) {
-        this.executor.execute(() -> {
-            try {
-                this.semaphore.acquire();
+    public <T extends MindustryImage> boolean tryAccept(final VirtualBuilding.Group<T> group) {
+        if (!this.classificationPermit.tryAcquire()) {
+            return false;
+        }
+        try {
+            this.executor.execute(() -> {
                 try {
                     this.classify(group);
                 } catch (final ConnectException e) {
@@ -99,12 +97,14 @@ final class NoHornyClient implements LifecycleListener {
                 } catch (final Exception e) {
                     log.error("Failed to rate group at ({}, {})", group.x(), group.y(), e);
                 } finally {
-                    this.semaphore.release();
+                    this.classificationPermit.release();
                 }
-            } catch (final InterruptedException _) {
-                Thread.currentThread().interrupt();
-            }
-        });
+            });
+            return true;
+        } catch (final RejectedExecutionException _) {
+            this.classificationPermit.release();
+            return false;
+        }
     }
 
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
