@@ -40,6 +40,5 @@ public class NoHornyConfiguration implements WebMvcConfigurer {
     @Override
     public void configureMessageConverters(final HttpMessageConverters.ServerBuilder builder) {
         builder.addCustomConverter(new BufferedImageHttpMessageConverter());
-        builder.addCustomConverter(new MindustryImageConverter());
     }
 }

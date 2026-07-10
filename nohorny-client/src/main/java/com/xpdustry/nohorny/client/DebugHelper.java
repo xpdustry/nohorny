@@ -8,7 +8,6 @@ import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryImageIO;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
@@ -112,11 +111,8 @@ final class DebugHelper implements LifecycleListener {
         this.render(player, group);
         final var prefix = x + "_" + y + "_" + System.currentTimeMillis();
         final var png = this.directory.resolve(prefix + ".png").toAbsolutePath();
-        final var bin = this.directory.resolve(prefix + ".bin").toAbsolutePath();
-        try (final var pngStream = Files.newOutputStream(png);
-                final var binStream = Files.newOutputStream(bin)) {
+        try (final var pngStream = Files.newOutputStream(png)) {
             ImageIO.write(MindustryImageRenderer.render(group), "png", pngStream);
-            MindustryImageIO.writeImageGroup(binStream, group);
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");

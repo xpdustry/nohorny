@@ -9,9 +9,10 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryImageIO;
+import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import javax.imageio.ImageIO;
 import org.jspecify.annotations.Nullable;
 
 final class NoHornyClient implements LifecycleListener {
@@ -107,9 +109,12 @@ final class NoHornyClient implements LifecycleListener {
 
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
-                .header("Content-Type", MindustryImageIO.MEDIA_TYPE)
-                .POST(HttpUtils.ofOutputStream(
-                        this.executor, stream -> MindustryImageIO.writeImageGroup(stream, group)))
+                .header("Content-Type", "image/jpeg")
+                .POST(HttpUtils.ofOutputStream(this.executor, stream -> {
+                    if (!ImageIO.write(MindustryImageRenderer.render(group), "jpg", stream)) {
+                        throw new IOException("No JPEG image writer is available");
+                    }
+                }))
                 .build();
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

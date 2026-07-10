@@ -2,11 +2,7 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ClassificationResponse;
-import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryImageIO;
-import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
-import com.xpdustry.nohorny.common.VirtualBuilding;
 import com.xpdustry.nohorny.server.classifier.Classifier;
 import java.awt.image.BufferedImage;
 import java.util.UUID;
@@ -37,20 +33,6 @@ public final class NoHornyController {
     @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
     public SimpleServerMessage onStatus() {
         return new SimpleServerMessage(this.status.motd());
-    }
-
-    @PostMapping(
-            path = "/classify",
-            consumes = MindustryImageIO.MEDIA_TYPE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> onClassify(final @RequestBody VirtualBuilding.Group<? extends MindustryImage> group) {
-        final BufferedImage image;
-        try {
-            image = MindustryImageRenderer.render(group);
-        } catch (final Exception e) {
-            return ResponseEntity.badRequest().body(new SimpleServerMessage("failed to parse and render the group"));
-        }
-        return this.classify(image);
     }
 
     @PostMapping(

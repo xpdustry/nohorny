@@ -20,7 +20,7 @@ public final class MindustryImageRenderer {
                 Math.min(1D, Math.min(MAX_IMAGE_SIZE / (double) renderW, MAX_IMAGE_SIZE / (double) renderH));
         final int imageW = Math.min(MAX_IMAGE_SIZE, (int) Math.ceil(renderW * downscaling));
         final int imageH = Math.min(MAX_IMAGE_SIZE, (int) Math.ceil(renderH * downscaling));
-        final var image = new BufferedImage(imageW, imageH, BufferedImage.TYPE_INT_ARGB);
+        final var image = new BufferedImage(imageW, imageH, BufferedImage.TYPE_INT_RGB);
 
         try (final var scope = new GraphicsScope(image)) {
             scope.graphics().setColor(Color.BLACK);
