@@ -205,7 +205,13 @@ project(":nohorny-server") {
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
+        "implementation"("org.springframework.boot:spring-boot-starter-data-jpa")
+        "implementation"("org.springframework.boot:spring-boot-starter-security")
         "implementation"("org.springframework.shell:spring-shell-starter:4.0.2")
+        "implementation"("org.hibernate.orm:hibernate-community-dialects")
+        "implementation"("org.xerial:sqlite-jdbc:3.53.1.0")
+        // Required by Argon2PasswordEncoder
+        "implementation"("org.bouncycastle:bcprov-jdk18on:1.82")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
 

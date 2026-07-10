@@ -42,7 +42,9 @@ RUN --mount=type=cache,target=/cache/.gradle \
 FROM docker.io/eclipse-temurin:26-jre AS runtime
 
 RUN groupadd -g 1001 appgroup && \
-    useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser
+    useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
+    mkdir /data && \
+    chown appuser:appgroup /data
 
 WORKDIR /app
 
@@ -54,8 +56,13 @@ ENV JAVA_OPTS="-server \
     -XX:+UseG1GC \
     -Djava.security.egd=file:/dev/./urandom"
 
+ENV NOHORNY_DATABASE_PATH=/data/nohorny.db \
+    SERVER_ADDRESS=0.0.0.0
+
 USER appuser
 
 EXPOSE 8080
+
+VOLUME ["/data"]
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar start"]

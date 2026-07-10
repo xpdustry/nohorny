@@ -3,9 +3,19 @@ package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
+import com.xpdustry.nohorny.persistence.ClassificationRequest;
+import com.xpdustry.nohorny.persistence.RequestProperties;
+import com.xpdustry.nohorny.persistence.RequestRepository;
 import com.xpdustry.nohorny.server.classifier.Classifier;
+import jakarta.servlet.http.HttpServletRequest;
 import java.awt.image.BufferedImage;
-import java.util.UUID;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.Principal;
+import java.time.Duration;
+import java.time.Instant;
+import javax.imageio.ImageIO;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,10 +34,18 @@ public final class NoHornyController {
 
     private final StatusProperties status;
     private final Classifier classifier;
+    private final RequestRepository requests;
+    private final RequestProperties requestProperties;
 
-    public NoHornyController(final StatusProperties status, final Classifier classifier) {
+    public NoHornyController(
+            final StatusProperties status,
+            final Classifier classifier,
+            final RequestRepository requests,
+            final RequestProperties requestProperties) {
         this.status = status;
         this.classifier = classifier;
+        this.requests = requests;
+        this.requestProperties = requestProperties;
     }
 
     @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -39,21 +57,67 @@ public final class NoHornyController {
             path = "/classify",
             consumes = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE},
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> onClassify(final @RequestBody BufferedImage image) {
-        return this.classify(image);
+    public ResponseEntity<?> onClassify(
+            final @RequestBody byte[] data, final HttpServletRequest request, final @Nullable Principal principal) {
+        final BufferedImage image;
+        try {
+            image = ImageIO.read(new ByteArrayInputStream(data));
+        } catch (final IOException exception) {
+            return ResponseEntity.badRequest().body(new SimpleServerMessage("invalid image"));
+        }
+        if (image == null) {
+            return ResponseEntity.badRequest().body(new SimpleServerMessage("invalid image"));
+        }
+        return this.classify(image, data, request, principal);
     }
 
-    private ResponseEntity<?> classify(final BufferedImage image) {
-        final var uuid = UUID.randomUUID().toString();
+    private ResponseEntity<?> classify(
+            final BufferedImage image,
+            final byte[] data,
+            final HttpServletRequest request,
+            final @Nullable Principal principal) {
+        final var startedAt = Instant.now();
+        final var startedNanos = System.nanoTime();
+        final var mediaType = MediaType.parseMediaType(request.getContentType());
+        final var imageMediaType = mediaType.getType() + "/" + mediaType.getSubtype();
+        final Classifier.Result result;
         try {
-            log.trace("Processing image {} (w={},h={})", uuid, image.getWidth(), image.getHeight());
-            final var result = this.classifier.classify(image);
-            log.trace("Processed image {}, got {}", uuid, result);
-            return ResponseEntity.ok(
-                    new ClassificationResponse(this.classifier.name(), result.rating(), result.confidence(), uuid));
+            result = this.classifier.classify(image);
         } catch (final Exception exception) {
-            log.error("Classification request {} has failed", uuid, exception);
+            final var id = this.saveRequest(new ClassificationRequest(
+                    startedAt,
+                    Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
+                    this.classifier.name(),
+                    null,
+                    null,
+                    false,
+                    exception.getClass().getSimpleName(),
+                    principal == null ? null : principal.getName(),
+                    request.getRemoteAddr(),
+                    imageMediaType,
+                    data));
+            log.error("Classification request {} has failed", id, exception);
             return ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));
         }
+        final var id = this.saveRequest(new ClassificationRequest(
+                startedAt,
+                Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
+                this.classifier.name(),
+                result.rating(),
+                result.confidence(),
+                true,
+                null,
+                principal == null ? null : principal.getName(),
+                request.getRemoteAddr(),
+                imageMediaType,
+                data));
+        return ResponseEntity.ok(new ClassificationResponse(
+                this.classifier.name(), result.rating(), result.confidence(), Long.toString(id)));
+    }
+
+    private long saveRequest(final ClassificationRequest request) {
+        return this.requests
+                .saveWithinCapacity(request, this.requestProperties.capacity())
+                .getId();
     }
 }

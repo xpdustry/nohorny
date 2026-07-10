@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NoHorny Admin</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+        body { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; background: #111; color: #eee; }
+        header { display: flex; align-items: baseline; justify-content: space-between; }
+        button { padding: .5rem .8rem; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: .6rem; border-bottom: 1px solid #333; text-align: left; vertical-align: top; }
+        img { width: 128px; max-height: 128px; object-fit: contain; background: #000; }
+        .safe { color: #72d572; }
+        .warn { color: #ffd166; }
+        .nsfw, .failed { color: #ff6b6b; }
+        .muted { color: #aaa; }
+    </style>
+</head>
+<body x-data="requests" x-init="load()">
+<header>
+    <div>
+        <h1>NoHorny Admin</h1>
+        <p class="muted">Recent classification requests</p>
+    </div>
+    <button type="button" @click="load()" :disabled="loading">Refresh</button>
+</header>
+
+<p x-show="error" class="failed" x-text="error"></p>
+
+<table>
+    <thead>
+    <tr>
+        <th>Image</th>
+        <th>Result</th>
+        <th>Request</th>
+        <th>Timing</th>
+    </tr>
+    </thead>
+    <tbody>
+    <template x-for="request in items" :key="request.id">
+        <tr>
+            <td><img :src="`api/requests/${request.id}/image`" :alt="`Request ${request.id}`"></td>
+            <td>
+                <strong :class="request.successful ? request.rating.toLowerCase() : 'failed'"
+                        x-text="request.successful ? request.rating : 'FAILED'"></strong>
+                <div x-show="request.confidence !== null"
+                     x-text="`${Math.round(request.confidence * 100)}%`"></div>
+                <small class="muted" x-text="request.classifier"></small>
+                <div x-show="request.error" class="failed" x-text="request.error"></div>
+            </td>
+            <td>
+                <div x-text="`#${request.id}`"></div>
+                <div x-text="request.username || 'anonymous'"></div>
+                <small class="muted" x-text="request.remoteAddress"></small>
+            </td>
+            <td>
+                <div x-text="`${request.durationMillis} ms`"></div>
+                <small class="muted" x-text="new Date(request.createdAt).toLocaleString()"></small>
+            </td>
+        </tr>
+    </template>
+    </tbody>
+</table>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('requests', () => ({
+            items: [],
+            loading: false,
+            error: null,
+            async load() {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const response = await fetch('api/requests');
+                    if (!response.ok) throw new Error(`Request failed: HTTP ${response.status}`);
+                    this.items = await response.json();
+                } catch (error) {
+                    this.error = error.message;
+                } finally {
+                    this.loading = false;
+                }
+            }
+        }));
+    });
+</script>
+</body>
+</html>
