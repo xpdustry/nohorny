@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
+import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.persistence.ClassificationRequestSummary;
 import com.xpdustry.nohorny.persistence.RequestProperties;
-import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
 import java.util.List;
 import org.springframework.data.domain.Limit;
 import org.springframework.http.CacheControl;

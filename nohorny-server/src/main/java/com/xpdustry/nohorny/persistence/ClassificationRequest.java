@@ -44,6 +44,7 @@ public class ClassificationRequest {
 
     private byte[] image;
 
+    @SuppressWarnings("NullAway")
     protected ClassificationRequest() {}
 
     public ClassificationRequest(

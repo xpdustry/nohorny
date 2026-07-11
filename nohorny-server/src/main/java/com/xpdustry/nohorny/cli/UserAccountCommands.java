@@ -3,6 +3,7 @@ package com.xpdustry.nohorny.cli;
 
 import com.xpdustry.nohorny.persistence.UserAccount;
 import com.xpdustry.nohorny.persistence.UserAccountRepository;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Sort;
@@ -35,7 +36,8 @@ public class UserAccountCommands {
         if (repository.existsById(username)) {
             return "User already exists: " + username;
         }
-        repository.save(new UserAccount(username, this.passwordEncoder.encode(password), admin));
+        repository.save(new UserAccount(
+                username, Objects.requireNonNull(this.passwordEncoder.encode(password), "password"), admin));
         return "Created user " + username;
     }
 
@@ -59,7 +61,7 @@ public class UserAccountCommands {
                 .getObject()
                 .findById(username)
                 .map(user -> {
-                    user.setPasswordHash(this.passwordEncoder.encode(password));
+                    user.setPasswordHash(Objects.requireNonNull(this.passwordEncoder.encode(password), "password"));
                     return "Updated password for " + username;
                 })
                 .orElse("User does not exist: " + username);

@@ -19,6 +19,7 @@ public class UserAccount {
 
     private Instant createdAt;
 
+    @SuppressWarnings("NullAway")
     protected UserAccount() {}
 
     public UserAccount(final String username, final String passwordHash, final boolean admin) {
