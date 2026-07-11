@@ -49,6 +49,33 @@
 
         .controls button { width: auto; margin-bottom: 0; }
 
+        /* Live connection indicator, driven by the SSE stream. */
+        .live {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            font-size: .85rem;
+            white-space: nowrap;
+            color: var(--pico-muted-color);
+        }
+
+        .live .dot {
+            width: .55rem;
+            height: .55rem;
+            border-radius: 50%;
+            background: var(--r-failed);
+        }
+
+        .live.is-live .dot {
+            background: var(--r-safe);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--r-safe) 55%, transparent); }
+            70%      { box-shadow: 0 0 0 .35rem transparent; }
+        }
+
         /* Stat tiles keyed to the moderation verdict. */
         .stats {
             display: grid;
@@ -99,12 +126,42 @@
         thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--pico-muted-color); }
 
         .thumb {
+            position: relative;
             width: 128px;
             height: 128px;
-            object-fit: contain;
             background: #000;
             border-radius: var(--pico-border-radius);
             border: 2px solid var(--rating-color, var(--pico-muted-border-color));
+            overflow: hidden;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            transition: filter .15s ease;
+        }
+
+        /* Sensitive results stay blurred until an admin clicks to reveal them. */
+        .thumb.is-hidden { cursor: pointer; }
+        .thumb.is-hidden img { filter: blur(14px); transform: scale(1.15); }
+
+        .reveal-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .4rem;
+            text-align: center;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+            background: color-mix(in srgb, var(--rating-color) 22%, rgba(0, 0, 0, .35));
+            pointer-events: none;
         }
 
         .badge {
@@ -148,21 +205,26 @@
 
         .spin { animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .spin, .live.is-live .dot { animation: none; }
+            .thumb img { transition: none; }
+        }
     </style>
 </head>
 <body>
-<main class="container" x-data="requests" x-init="load()">
+<main class="container" x-data="requests" x-init="load(); connect()">
     <div class="page-head">
         <hgroup>
             <h1>NoHorny Admin</h1>
             <p>Latest image moderation decisions</p>
         </hgroup>
         <div class="controls">
-            <label>
-                <input type="checkbox" role="switch" x-model="auto" @change="toggleAuto()">
-                Auto-refresh
-            </label>
+            <span class="live" :class="{ 'is-live': connected }"
+                  :title="connected ? 'Listening for new requests' : 'Stream disconnected, retrying…'">
+                <span class="dot"></span>
+                <span x-text="connected ? 'Live' : 'Reconnecting…'"></span>
+            </span>
             <button type="button" @click="load()" :aria-busy="loading" :disabled="loading">
                 <span x-show="!loading">Refresh</span>
                 <span x-show="loading">Loading</span>
@@ -204,8 +266,13 @@
             <template x-for="request in visible" :key="request.id">
                 <tr :data-rating="rating(request)">
                     <td>
-                        <img class="thumb" loading="lazy"
-                             :src="`api/requests/${request.id}/image`" :alt="`Request ${request.id}`">
+                        <div class="thumb" :class="{ 'is-hidden': isHidden(request) }"
+                             @click="toggleReveal(request)">
+                            <img loading="lazy"
+                                 :src="`api/requests/${request.id}/image`" :alt="`Request ${request.id}`">
+                            <span class="reveal-hint" x-show="isHidden(request)"
+                                  x-text="`${verdict(request)} · click to reveal`"></span>
+                        </div>
                     </td>
                     <td class="stack">
                         <span class="badge" x-text="verdict(request)"></span>
@@ -247,8 +314,10 @@
             loading: false,
             error: null,
             filter: 'all',
-            auto: false,
-            timer: null,
+            connected: false,
+            revealed: {},
+            stream: null,
+            reloadTimer: null,
 
             rating(request) {
                 if (!request.successful) return 'failed';
@@ -257,6 +326,20 @@
 
             verdict(request) {
                 return request.successful ? (request.rating || 'SAFE') : 'FAILED';
+            },
+
+            shouldBlur(request) {
+                const rating = this.rating(request);
+                return rating === 'warn' || rating === 'nsfw';
+            },
+
+            isHidden(request) {
+                return this.shouldBlur(request) && !this.revealed[request.id];
+            },
+
+            toggleReveal(request) {
+                if (!this.shouldBlur(request)) return;
+                this.revealed[request.id] = !this.revealed[request.id];
             },
 
             formatTime(value) {
@@ -292,9 +375,19 @@
                 }
             },
 
-            toggleAuto() {
-                clearInterval(this.timer);
-                this.timer = this.auto ? setInterval(() => this.load(), 10000) : null;
+            // Subscribe to the server-sent events stream and reload when a new request lands.
+            // EventSource reconnects on its own, so we only track the connection state here.
+            connect() {
+                this.stream = new EventSource('api/stream');
+                this.stream.onopen = () => { this.connected = true; };
+                this.stream.onerror = () => { this.connected = false; };
+                this.stream.addEventListener('request', () => this.scheduleReload());
+            },
+
+            // Coalesce bursts of events into a single reload.
+            scheduleReload() {
+                clearTimeout(this.reloadTimer);
+                this.reloadTimer = setTimeout(() => this.load(), 250);
             }
         }));
     });

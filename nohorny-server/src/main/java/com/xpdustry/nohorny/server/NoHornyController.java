@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,16 +37,19 @@ public final class NoHornyController {
     private final Classifier classifier;
     private final ClassificationRequestRepository requests;
     private final RequestProperties requestProperties;
+    private final ApplicationEventPublisher events;
 
     public NoHornyController(
             final StatusProperties status,
             final Classifier classifier,
             final ClassificationRequestRepository requests,
-            final RequestProperties requestProperties) {
+            final RequestProperties requestProperties,
+            final ApplicationEventPublisher events) {
         this.status = status;
         this.classifier = classifier;
         this.requests = requests;
         this.requestProperties = requestProperties;
+        this.events = events;
     }
 
     @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -116,8 +120,10 @@ public final class NoHornyController {
     }
 
     private long saveRequest(final ClassificationRequest request) {
-        return this.requests
+        final var id = this.requests
                 .saveWithinCapacity(request, this.requestProperties.capacity())
                 .getId();
+        this.events.publishEvent(new ClassificationRequestSavedEvent(id));
+        return id;
     }
 }
