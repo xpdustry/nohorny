@@ -31,24 +31,6 @@
 
         .page-head hgroup { margin-bottom: 0; }
 
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .controls label {
-            display: flex;
-            align-items: center;
-            gap: .4rem;
-            margin-bottom: 0;
-            white-space: nowrap;
-            font-size: .85rem;
-            color: var(--pico-muted-color);
-        }
-
-        .controls button { width: auto; margin-bottom: 0; }
-
         /* Live connection indicator, driven by the SSE stream. */
         .live {
             display: inline-flex;
@@ -219,17 +201,11 @@
             <h1>NoHorny Admin</h1>
             <p>Latest image moderation decisions</p>
         </hgroup>
-        <div class="controls">
-            <span class="live" :class="{ 'is-live': connected }"
-                  :title="connected ? 'Listening for new requests' : 'Stream disconnected, retrying…'">
-                <span class="dot"></span>
-                <span x-text="connected ? 'Live' : 'Reconnecting…'"></span>
-            </span>
-            <button type="button" @click="load()" :aria-busy="loading" :disabled="loading">
-                <span x-show="!loading">Refresh</span>
-                <span x-show="loading">Loading</span>
-            </button>
-        </div>
+        <span class="live" :class="{ 'is-live': connected }"
+              :title="connected ? 'Listening for new requests' : 'Stream disconnected, retrying…'">
+            <span class="dot"></span>
+            <span x-text="connected ? 'Live' : 'Reconnecting…'"></span>
+        </span>
     </div>
 
     <article x-show="error" style="border-left: 3px solid var(--r-nsfw);">
