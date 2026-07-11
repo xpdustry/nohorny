@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
-import com.xpdustry.nohorny.persistence.UserRepository;
+import com.xpdustry.nohorny.persistence.UserAccountRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfiguration {
 
     @Bean
-    public UserDetailsService userDetailsService(final UserRepository users) {
+    public UserDetailsService userDetailsService(final UserAccountRepository users) {
         return username -> {
             final var account = users.findById(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Unknown user: " + username));

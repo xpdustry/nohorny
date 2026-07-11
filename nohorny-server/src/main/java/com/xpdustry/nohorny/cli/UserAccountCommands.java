@@ -2,7 +2,7 @@
 package com.xpdustry.nohorny.cli;
 
 import com.xpdustry.nohorny.persistence.UserAccount;
-import com.xpdustry.nohorny.persistence.UserRepository;
+import com.xpdustry.nohorny.persistence.UserAccountRepository;
 import com.xpdustry.nohorny.persistence.UserRole;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -17,12 +17,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-public class UserCommands {
+public class UserAccountCommands {
 
-    private final ObjectProvider<UserRepository> users;
+    private final ObjectProvider<UserAccountRepository> users;
     private final PasswordEncoder passwordEncoder;
 
-    public UserCommands(final ObjectProvider<UserRepository> users, final PasswordEncoder passwordEncoder) {
+    public UserAccountCommands(final ObjectProvider<UserAccountRepository> users, final PasswordEncoder passwordEncoder) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
     }
