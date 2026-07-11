@@ -3,10 +3,6 @@ package com.xpdustry.nohorny.cli;
 
 import com.xpdustry.nohorny.persistence.UserAccount;
 import com.xpdustry.nohorny.persistence.UserAccountRepository;
-import com.xpdustry.nohorny.persistence.UserRole;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Locale;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Sort;
@@ -22,7 +18,8 @@ public class UserAccountCommands {
     private final ObjectProvider<UserAccountRepository> users;
     private final PasswordEncoder passwordEncoder;
 
-    public UserAccountCommands(final ObjectProvider<UserAccountRepository> users, final PasswordEncoder passwordEncoder) {
+    public UserAccountCommands(
+            final ObjectProvider<UserAccountRepository> users, final PasswordEncoder passwordEncoder) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
     }
@@ -32,13 +29,13 @@ public class UserAccountCommands {
     public String add(
             final @Option(longName = "username", required = true) String username,
             final @Option(longName = "password", required = true) String password,
-            final @Option(longName = "roles", required = true, description = "Comma-separated ADMIN and/or API roles")
-                    String roles) {
+            final @Option(longName = "admin", required = true, description = "Whether the user is an administrator")
+                    boolean admin) {
         final var repository = this.users.getObject();
         if (repository.existsById(username)) {
             return "User already exists: " + username;
         }
-        repository.save(new UserAccount(username, this.passwordEncoder.encode(password), parseRoles(roles)));
+        repository.save(new UserAccount(username, this.passwordEncoder.encode(password), admin));
         return "Created user " + username;
     }
 
@@ -69,54 +66,25 @@ public class UserAccountCommands {
     }
 
     @Transactional
-    @Command(name = "user-role-add", description = "Grant a role to a user.")
-    public String addRole(
+    @Command(name = "user-admin", description = "Change a user's administrator flag.")
+    public String admin(
             final @Option(longName = "username", required = true) String username,
-            final @Option(longName = "role", required = true) UserRole role) {
+            final @Option(longName = "admin", required = true) boolean admin) {
         return this.users
                 .getObject()
                 .findById(username)
                 .map(user -> {
-                    user.addRole(role);
-                    return "Granted " + role + " to " + username;
+                    user.setAdmin(admin);
+                    return "Set admin=" + admin + " for " + username;
                 })
                 .orElse("User does not exist: " + username);
     }
 
-    @Transactional
-    @Command(name = "user-role-remove", description = "Revoke a role from a user.")
-    public String removeRole(
-            final @Option(longName = "username", required = true) String username,
-            final @Option(longName = "role", required = true) UserRole role) {
-        return this.users
-                .getObject()
-                .findById(username)
-                .filter(user -> user.getRoles().contains(role))
-                .map(user -> {
-                    user.removeRole(role);
-                    return "Revoked " + role + " from " + username;
-                })
-                .orElse("User or role does not exist");
-    }
-
     @Transactional(readOnly = true)
-    @Command(name = "user-list", description = "List users and their roles.")
+    @Command(name = "user-list", description = "List users.")
     public String list() {
         return this.users.getObject().findAll(Sort.by("username")).stream()
-                .map(user -> user.getUsername() + "\t"
-                        + user.getRoles().stream().map(Enum::name).sorted().collect(Collectors.joining(",")))
+                .map(user -> user.getUsername() + "\tadmin=" + user.isAdmin())
                 .collect(Collectors.joining(System.lineSeparator()));
-    }
-
-    private static EnumSet<UserRole> parseRoles(final String value) {
-        final var result = Arrays.stream(value.split(","))
-                .map(String::strip)
-                .filter(role -> !role.isEmpty())
-                .map(role -> UserRole.valueOf(role.toUpperCase(Locale.ROOT)))
-                .collect(Collectors.toCollection(() -> EnumSet.noneOf(UserRole.class)));
-        if (result.isEmpty()) {
-            throw new IllegalArgumentException("At least one role is required");
-        }
-        return result;
     }
 }

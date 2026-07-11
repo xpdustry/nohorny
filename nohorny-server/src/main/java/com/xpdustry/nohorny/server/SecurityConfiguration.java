@@ -21,10 +21,13 @@ public class SecurityConfiguration {
         return username -> {
             final var account = users.findById(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Unknown user: " + username));
-            return User.withUsername(account.getUsername())
+            final var builder = User.withUsername(account.getUsername())
                     .password(account.getPasswordHash())
-                    .roles(account.getRoles().stream().map(Enum::name).toArray(String[]::new))
-                    .build();
+                    .roles("USER");
+            if (account.isAdmin()) {
+                builder.roles("USER", "ADMIN");
+            }
+            return builder.build();
         };
     }
 
@@ -35,7 +38,7 @@ public class SecurityConfiguration {
                     if (properties.apiDefaultPolicy() == ApiSecurityProperties.ApiDefaultPolicy.ALLOW_ALL) {
                         authorize.requestMatchers("/classify").permitAll();
                     } else {
-                        authorize.requestMatchers("/classify").hasRole("API");
+                        authorize.requestMatchers("/classify").authenticated();
                     }
                     authorize.requestMatchers("/admin", "/admin/**").hasRole("ADMIN");
                     authorize.anyRequest().denyAll();

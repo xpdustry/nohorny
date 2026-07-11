@@ -1,15 +1,8 @@
 CREATE TABLE IF NOT EXISTS users (
     username            TEXT PRIMARY KEY,
     password_hash       TEXT NOT NULL,
+    admin               INTEGER NOT NULL,
     created_at          TIMESTAMP NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS user_roles (
-    username            TEXT NOT NULL,
-    role                TEXT NOT NULL
-        CHECK (role IN ('ADMIN', 'API')),
-    PRIMARY KEY (username, role),
-    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS classification_requests (

@@ -18,7 +18,7 @@ nohorny:
     # SQLite database shared by the server and CLI commands.
     path: nohorny.db
   security:
-    # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user with the API role.
+    # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user account.
     api-default-policy: ALLOW_ALL
   requests:
     # Number of recent classification requests retained in the database.
