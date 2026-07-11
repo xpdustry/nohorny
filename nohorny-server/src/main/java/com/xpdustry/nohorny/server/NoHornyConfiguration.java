@@ -8,10 +8,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
+@EnableScheduling
 public class NoHornyConfiguration {
 
     @Bean

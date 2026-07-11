@@ -23,6 +23,9 @@ nohorny:
   requests:
     # Number of recent classification requests retained in the database.
     capacity: 100
+  mindustry:
+    # How often the public Mindustry server list is refreshed to label request origins.
+    refresh-interval: 10m
   classifier:
     # Use vit for using a local model, or sight-engine to classify through SightEngine.
     type: vit

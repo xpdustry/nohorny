@@ -2,9 +2,10 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
-import com.xpdustry.nohorny.persistence.ClassificationRequestSummary;
 import com.xpdustry.nohorny.persistence.RequestProperties;
+import com.xpdustry.nohorny.server.MindustryClientDirectory.ClientInfo;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,11 +33,16 @@ public final class AdminController {
 
     private final ClassificationRequestRepository requests;
     private final RequestProperties requestProperties;
+    private final MindustryClientDirectory clients;
     private final Set<SseEmitter> emitters = ConcurrentHashMap.newKeySet();
 
-    public AdminController(final ClassificationRequestRepository requests, final RequestProperties requestProperties) {
+    public AdminController(
+            final ClassificationRequestRepository requests,
+            final RequestProperties requestProperties,
+            final MindustryClientDirectory clients) {
         this.requests = requests;
         this.requestProperties = requestProperties;
+        this.clients = clients;
     }
 
     @GetMapping
@@ -46,8 +52,18 @@ public final class AdminController {
 
     @ResponseBody
     @GetMapping("/api/requests")
-    public List<ClassificationRequestSummary> recentRequests() {
-        return this.requests.findAllByOrderByIdDesc(Limit.of(this.requestProperties.capacity()));
+    public List<ClassificationRequestView> recentRequests() {
+        return this.requests.findAllByOrderByIdDesc(Limit.of(this.requestProperties.capacity())).stream()
+                .map(summary -> ClassificationRequestView.of(summary, this.whois(summary.getRemoteAddress())))
+                .toList();
+    }
+
+    private ClientInfo whois(final String remoteAddress) {
+        try {
+            return this.clients.whois(remoteAddress);
+        } catch (final UnknownHostException exception) {
+            return new ClientInfo("unknown", remoteAddress);
+        }
     }
 
     @ResponseBody

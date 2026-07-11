@@ -103,6 +103,22 @@
 
         .filters button .count { opacity: .6; margin-left: .35rem; }
 
+        /* Origin label resolved from the request's remote address. */
+        .client {
+            display: inline-block;
+            padding: .1rem .45rem;
+            border-radius: 999px;
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            border: 1px solid var(--client-color, var(--pico-muted-border-color));
+            color: var(--client-color, var(--pico-muted-color));
+        }
+
+        .client[data-client="mindustry-server"] { --client-color: #7aa2f7; }
+        .client[data-client="localhost"]        { --client-color: var(--pico-muted-color); }
+        .client[data-client="unknown"]          { --client-color: var(--r-warn); }
+
         table { margin-bottom: 0; }
         th, td { vertical-align: top; }
         thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--pico-muted-color); }
@@ -266,6 +282,7 @@
                     <td class="stack">
                         <div class="mono" x-text="`#${request.id}`"></div>
                         <div x-text="request.username || 'anonymous'"></div>
+                        <div><span class="client" :data-client="request.clientType" x-text="clientLabel(request)"></span></div>
                         <small class="mono" style="color: var(--pico-muted-color);" x-text="request.remoteAddress"></small>
                     </td>
                     <td class="stack">
@@ -324,6 +341,14 @@
 
             filterLabel(filter) {
                 return filter === 'nsfw' ? 'NSFW' : filter[0].toUpperCase() + filter.slice(1);
+            },
+
+            clientLabel(request) {
+                if (request.clientType === 'mindustry-server') {
+                    // clientName arrives as "[Name1,Name2]"; show it as a readable list.
+                    return request.clientName.replace(/^\[|\]$/g, '').replace(/,/g, ', ');
+                }
+                return request.clientType;
             },
 
             get stats() {
