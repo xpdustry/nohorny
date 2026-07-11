@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface RequestRepository extends JpaRepository<ClassificationRequest, Long> {
 
-    List<ClassificationRequestSummary> findAllByOrderByIdDesc(Limit limit);
+    List<ClassificationRequestSummary> findAllByOrderByIdDesc(final Limit limit);
 
-    Optional<ClassificationRequestImage> findImageById(long id);
+    Optional<ClassificationRequestImage> findImageById(final long id);
 
     @Transactional
     default ClassificationRequest saveWithinCapacity(final ClassificationRequest request, final int capacity) {
