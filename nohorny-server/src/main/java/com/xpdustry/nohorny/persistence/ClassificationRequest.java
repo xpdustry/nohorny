@@ -14,7 +14,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 @Entity
-@Table(name = "classification_requests")
+@Table(name = "classification_request")
 public class ClassificationRequest {
 
     @Id

@@ -25,10 +25,7 @@ public interface ClassificationRequestRepository extends JpaRepository<Classific
 
     @Modifying
     @Query(nativeQuery = true, value = """
-            DELETE FROM classification_requests
-            WHERE id NOT IN (
-                SELECT id FROM classification_requests ORDER BY id DESC LIMIT :capacity
-            )
-            """)
+            DELETE FROM classification_request
+            WHERE id NOT IN (SELECT id FROM classification_request ORDER BY id DESC LIMIT :capacity)""")
     void deleteOverCapacity(final @Param("capacity") int capacity);
 }
