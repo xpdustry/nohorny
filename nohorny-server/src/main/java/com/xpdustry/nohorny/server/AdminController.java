@@ -3,7 +3,7 @@ package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.persistence.ClassificationRequestSummary;
 import com.xpdustry.nohorny.persistence.RequestProperties;
-import com.xpdustry.nohorny.persistence.RequestRepository;
+import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
 import java.util.List;
 import org.springframework.data.domain.Limit;
 import org.springframework.http.CacheControl;
@@ -18,10 +18,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/admin")
 public final class AdminController {
 
-    private final RequestRepository requests;
+    private final ClassificationRequestRepository requests;
     private final RequestProperties requestProperties;
 
-    public AdminController(final RequestRepository requests, final RequestProperties requestProperties) {
+    public AdminController(final ClassificationRequestRepository requests, final RequestProperties requestProperties) {
         this.requests = requests;
         this.requestProperties = requestProperties;
     }

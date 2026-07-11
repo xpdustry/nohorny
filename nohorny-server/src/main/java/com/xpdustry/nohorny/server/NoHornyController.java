@@ -5,7 +5,7 @@ import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
 import com.xpdustry.nohorny.persistence.ClassificationRequest;
 import com.xpdustry.nohorny.persistence.RequestProperties;
-import com.xpdustry.nohorny.persistence.RequestRepository;
+import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.classifier.Classifier;
 import jakarta.servlet.http.HttpServletRequest;
 import java.awt.image.BufferedImage;
@@ -34,13 +34,13 @@ public final class NoHornyController {
 
     private final StatusProperties status;
     private final Classifier classifier;
-    private final RequestRepository requests;
+    private final ClassificationRequestRepository requests;
     private final RequestProperties requestProperties;
 
     public NoHornyController(
             final StatusProperties status,
             final Classifier classifier,
-            final RequestRepository requests,
+            final ClassificationRequestRepository requests,
             final RequestProperties requestProperties) {
         this.status = status;
         this.classifier = classifier;

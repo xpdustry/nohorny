@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-public interface RequestRepository extends JpaRepository<ClassificationRequest, Long> {
+public interface ClassificationRequestRepository extends JpaRepository<ClassificationRequest, Long> {
 
     List<ClassificationRequestSummary> findAllByOrderByIdDesc(final Limit limit);
 
