@@ -43,3 +43,7 @@ Thumbs.db
 
 ## Xpdustry
 .xpdustry-ci/
+*.pt
+*.onnx
+*.db
+*.sqlite
