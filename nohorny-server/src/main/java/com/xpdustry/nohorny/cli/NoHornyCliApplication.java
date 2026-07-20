@@ -19,7 +19,7 @@ public class NoHornyCliApplication {
                 .bannerMode(Banner.Mode.OFF)
                 .logStartupInfo(false)
                 .properties("spring.shell.interactive.enabled=false")
-                .properties("logging.level.root=WARN")
+                // .properties("logging.level.root=WARN")
                 .properties("spring.shell.context.close=true")
                 .run(args.length == 0 ? new String[] {"help"} : args);
     }
