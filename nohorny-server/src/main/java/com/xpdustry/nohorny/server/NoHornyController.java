@@ -48,13 +48,13 @@ public final class NoHornyController {
         this.requestProperties = requestProperties;
     }
 
-    @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/api/status", produces = MediaType.APPLICATION_JSON_VALUE)
     public SimpleServerMessage onStatus() {
         return new SimpleServerMessage(this.status.motd());
     }
 
     @PostMapping(
-            path = "/classify",
+            path = "/api/classify",
             consumes = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE},
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> onClassify(
