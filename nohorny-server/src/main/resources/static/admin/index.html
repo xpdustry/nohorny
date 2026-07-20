@@ -31,32 +31,7 @@
 
         .page-head hgroup { margin-bottom: 0; }
 
-        /* Live connection indicator, driven by the SSE stream. */
-        .live {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            font-size: .85rem;
-            white-space: nowrap;
-            color: var(--pico-muted-color);
-        }
-
-        .live .dot {
-            width: .55rem;
-            height: .55rem;
-            border-radius: 50%;
-            background: var(--r-failed);
-        }
-
-        .live.is-live .dot {
-            background: var(--r-safe);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--r-safe) 55%, transparent); }
-            70%      { box-shadow: 0 0 0 .35rem transparent; }
-        }
+        .page-head button { width: auto; margin-bottom: 0; }
 
         /* Stat tiles keyed to the moderation verdict. */
         .stats {
@@ -205,23 +180,22 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (prefers-reduced-motion: reduce) {
-            .spin, .live.is-live .dot { animation: none; }
+            .spin { animation: none; }
             .thumb img { transition: none; }
         }
     </style>
 </head>
 <body>
-<main class="container" x-data="requests" x-init="load(); connect()">
+<main class="container" x-data="requests" x-init="load()">
     <div class="page-head">
         <hgroup>
             <h1>NoHorny Admin</h1>
             <p>Latest image moderation decisions</p>
         </hgroup>
-        <span class="live" :class="{ 'is-live': connected }"
-              :title="connected ? 'Listening for new requests' : 'Stream disconnected, retrying…'">
-            <span class="dot"></span>
-            <span x-text="connected ? 'Live' : 'Reconnecting…'"></span>
-        </span>
+        <button type="button" @click="load()" :aria-busy="loading" :disabled="loading">
+            <span x-show="!loading">Refresh</span>
+            <span x-show="loading">Loading</span>
+        </button>
     </div>
 
     <article x-show="error" style="border-left: 3px solid var(--r-nsfw);">
@@ -307,10 +281,7 @@
             loading: false,
             error: null,
             filter: 'all',
-            connected: false,
             revealed: {},
-            stream: null,
-            reloadTimer: null,
 
             rating(request) {
                 if (!request.successful) return 'failed';
@@ -374,21 +345,6 @@
                 } finally {
                     this.loading = false;
                 }
-            },
-
-            // Subscribe to the server-sent events stream and reload when a new request lands.
-            // EventSource reconnects on its own, so we only track the connection state here.
-            connect() {
-                this.stream = new EventSource('api/stream');
-                this.stream.onopen = () => { this.connected = true; };
-                this.stream.onerror = () => { this.connected = false; };
-                this.stream.addEventListener('request', () => this.scheduleReload());
-            },
-
-            // Coalesce bursts of events into a single reload.
-            scheduleReload() {
-                clearTimeout(this.reloadTimer);
-                this.reloadTimer = setTimeout(() => this.load(), 250);
             }
         }));
     });
