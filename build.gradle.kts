@@ -26,7 +26,7 @@ plugins {
 
 allprojects {
     group = "com.xpdustry"
-    version = "4.0.0-beta.8" + if (findProperty("is_release").toString().toBoolean()) "" else "-SNAPSHOT"
+    version = "4.0.0-beta.9" + if (findProperty("is_release").toString().toBoolean()) "" else "-SNAPSHOT"
     description = "NO HORNY IN MY SERVER!"
 }
 

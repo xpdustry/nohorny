@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.8 - 2026-07-20
+
+### Changes & New features
+
+- Ditch the server side rendering and send images straight away... ([`7f161f8`](https://github.com/xpdustry/nohorny/commit/7f161f8547c06043ac5a046037d3b30e6587a378))
+
+> :warning: **Breaking** :warning: It makes previous releases incompatible with the public nohorny server instance.
+
+- bump mindustry to v159 ([`a75c7a0`](https://github.com/xpdustry/nohorny/commit/a75c7a047a7af8644fa2a0385cf75b262609d2ba))
+- Use components v2 for embed with spoilers ([`9908ef2`](https://github.com/xpdustry/nohorny/commit/9908ef2a7000ccb75e85c03d393a8f1c849ffc30))
+- Log warn+ classification results on info instead of debug ([`7736c13`](https://github.com/xpdustry/nohorny/commit/7736c13fa91711452a7bc236e9970ba827b04d11))
+- Added a cli for the nohorny server ([`fb7871d`](https://github.com/xpdustry/nohorny/commit/fb7871d22ef42011441bdcd905cca6fae3defb67))
+
+> :warning: **Breaking** :warning: You now start the nohorny server with `java -jar nohorny-server.jar start`.
+
+### Bugfixes
+
+- Prevent divide by zero in the smart delay ([`b509134`](https://github.com/xpdustry/nohorny/commit/b509134c218dc3748ae02029c6727a49c4b03453))
+- Fix invalid argument order in classification response logs ([`2e32656`](https://github.com/xpdustry/nohorny/commit/2e32656080c0a7077f68c8a5d84be57640473056))
+- Better classification requests admissions ([`bb4198d`](https://github.com/xpdustry/nohorny/commit/bb4198d61f8414ea8a78736e010126a922d67e52))
+
 ## v4.0.0-beta.7 - 2026-05-22
 
 ### Changes & New features
