@@ -9,6 +9,7 @@ import com.xpdustry.nohorny.common.Rating;
 import java.awt.Color;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -23,9 +24,17 @@ import mindustry.Vars;
 import mindustry.mod.Mods;
 import org.jspecify.annotations.Nullable;
 
+// https://docs.discord.com/developers/resources/webhook#execute-webhook
+// https://docs.discord.com/developers/components/reference
 final class DiscordWebhook implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(DiscordWebhook.class);
+
+    private static final int COMPONENT_TYPE_TEXT_DISPLAY = 10;
+    private static final int COMPONENT_TYPE_MEDIA_GALLERY = 12;
+    private static final int COMPONENT_TYPE_SEPARATOR = 14;
+    private static final int COMPONENT_TYPE_CONTAINER = 17;
+    private static final int MESSAGE_FLAG_IS_COMPONENTS_V2 = 1 << 15;
 
     private final HttpClient http;
     private final Mods.ModMeta metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
@@ -76,24 +85,6 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
-    private void send(final URI webhook, final MultipartFormBodyPublisher form) throws Exception {
-        this.rateLimiter.waitIfRateLimited();
-        final var response = this.http.send(
-                HttpRequest.newBuilder(webhook)
-                        .timeout(Duration.ofSeconds(15L))
-                        .POST(form)
-                        .header(
-                                "User-Agent",
-                                "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")")
-                        .header("Content-Type", form.contentType())
-                        .build(),
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() > 299) {
-            throw new IOException(
-                    "Discord webhook returned http code " + response.statusCode() + ": " + response.body());
-        }
-    }
-
     private void onWebhookConfigure(final String message) {
         final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
         if (webhook == null) {
@@ -108,11 +99,41 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
+    private void send(final URI webhook, final MultipartFormBodyPublisher form) throws Exception {
+        this.rateLimiter.waitIfRateLimited();
+        final var response = this.http.send(
+                HttpRequest.newBuilder(this.withComponentsV2Enabled(webhook))
+                        .timeout(Duration.ofSeconds(15L))
+                        .POST(form)
+                        .header(
+                                "User-Agent",
+                                "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")")
+                        .header("Content-Type", form.contentType())
+                        .build(),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() > 299) {
+            throw new IOException(
+                    "Discord webhook returned http code " + response.statusCode() + ": " + response.body());
+        }
+    }
+
+    private URI withComponentsV2Enabled(final URI webhook) throws URISyntaxException {
+        final var query = webhook.getQuery();
+        return new URI(
+                webhook.getScheme(),
+                webhook.getUserInfo(),
+                webhook.getHost(),
+                webhook.getPort(),
+                webhook.getPath(),
+                query == null ? "with_components=true" : query + "&with_components=true",
+                webhook.getFragment());
+    }
+
     private MultipartFormBodyPublisher createConfigurationSuccessFormPayload(final String message) {
         return new MultipartFormBodyPublisher.Builder()
                 .textPart(
                         "payload_json",
-                        this.createEmbedJsonPayload("NoHorny has been re-configured", message, null, null)
+                        this.createComponentsJsonPayload("NoHorny has been re-configured", message, null, null)
                                 .toString())
                 .build();
     }
@@ -162,31 +183,58 @@ final class DiscordWebhook implements LifecycleListener {
         message.append("- Confidence: **")
                 .append((int) Math.ceil(event.response().confidence() * 100))
                 .append("%**\n");
-        return this.createEmbedJsonPayload(
+        return this.createComponentsJsonPayload(
                 "NoHorny has detected unsafe buildings",
                 message.toString(),
                 image,
-                "Trace ID: " + event.response().identifier());
+                "Request ID: `" + event.response().identifier() + "`");
     }
 
-    private Jval createEmbedJsonPayload(
+    private Jval createComponentsJsonPayload(
             final String title, final String content, final @Nullable String image, final @Nullable String footer) {
-        final var embed = Jval.newObject()
-                .put("color", Color.PINK.getRGB() & 0xFFFFFF)
-                .put("title", title)
-                .put("description", content);
+        final var components = Jval.newArray()
+                .add(Jval.newObject().put("type", COMPONENT_TYPE_TEXT_DISPLAY).put("content", "## " + title))
+                .add(Jval.newObject()
+                        .put("type", COMPONENT_TYPE_SEPARATOR)
+                        .put("divider", true)
+                        .put("spacing", 1))
+                .add(Jval.newObject().put("type", COMPONENT_TYPE_TEXT_DISPLAY).put("content", content));
         if (image != null) {
-            embed.put("image", Jval.newObject().put("url", image));
+            components.add(Jval.newObject()
+                    .put("type", COMPONENT_TYPE_SEPARATOR)
+                    .put("divider", false)
+                    .put("spacing", 1));
+            components.add(Jval.newObject()
+                    .put("type", COMPONENT_TYPE_MEDIA_GALLERY)
+                    .put(
+                            "items",
+                            Jval.newArray()
+                                    .add(Jval.newObject()
+                                            .put("media", Jval.newObject().put("url", image))
+                                            .put("spoiler", true))));
         }
         if (footer != null) {
-            embed.put("footer", Jval.newObject().put("text", footer));
+            components.add(Jval.newObject()
+                    .put("type", COMPONENT_TYPE_SEPARATOR)
+                    .put("divider", false)
+                    .put("spacing", 1));
+            components.add(
+                    Jval.newObject().put("type", COMPONENT_TYPE_TEXT_DISPLAY).put("content", footer));
         }
         final var payload = Jval.newObject()
+                .put("flags", MESSAGE_FLAG_IS_COMPONENTS_V2)
                 .put("allowed_mentions", Jval.newObject().put("parse", Jval.newArray()))
-                .put("embeds", Jval.newArray().add(embed));
+                .put(
+                        "components",
+                        Jval.newArray()
+                                .add(Jval.newObject()
+                                        .put("type", COMPONENT_TYPE_CONTAINER)
+                                        .put("accent_color", Color.PINK.getRGB() & 0xFFFFFF)
+                                        .put("spoiler", false)
+                                        .put("components", components)));
         final var username = NoHornySetting.DISCORD_WEBHOOK_NAME.get();
         if (username != null) {
-            payload.put("username", NoHornySetting.DISCORD_WEBHOOK_NAME.get());
+            payload.put("username", username);
         }
         return payload;
     }
