@@ -120,9 +120,8 @@ public final class NoHornyController {
     }
 
     private long saveRequest(final ClassificationRequest request) {
-        final var id = this.requests
-                .saveWithinCapacity(request, this.requestProperties.capacity())
-                .getId();
+        final var id = this.requests.save(request).getId();
+        this.requests.deleteOverCapacity(this.requestProperties.capacity());
         this.events.publishEvent(new ClassificationRequestSavedEvent(id));
         return id;
     }

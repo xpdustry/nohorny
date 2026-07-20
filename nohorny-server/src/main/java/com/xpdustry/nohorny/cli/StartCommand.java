@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public final class StartCommand {
 
     @Command(name = "start", description = "Start the NoHorny classification server.")
-    public void start(final @Arguments String[] arguments) {
+    public void onStart(final @Arguments String[] arguments) {
         final var application = new SpringApplication(NoHornyServerApplication.class);
         application.setMainApplicationClass(NoHornyServerApplication.class);
         application.run(arguments);
