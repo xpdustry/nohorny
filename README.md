@@ -160,6 +160,17 @@ SERVER_PORT=9090 java -jar nohorny-server.jar start
 java -jar nohorny-server.jar start -- --server.port=9090
 ```
 
+When the server runs behind a trusted reverse proxy, enable forwarded-header processing so request attribution and
+Mindustry server detection use the original client address:
+
+```yaml
+server:
+  forward-headers-strategy: framework
+```
+
+The proxy must overwrite, rather than append to untrusted, `Forwarded` or `X-Forwarded-*` headers. Leave this option
+set to `none` when the server is directly exposed.
+
 ### Users and security
 
 The classification API is public by default. Set `nohorny.security.api-default-policy` to `DENY_ALL` to require HTTP

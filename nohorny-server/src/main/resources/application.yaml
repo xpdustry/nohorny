@@ -12,6 +12,9 @@ server:
   address: 127.0.0.1
   # HTTP port used for the app
   port: 8080
+  # Set to framework when running behind a trusted reverse proxy that overwrites Forwarded/X-Forwarded-* headers.
+  # This makes request attribution and Mindustry server detection use the original client address.
+  forward-headers-strategy: none
 
 nohorny:
   database:
