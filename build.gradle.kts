@@ -131,7 +131,7 @@ project(":nohorny-client") {
             repository = "xpdustry/nohorny",
             java = true,
             hidden = true,
-            minGameVersion = "157",
+            minGameVersion = "159",
             dependencies = mutableListOf(ModDependency("slf4md", soft = true)),
         )
 
