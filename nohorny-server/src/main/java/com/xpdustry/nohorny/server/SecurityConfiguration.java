@@ -41,7 +41,7 @@ public class SecurityConfiguration {
                         authorize.requestMatchers("/classify").authenticated();
                     }
                     authorize.requestMatchers("/admin", "/admin/**").hasRole("ADMIN");
-                    authorize.anyRequest().denyAll();
+                    authorize.anyRequest().permitAll();
                 })
                 .httpBasic(Customizer.withDefaults())
                 .formLogin(Customizer.withDefaults())
