@@ -30,7 +30,7 @@ public class UserAccountCommands {
     @Command(name = "user create", description = "Create a user.")
     public String onUserCreate(
             final @Argument(index = 0) String username,
-            final @Argument(index = 0) String password,
+            final @Argument(index = 1) String password,
             final @Option(shortName = 'a', longName = "admin", description = "Whether the user is an administrator")
                     boolean admin) {
         final var repository = this.users.getObject();
