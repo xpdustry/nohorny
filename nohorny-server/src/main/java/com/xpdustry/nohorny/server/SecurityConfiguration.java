@@ -34,18 +34,18 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(final HttpSecurity http, final ApiSecurityProperties properties) {
         return http.authorizeHttpRequests(authorize -> {
-                    authorize.requestMatchers("/status", "/login", "/error").permitAll();
+                    authorize.requestMatchers("/api/status", "/login", "/error").permitAll();
                     if (properties.apiDefaultPolicy() == ApiSecurityProperties.ApiDefaultPolicy.ALLOW_ALL) {
-                        authorize.requestMatchers("/classify").permitAll();
+                        authorize.requestMatchers("/api/classify").permitAll();
                     } else {
-                        authorize.requestMatchers("/classify").authenticated();
+                        authorize.requestMatchers("/api/classify").authenticated();
                     }
                     authorize.requestMatchers("/admin", "/admin/**").hasRole("ADMIN");
                     authorize.anyRequest().permitAll();
                 })
                 .httpBasic(Customizer.withDefaults())
                 .formLogin(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/classify"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/classify"))
                 .build();
     }
 }
