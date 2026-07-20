@@ -39,7 +39,7 @@ final class DisplayTracker implements LifecycleListener {
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
     private GroupingVirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
-    private record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
+    record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
     public DisplayTracker(final NoHornyClient client) {
         this.client = client;

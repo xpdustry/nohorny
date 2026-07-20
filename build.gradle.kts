@@ -14,13 +14,13 @@ import net.ltgt.gradle.errorprone.errorprone
 import org.springframework.boot.gradle.tasks.run.BootRun
 
 plugins {
-    id("com.diffplug.spotless") version "8.5.1" apply false
+    id("com.diffplug.spotless") version "8.8.0" apply false
     id("net.kyori.indra") version "4.0.0" apply false
     id("net.kyori.indra.publishing") version "4.0.0" apply false
-    id("com.gradleup.shadow") version "9.4.1" apply false
+    id("com.gradleup.shadow") version "9.5.1" apply false
     id("com.xpdustry.toxopid") version "4.2.0" apply false
     id("net.ltgt.errorprone") version "5.1.0" apply false
-    id("org.springframework.boot") version "4.0.6" apply false
+    id("org.springframework.boot") version "4.1.0" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
@@ -41,11 +41,10 @@ subprojects {
     }
 
     dependencies {
-        // No update until https://github.com/uber/NullAway/issues/1511 is implemented
-        "errorprone"("com.google.errorprone:error_prone_core:2.49.0")
-        "errorprone"("com.uber.nullaway:nullaway:0.13.4")
+        "errorprone"("com.google.errorprone:error_prone_core:2.50.0")
+        "errorprone"("com.uber.nullaway:nullaway:0.13.7")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.0")
-        "testImplementation"("org.junit.jupiter:junit-jupiter:6.0.3")
+        "testImplementation"("org.junit.jupiter:junit-jupiter:6.1.1")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
@@ -132,7 +131,7 @@ project(":nohorny-client") {
             repository = "xpdustry/nohorny",
             java = true,
             hidden = true,
-            minGameVersion = "157",
+            minGameVersion = "159",
             dependencies = mutableListOf(ModDependency("slf4md", soft = true)),
         )
 
