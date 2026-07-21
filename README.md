@@ -160,6 +160,48 @@ SERVER_PORT=9090 java -jar nohorny-server.jar start
 java -jar nohorny-server.jar start -- --server.port=9090
 ```
 
+When the server runs behind a trusted reverse proxy, enable forwarded-header processing so request attribution and
+Mindustry server detection use the original client address:
+
+```yaml
+server:
+  forward-headers-strategy: framework
+```
+
+The proxy must overwrite, rather than append to untrusted, `Forwarded` or `X-Forwarded-*` headers. Leave this option
+set to `none` when the server is directly exposed.
+
+### Users and security
+
+The classification API is public by default. Set `nohorny.security.api-default-policy` to `DENY_ALL` to require HTTP
+Basic authentication with a user account. The `/status` endpoint always remains public.
+
+Users are managed through the server CLI. The admin flag controls access to the admin panel:
+
+```text
+java -jar nohorny-server.jar user-add --username=alice --password=secret --admin=false
+java -jar nohorny-server.jar user-list
+java -jar nohorny-server.jar user-password --username=alice --password=new-secret
+java -jar nohorny-server.jar user-admin --username=alice --admin=true
+java -jar nohorny-server.jar user-remove --username=alice
+```
+
+For a running container, invoke the same commands with `docker exec`:
+
+```text
+docker exec nohorny java --enable-native-access=ALL-UNNAMED -jar nohorny-server.jar \
+    user-add --username=admin --password=secret --admin=true
+```
+
+The SQLite database is stored at `nohorny.database.path`, which defaults to `nohorny.db`. The Docker image stores it
+at `/data/nohorny.db`; mount the `/data` volume to preserve users and recent requests.
+
+### Admin panel
+
+Users with the admin flag can open `/admin`. Spring Security provides the login page. The panel shows recent
+classification requests, including their result, caller, duration, and submitted image. The number retained is
+configured with `nohorny.requests.capacity` and defaults to `100`.
+
 ## Building
 
 - `./gradlew shadowJar` to compile all modules into jars at `nohorny-client/build/libs/nohorny-client.jar` and `nohorny-server/build/libs/nohorny-server.jar`.

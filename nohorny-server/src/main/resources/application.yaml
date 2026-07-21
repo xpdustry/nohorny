@@ -2,17 +2,33 @@ spring:
   application.name: nohorny
   # Disable the default HTML error page.
   web.error.whitelabel.enabled: false
+  jpa:
+    # The schema is managed by database/schema.sql.
+    hibernate.ddl-auto: none
+    open-in-view: false
 
 server:
   # Listen on localhost. Use 0.0.0.0 to expose the API on your network.
   address: 127.0.0.1
   # HTTP port used for the app
   port: 8080
-  # Uncomment to serve the API under a prefix such as /api.
-  # That would change the endpoints to /api/status and /api/classify.
-  # servlet.context-path: /api
+  # Set to framework when running behind a trusted reverse proxy that overwrites Forwarded/X-Forwarded-* headers.
+  # This makes request attribution and Mindustry server detection use the original client address.
+  forward-headers-strategy: none
 
 nohorny:
+  database:
+    # SQLite database shared by the server and CLI commands.
+    path: nohorny.db
+  security:
+    # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user account.
+    api-default-policy: ALLOW_ALL
+  requests:
+    # Number of recent classification requests retained in the database.
+    capacity: 100
+  mindustry:
+    # How often the public Mindustry server list is refreshed to label request origins.
+    refresh-interval: 10m
   classifier:
     # Use vit for using a local model, or sight-engine to classify through SightEngine.
     type: vit
