@@ -65,14 +65,30 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
+    NoHornySetting<Boolean> DISCORD_WEBHOOK_PROXY_ENABLED =
+            new AdminConfigNoHornySetting<>("proxy-countries", """
+            Whether discord requests should be proxied.
+            Useful if discord is banned in the server's country.
+            eg: "true", "false".
+            """, false, Boolean.class, SettingCodec.OfBoolean);
+
+    NoHornySetting<String> PROXY_COUNTRIES =
+            new AdminConfigNoHornySetting<>("proxy-countries", """
+            Comma separated list of ISO 3166-1 alpha-2 country codes used to select a proxy.
+            Setting this to null defaults to the "US".
+            eg: "FR,DE,US".
+            """, "US", String.class, SettingCodec.OfCountryCodeList);
+
     List<NoHornySetting<?>> ALL = List.of(
             API_ENDPOINT,
             API_AUTH_TYPE,
             API_AUTH_VALUE,
             DISCORD_WEBHOOK,
             DISCORD_WEBHOOK_NAME,
+            DISCORD_WEBHOOK_PROXY_ENABLED,
             AUTOMOD_POLICY,
-            DEBUG_TAP);
+            DEBUG_TAP,
+            PROXY_COUNTRIES);
 
     String name();
 

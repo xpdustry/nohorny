@@ -47,6 +47,8 @@ You can configure nohorny using the Mindustry built-in `config` command, with `c
 | `nohorny-discord-webhook`      | Discord webhook used to report unsafe buildings.                                         | empty                              |
 | `nohorny-discord-webhook-name` | Username used for messages sent through the Discord webhook.                             | `NoHorny`                          |
 | `nohorny-debug-tap`            | Enables admin double-tap debugging for tracked displays and canvases.                    | `false`                            |
+| `nohorny-proxy-address`        | HTTP proxy used for API and Discord requests, in `host:port` format.                     | empty                              |
+| `nohorny-proxy-countries`      | Comma-separated ISO country codes to select a proxy from the Proxifly free proxy list.   | empty                              |
 
 #### Auto-Mod Policies
 

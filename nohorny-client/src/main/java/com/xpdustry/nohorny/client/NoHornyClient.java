@@ -14,7 +14,6 @@ import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -34,13 +33,13 @@ final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
-    private final HttpClient http;
-    private final Semaphore classificationPermit = new Semaphore(1);
+    private final Semaphore classificationPermits = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
+    private final HttpClient http =
+            HttpClient.newBuilder().executor(this.executor).build();
 
-    NoHornyClient(final HttpClient http) {
-        this.http = http;
+    NoHornyClient() {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.API_ENDPOINT)
                     || event.key().equals(NoHornySetting.API_AUTH_TYPE)
@@ -53,6 +52,12 @@ final class NoHornyClient implements LifecycleListener {
     @Override
     public void onInit() {
         this.checkEndpointStatus();
+    }
+
+    @Override
+    public void onExit() {
+        this.executor.close();
+        this.http.close();
     }
 
     private void checkEndpointStatus() {
@@ -82,7 +87,7 @@ final class NoHornyClient implements LifecycleListener {
     }
 
     public <T extends MindustryImage> boolean tryAccept(final VirtualBuilding.Group<T> group) {
-        if (!this.classificationPermit.tryAcquire()) {
+        if (!this.classificationPermits.tryAcquire()) {
             return false;
         }
         try {
@@ -97,12 +102,12 @@ final class NoHornyClient implements LifecycleListener {
                 } catch (final Exception e) {
                     log.error("Failed to rate group at ({}, {})", group.x(), group.y(), e);
                 } finally {
-                    this.classificationPermit.release();
+                    this.classificationPermits.release();
                 }
             });
             return true;
         } catch (final RejectedExecutionException _) {
-            this.classificationPermit.release();
+            this.classificationPermits.release();
             return false;
         }
     }
@@ -158,10 +163,8 @@ final class NoHornyClient implements LifecycleListener {
         if (endpoint == null) {
             throw new IllegalStateException("NoHorny API endpoint is disabled");
         }
-        final var base = endpoint.toString();
-        final var normalized = base.endsWith("/") ? base : base + "/";
-        final var uri = URI.create(normalized).resolve(path);
-        final var request = HttpRequest.newBuilder(uri).timeout(timeout);
+        final var request = HttpRequest.newBuilder(HttpUtils.appendPathSegments(endpoint, path))
+                .timeout(timeout);
         final var authorization = this.authorization();
         if (authorization != null) {
             request.header("Authorization", authorization);
