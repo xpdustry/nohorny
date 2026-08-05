@@ -220,10 +220,17 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
         return Optional.empty();
     }
 
+    // Some proxies return fake responses, mostly as fake HTML pages, run some basic checks to filter them out
     private static @Nullable URI parseGatewayUri(final String response) {
         try {
             final var url = Jval.read(response).getString("url", null);
-            return url == null ? null : URI.create(url);
+            if (url == null) {
+                return null;
+            }
+            final var gateway = URI.create(url);
+            return gateway.isAbsolute() && gateway.getHost() != null && "wss".equalsIgnoreCase(gateway.getScheme())
+                    ? gateway
+                    : null;
         } catch (final Exception _) {
             return null;
         }

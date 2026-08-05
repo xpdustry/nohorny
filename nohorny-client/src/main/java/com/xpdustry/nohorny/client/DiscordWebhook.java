@@ -293,6 +293,9 @@ final class DiscordWebhook implements LifecycleListener {
     }
 
     void deleteExpiredReports() {
+        if (NoHornySetting.DISCORD_WEBHOOK_MESSAGE_RETENTION.get() == null) {
+            return;
+        }
         final var src = this.directory.resolve("reports.jsonl");
         final var tmp = this.directory.resolve("reports.jsonl.tmp");
         synchronized (this.lock) {
@@ -372,7 +375,7 @@ final class DiscordWebhook implements LifecycleListener {
             }
             if (response.statusCode() == 429) {
                 log.debug("Report {} deletion failed due to rate limit, retrying later.", report);
-                return true;
+                return false;
             }
             if (response.statusCode() >= 400 && response.statusCode() <= 499) {
                 log.debug(
