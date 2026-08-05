@@ -45,5 +45,5 @@ Thumbs.db
 .xpdustry-ci/
 *.pt
 *.onnx
-*.db
-*.sqlite
+*.db*
+*.sqlite*

@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NoHorny Admin</title>
+    <link rel="stylesheet" href="vendor/pico.min.css">
+    <script defer src="vendor/alpine.min.js"></script>
+    <style>
+        :root {
+            --r-safe: #4ade80;
+            --r-warn: #fbbf24;
+            --r-nsfw: #f87171;
+            --r-failed: #9ca3af;
+            --pico-spacing: 1rem;
+        }
+
+        body > main {
+            max-width: 1100px;
+            padding-block: 2rem;
+        }
+
+        .page-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-head hgroup { margin-bottom: 0; }
+
+        .page-head button { width: auto; margin-bottom: 0; }
+
+        /* Stat tiles keyed to the moderation verdict. */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+            gap: .75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tile {
+            border: 1px solid var(--pico-muted-border-color);
+            border-left: 3px solid var(--tile-accent, var(--pico-muted-border-color));
+            border-radius: var(--pico-border-radius);
+            padding: .75rem 1rem;
+            background: var(--pico-card-background-color);
+        }
+
+        .tile b { font-size: 1.6rem; line-height: 1.1; display: block; }
+        .tile small { color: var(--pico-muted-color); text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; }
+        .tile[data-rating="safe"]   { --tile-accent: var(--r-safe); }
+        .tile[data-rating="warn"]   { --tile-accent: var(--r-warn); }
+        .tile[data-rating="nsfw"]   { --tile-accent: var(--r-nsfw); }
+        .tile[data-rating="failed"] { --tile-accent: var(--r-failed); }
+
+        /* Rating filter pills. */
+        .filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+
+        .filters button {
+            width: auto;
+            margin-bottom: 0;
+            padding: .3rem .8rem;
+            font-size: .85rem;
+            border-radius: 999px;
+            background: transparent;
+            border-color: var(--pico-muted-border-color);
+            color: var(--pico-color);
+        }
+
+        .filters button[aria-pressed="true"] {
+            background: var(--pico-primary-background);
+            border-color: var(--pico-primary-background);
+            color: var(--pico-primary-inverse);
+        }
+
+        .filters button .count { opacity: .6; margin-left: .35rem; }
+
+        /* Origin label resolved from the request's remote address. */
+        .client {
+            display: inline-block;
+            padding: .1rem .45rem;
+            border-radius: 999px;
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            border: 1px solid var(--client-color, var(--pico-muted-border-color));
+            color: var(--client-color, var(--pico-muted-color));
+        }
+
+        .client[data-client="mindustry-server"] { --client-color: #7aa2f7; }
+        .client[data-client="localhost"]        { --client-color: var(--pico-muted-color); }
+        .client[data-client="unknown"]          { --client-color: var(--r-warn); }
+
+        table { margin-bottom: 0; }
+        th, td { vertical-align: top; }
+        thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--pico-muted-color); }
+
+        .thumb {
+            position: relative;
+            width: 128px;
+            height: 128px;
+            background: #000;
+            border-radius: var(--pico-border-radius);
+            border: 2px solid var(--rating-color, var(--pico-muted-border-color));
+            overflow: hidden;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            transition: filter .15s ease;
+        }
+
+        /* Sensitive results stay blurred until an admin clicks to reveal them. */
+        .thumb.is-hidden { cursor: pointer; }
+        .thumb.is-hidden img { filter: blur(14px); transform: scale(1.15); }
+
+        .reveal-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .4rem;
+            text-align: center;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+            background: color-mix(in srgb, var(--rating-color) 22%, rgba(0, 0, 0, .35));
+            pointer-events: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: .15rem .55rem;
+            border-radius: 999px;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            color: var(--rating-color);
+            background: color-mix(in srgb, var(--rating-color) 18%, transparent);
+        }
+
+        [data-rating="safe"]   { --rating-color: var(--r-safe); }
+        [data-rating="warn"]   { --rating-color: var(--r-warn); }
+        [data-rating="nsfw"]   { --rating-color: var(--r-nsfw); }
+        [data-rating="failed"] { --rating-color: var(--r-failed); }
+
+        .meter {
+            height: 6px;
+            width: 100%;
+            max-width: 8rem;
+            margin-top: .4rem;
+            border-radius: 999px;
+            background: var(--pico-muted-border-color);
+            overflow: hidden;
+        }
+
+        .meter > span { display: block; height: 100%; background: var(--rating-color); }
+
+        .confidence { font-variant-numeric: tabular-nums; font-size: .9rem; }
+        .classifier { font-family: var(--pico-font-family-monospace); font-size: .75rem; }
+        .mono { font-family: var(--pico-font-family-monospace); }
+        .stack > * + * { margin-top: .25rem; }
+
+        .state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--pico-muted-color);
+        }
+
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .spin { animation: none; }
+            .thumb img { transition: none; }
+        }
+    </style>
+</head>
+<body>
+<main class="container" x-data="requests" x-init="load()">
+    <div class="page-head">
+        <hgroup>
+            <h1>NoHorny Admin</h1>
+            <p>Latest image moderation decisions</p>
+        </hgroup>
+        <button type="button" @click="load()" :aria-busy="loading" :disabled="loading">
+            <span x-show="!loading">Refresh</span>
+            <span x-show="loading">Loading</span>
+        </button>
+    </div>
+
+    <article x-show="error" style="border-left: 3px solid var(--r-nsfw);">
+        <strong style="color: var(--r-nsfw);">Couldn't load requests.</strong>
+        <span x-text="error"></span>
+    </article>
+
+    <section class="stats" x-show="items.length">
+        <div class="tile"><small>Total</small><b x-text="stats.total"></b></div>
+        <div class="tile" data-rating="safe"><small>Safe</small><b x-text="stats.safe"></b></div>
+        <div class="tile" data-rating="warn"><small>Warn</small><b x-text="stats.warn"></b></div>
+        <div class="tile" data-rating="nsfw"><small>NSFW</small><b x-text="stats.nsfw"></b></div>
+        <div class="tile" data-rating="failed"><small>Failed</small><b x-text="stats.failed"></b></div>
+    </section>
+
+    <div class="filters" x-show="items.length">
+        <template x-for="f in ['all', 'safe', 'warn', 'nsfw', 'failed']" :key="f">
+            <button type="button" @click="filter = f" :aria-pressed="filter === f"
+                    x-text="filterLabel(f)"></button>
+        </template>
+    </div>
+
+    <figure x-show="visible.length">
+        <table role="grid">
+            <thead>
+            <tr>
+                <th>Image</th>
+                <th>Result</th>
+                <th>Request</th>
+                <th>Timing</th>
+            </tr>
+            </thead>
+            <tbody>
+            <template x-for="request in visible" :key="request.id">
+                <tr :data-rating="rating(request)">
+                    <td>
+                        <div class="thumb" :class="{ 'is-hidden': isHidden(request) }"
+                             @click="toggleReveal(request)">
+                            <img loading="lazy"
+                                 :src="`api/requests/${request.id}/image`" :alt="`Request ${request.id}`">
+                            <span class="reveal-hint" x-show="isHidden(request)"
+                                  x-text="`${verdict(request)} · click to reveal`"></span>
+                        </div>
+                    </td>
+                    <td class="stack">
+                        <span class="badge" x-text="verdict(request)"></span>
+                        <template x-if="request.confidence !== null">
+                            <div>
+                                <span class="confidence" x-text="`${Math.round(request.confidence * 100)}% confidence`"></span>
+                                <div class="meter">
+                                    <span :style="`width: ${Math.round(request.confidence * 100)}%`"></span>
+                                </div>
+                            </div>
+                        </template>
+                        <small class="classifier" x-text="request.classifier"></small>
+                        <div x-show="request.error" style="color: var(--r-nsfw);" x-text="request.error"></div>
+                    </td>
+                    <td class="stack">
+                        <div class="mono" x-text="`#${request.id}`"></div>
+                        <div x-text="request.username || 'anonymous'"></div>
+                        <div><span class="client" :data-client="request.clientType" x-text="clientLabel(request)"></span></div>
+                        <small class="mono" style="color: var(--pico-muted-color);" x-text="request.remoteAddress"></small>
+                    </td>
+                    <td class="stack">
+                        <div x-text="`${request.durationMillis} ms`"></div>
+                        <small style="color: var(--pico-muted-color);" x-text="formatTime(request.createdAt)"></small>
+                    </td>
+                </tr>
+            </template>
+            </tbody>
+        </table>
+    </figure>
+
+    <p class="state" x-show="loading && !items.length"><span class="spin">↻</span> Loading requests…</p>
+    <p class="state" x-show="!loading && !items.length && !error">No classification requests yet. Once images are classified, they'll show up here.</p>
+    <p class="state" x-show="items.length && !visible.length">No <span x-text="filter"></span> requests in the latest batch.</p>
+</main>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('requests', () => ({
+            items: [],
+            loading: false,
+            error: null,
+            filter: 'all',
+            revealed: {},
+
+            rating(request) {
+                if (!request.successful) return 'failed';
+                return request.rating ? request.rating.toLowerCase() : 'safe';
+            },
+
+            verdict(request) {
+                return request.successful ? (request.rating || 'SAFE') : 'FAILED';
+            },
+
+            shouldBlur(request) {
+                const rating = this.rating(request);
+                return rating === 'warn' || rating === 'nsfw';
+            },
+
+            isHidden(request) {
+                return this.shouldBlur(request) && !this.revealed[request.id];
+            },
+
+            toggleReveal(request) {
+                if (!this.shouldBlur(request)) return;
+                this.revealed[request.id] = !this.revealed[request.id];
+            },
+
+            formatTime(value) {
+                return new Date(value).toLocaleString();
+            },
+
+            filterLabel(filter) {
+                return filter === 'nsfw' ? 'NSFW' : filter[0].toUpperCase() + filter.slice(1);
+            },
+
+            clientLabel(request) {
+                if (request.clientType === 'mindustry-server') {
+                    // clientName arrives as "[Name1,Name2]"; show it as a readable list.
+                    return request.clientName.replace(/^\[|\]$/g, '').replace(/,/g, ', ');
+                }
+                return request.clientType;
+            },
+
+            get stats() {
+                const counts = { total: this.items.length, safe: 0, warn: 0, nsfw: 0, failed: 0 };
+                for (const request of this.items) counts[this.rating(request)]++;
+                return counts;
+            },
+
+            get visible() {
+                if (this.filter === 'all') return this.items;
+                return this.items.filter(request => this.rating(request) === this.filter);
+            },
+
+            async load() {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const response = await fetch('api/requests');
+                    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                    this.items = await response.json();
+                } catch (error) {
+                    this.error = error.message;
+                } finally {
+                    this.loading = false;
+                }
+            }
+        }));
+    });
+</script>
+</body>
+</html>
