@@ -44,7 +44,7 @@ sealed interface MiniLogger {
     void log(final Level level, final String message, final @Nullable Object... args);
 
     final class SLF4MDMiniLogger implements MiniLogger {
-        private static volatile boolean isFailureReported = false;
+        private static boolean isFailureReported = false;
         private final Object logger;
 
         private SLF4MDMiniLogger(final Class<?> clazz) throws ReflectiveOperationException {
