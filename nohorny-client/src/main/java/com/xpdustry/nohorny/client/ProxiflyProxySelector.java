@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.HttpsURLConnection;
 import org.jspecify.annotations.Nullable;
 
-final class ProxiflyProxySelector extends ProxySelector {
+final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable {
 
     private static final MiniLogger log = MiniLogger.forClass(ProxiflyProxySelector.class);
 
@@ -270,5 +270,10 @@ final class ProxiflyProxySelector extends ProxySelector {
             return null;
         }
         return new InetSocketAddress(InetAddress.ofLiteral(ip), port);
+    }
+
+    @Override
+    public void close() {
+        this.http.close();
     }
 }

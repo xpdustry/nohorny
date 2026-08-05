@@ -80,6 +80,7 @@ final class DiscordWebhook implements LifecycleListener {
     public void onExit() {
         this.executor.close();
         this.http.close();
+        this.proxy.close();
     }
 
     private void onWebhookConfigure(final URI webhook, final String message) {
