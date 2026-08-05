@@ -49,7 +49,11 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
         }
     }
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration PROXY_LIST_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration PROXY_CONNECT_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration PROXY_READ_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration PROXY_BATCH_TIMEOUT =
+            PROXY_CONNECT_TIMEOUT.plus(PROXY_READ_TIMEOUT).plusSeconds(1L);
     private static final int TEST_BATCH_SIZE = 128;
 
     private final Executor executor;
@@ -61,7 +65,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
     ProxiflyProxySelector(final Executor executor) {
         this.executor = executor;
         this.http = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
+                .connectTimeout(PROXY_LIST_TIMEOUT)
                 .executor(this.executor)
                 .build();
     }
@@ -145,7 +149,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
             for (final var address : batch) {
                 tasks.add(completion.submit(() -> this.testProxy(address)));
             }
-            final var deadline = System.nanoTime() + TIMEOUT.toNanos();
+            final var deadline = System.nanoTime() + PROXY_BATCH_TIMEOUT.toNanos();
             for (int i = 0; i < tasks.size(); i++) {
                 final var remaining = deadline - System.nanoTime();
                 if (remaining <= 0) {
@@ -189,20 +193,21 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
             return Optional.empty();
         }
         try {
-            connection.setConnectTimeout((int) TIMEOUT.toMillis());
-            connection.setReadTimeout((int) TIMEOUT.toMillis());
+            connection.setConnectTimeout((int) PROXY_CONNECT_TIMEOUT.toMillis());
+            connection.setReadTimeout((int) PROXY_READ_TIMEOUT.toMillis());
             connection.setRequestMethod("GET");
             connection.setUseCaches(false);
             connection.setRequestProperty("Connection", "close");
             if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK) {
-                return Optional.of(proxy);
+                try (final var stream = connection.getInputStream()) {
+                    final var body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                    if (parseGatewayUri(body) != null) {
+                        return Optional.of(proxy);
+                    }
+                }
             }
         } catch (final IOException _) {
         } finally {
-            try {
-                connection.getInputStream().close();
-            } catch (final IOException _) {
-            }
             try {
                 final var error = connection.getErrorStream();
                 if (error != null) {
@@ -215,6 +220,15 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
         return Optional.empty();
     }
 
+    private static @Nullable URI parseGatewayUri(final String response) {
+        try {
+            final var url = Jval.read(response).getString("url", null);
+            return url == null ? null : URI.create(url);
+        } catch (final Exception _) {
+            return null;
+        }
+    }
+
     // TODO Parallelize too?
     @SuppressWarnings("EmptyCatch")
     private List<InetSocketAddress> fetchProxies(final List<String> countries) {
@@ -222,7 +236,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
         for (final var country : countries) {
             final var request = HttpRequest.newBuilder(
                             HttpUtils.appendPathSegments(PROXY_LIST_ENDPOINT, country, "data.json"))
-                    .timeout(TIMEOUT)
+                    .timeout(PROXY_LIST_TIMEOUT)
                     .GET()
                     .build();
             final HttpResponse<String> response;
