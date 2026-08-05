@@ -20,12 +20,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HexFormat;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -296,75 +293,62 @@ final class DiscordWebhook implements LifecycleListener {
     }
 
     void deleteExpiredReports() {
-        final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
-        if (webhook == null) {
-            return;
-        }
-
-        final var hash = this.hash(webhook);
-        final var src = this.directory.resolve("reports.txt");
-        final var tmp = this.directory.resolve("reports.txt.tmp");
-        if (Files.notExists(src)) {
-            return;
-        }
-
-        try (final var reader = Files.newBufferedReader(src);
-                final var writer =
-                        Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                final var parts = line.split("/", -1);
-                if (parts.length != 3) {
-                    continue;
-                }
-                final var messageId = Strings.parseLong(parts[0], -1);
-                if (messageId == -1) {
-                    continue;
-                }
-                final var deleteFor = Strings.parseLong(parts[1], -1);
-                if (deleteFor == -1) {
-                    continue;
-                }
-                if (!parts[2].equalsIgnoreCase(hash)) {
-                    continue;
-                }
-                if (Instant.ofEpochMilli(deleteFor).isBefore(Instant.now())) {
-                    this.executor.execute(() -> this.deleteReport(webhook, messageId));
-                } else {
-                    writer.write(line);
-                    writer.newLine();
-                }
+        final var src = this.directory.resolve("reports.jsonl");
+        final var tmp = this.directory.resolve("reports.jsonl.tmp");
+        synchronized (this.lock) {
+            if (Files.notExists(src)) {
+                return;
             }
-        } catch (final IOException e) {
-            log.error("Failed to read the sent NoHorny discord reports from the settings", e);
+
+            try (final var reader = Files.newBufferedReader(src);
+                    final var writer = Files.newBufferedWriter(
+                            tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    final var report = this.readReport(line);
+                    if (report == null) {
+                        continue;
+                    }
+                    if (report.deleteAt().isAfter(Instant.now())
+                            || !this.deleteReport(report.webhook(), report.messageId())) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                }
+            } catch (final IOException e1) {
+                log.error("Failed to read the sent NoHorny discord reports from the settings", e1);
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (final IOException e2) {
+                    log.error("Failed to delete incomplete Discord report state", e2);
+                }
+                return;
+            }
+
             try {
-                Files.deleteIfExists(tmp);
-            } catch (final IOException _) {
+                Files.move(tmp, src, StandardCopyOption.REPLACE_EXISTING);
+            } catch (final IOException e) {
+                log.error("Failed to save processed reports", e);
             }
-        }
-
-        try {
-            Files.move(tmp, src, StandardCopyOption.REPLACE_EXISTING);
-        } catch (final IOException e) {
-            log.error("Failed to save processed reports", e);
         }
     }
 
     private void recordReport(final URI webhook, final long report) {
         final var retention = NoHornySetting.DISCORD_WEBHOOK_MESSAGE_RETENTION.get();
-        if (retention == null || retention < 0 || retention > 7) {
+        if (retention == null) {
             return;
         }
         synchronized (this.lock) {
             try (final var writer = Files.newBufferedWriter(
-                    this.directory.resolve("reports.txt"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-                writer.write(Long.toString(report));
-                writer.write('/');
-                writer.write(Long.toString(
-                        Instant.now().plus(retention, ChronoUnit.DAYS).toEpochMilli()));
-                writer.write('/');
-                writer.write(this.hash(webhook));
+                    this.directory.resolve("reports.jsonl"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+                writer.write(Jval.newObject()
+                        .put("message_id", Long.toString(report))
+                        .put(
+                                "delete_at",
+                                Instant.now().plus(retention, ChronoUnit.DAYS).toEpochMilli())
+                        .put("webhook", webhook.toString())
+                        .toString());
                 writer.newLine();
             } catch (final IOException e) {
                 log.error("Failed to schedule webhook message {} for deletion", report, e);
@@ -372,7 +356,7 @@ final class DiscordWebhook implements LifecycleListener {
         }
     }
 
-    private void deleteReport(final URI webhook, final long report) {
+    private boolean deleteReport(final URI webhook, final long report) {
         try {
             this.rateLimiter.waitIfRateLimited();
             final var response = this.http.send(
@@ -384,14 +368,14 @@ final class DiscordWebhook implements LifecycleListener {
                     HttpResponse.BodyHandlers.discarding());
             if (response.statusCode() >= 200 && response.statusCode() <= 299) {
                 log.info("Deleted the expired NoHorny discord report {}", report);
-                return;
+                return true;
             }
             if (response.statusCode() >= 400 && response.statusCode() <= 499) {
                 log.info(
                         "Discarding the NoHorny discord report {} that can no longer be deleted (http-code={})",
                         report,
                         response.statusCode());
-                return;
+                return true;
             }
             log.error(
                     "Discord webhook returned http code {} while deleting the report {}",
@@ -402,14 +386,22 @@ final class DiscordWebhook implements LifecycleListener {
         } catch (final IOException e) {
             log.error("Failed to delete the NoHorny discord report {}", report, e);
         }
+        return false;
     }
 
-    private String hash(final URI webhook) {
+    private @Nullable Report readReport(final String line) {
         try {
-            final var digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(webhook.toString().getBytes(StandardCharsets.UTF_8)));
-        } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException("Unable to obtain the SHA-256 MessageDigest", e);
+            final var json = Jval.read(line);
+            final var messageId = Strings.parseLong(json.getString("message_id", "-1"), -1);
+            final var deleteAt = json.getLong("delete_at", -1L);
+            if (messageId == -1L || deleteAt == -1L) {
+                return null;
+            }
+            return new Report(messageId, Instant.ofEpochMilli(deleteAt), URI.create(json.getString("webhook")));
+        } catch (final RuntimeException _) {
+            return null;
         }
     }
+
+    private record Report(long messageId, Instant deleteAt, URI webhook) {}
 }

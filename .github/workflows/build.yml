@@ -57,8 +57,8 @@ jobs:
       - name: "Build Gradle"
         run: ./gradlew build
         env:
-          NOHORNY_TEST_PROXIFLY: "true"
-          NOHORNY_TEST_DISCORD_WEBHOOK: "${{ secrets.NOHORNY_TEST_DISCORD_WEBHOOK }}"
+          NOHORNY_TEST_PROXIFLY: "${{ github.event_name != 'release' && 'true' || '' }}"
+          NOHORNY_TEST_DISCORD_WEBHOOK: "${{ github.event_name != 'release' && secrets.NOHORNY_TEST_DISCORD_WEBHOOK || '' }}"
 
       - name: "Upload Client Jar"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

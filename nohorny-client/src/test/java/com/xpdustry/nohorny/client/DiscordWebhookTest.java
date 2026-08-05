@@ -40,6 +40,7 @@ final class DiscordWebhookTest {
 
     private URI webhookUri;
     private DiscordWebhook webhook;
+    private boolean webhookClosed;
 
     @BeforeEach
     void before() {
@@ -55,7 +56,7 @@ final class DiscordWebhookTest {
 
     @AfterEach
     void after() {
-        this.webhook.onExit();
+        this.closeWebhook();
         Events.clear();
         Core.settings = null;
         Core.app = null;
@@ -74,6 +75,7 @@ final class DiscordWebhookTest {
             assertTrue(response.body().contains("discord-webhook-test"));
             assertTrue(response.body().contains("(10, 20)"));
         } finally {
+            NoHornySetting.DISCORD_WEBHOOK.set(null);
             this.webhook.deleteExpiredReports();
         }
 
@@ -83,8 +85,9 @@ final class DiscordWebhookTest {
     @Test
     void ignore_safe_classification() {
         Events.fire(classification(Rating.SAFE, "safe-discord-webhook-test"));
+        this.closeWebhook();
 
-        assertFalse(Files.exists(this.directory.resolve("reports.txt")));
+        assertFalse(Files.exists(this.directory.resolve("reports.jsonl")));
     }
 
     private ClassificationEvent classification(final Rating rating, final String identifier) {
@@ -108,12 +111,12 @@ final class DiscordWebhookTest {
     }
 
     private long awaitRecordedReport() throws Exception {
-        final var reports = this.directory.resolve("reports.txt");
+        final var reports = this.directory.resolve("reports.jsonl");
         for (int attempt = 0; attempt < 150; attempt++) {
             if (Files.exists(reports)) {
                 final var content = Files.readString(reports).trim();
                 if (!content.isEmpty()) {
-                    return Long.parseLong(content.split("/", -1)[0]);
+                    return Long.parseLong(Jval.read(content).getString("message_id"));
                 }
             }
             TimeUnit.MILLISECONDS.sleep(100L);
@@ -144,5 +147,12 @@ final class DiscordWebhookTest {
 
     private URI reportUri(final long report) {
         return URI.create(this.webhookUri + "/messages/" + report);
+    }
+
+    private void closeWebhook() {
+        if (!this.webhookClosed) {
+            this.webhook.onExit();
+            this.webhookClosed = true;
+        }
     }
 }

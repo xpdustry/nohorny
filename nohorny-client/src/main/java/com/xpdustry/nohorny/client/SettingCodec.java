@@ -72,7 +72,7 @@ interface SettingCodec<T> {
         }
     };
 
-    SettingCodec<Integer> OfInteger = new SettingCodec<>() {
+    record OfInteger(int minimum, int maximum) implements SettingCodec<Integer> {
         @Override
         public String encode(final Integer value) {
             return String.valueOf(value);
@@ -80,14 +80,14 @@ interface SettingCodec<T> {
 
         @Override
         public Integer decode(final String value) {
-            return Integer.valueOf(value);
+            final var integer = Integer.parseInt(value);
+            if (integer < this.minimum || integer > this.maximum) {
+                throw new IllegalArgumentException(
+                        "The integer must be between " + this.minimum + " and " + this.maximum + " (inclusive)");
+            }
+            return integer;
         }
-
-        @Override
-        public String toString() {
-            return "SettingCodec.OfInteger";
-        }
-    };
+    }
 
     SettingCodec<Boolean> OfBoolean = new SettingCodec<>() {
         @Override
