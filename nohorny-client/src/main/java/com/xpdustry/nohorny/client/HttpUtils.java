@@ -44,7 +44,7 @@ final class HttpUtils {
                 + (base.getPath().endsWith("/") ? "" : "/")
                 + Stream.of(segments)
                         .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8))
-                        .collect(Collectors.joining());
+                        .collect(Collectors.joining("/"));
         try {
             return new URI(
                     base.getScheme(),

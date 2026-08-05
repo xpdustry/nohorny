@@ -34,6 +34,7 @@ final class ProxiflyProxySelector extends ProxySelector {
     private static final MiniLogger log = MiniLogger.forClass(ProxiflyProxySelector.class);
     private static final URI PROXY_LIST_ENDPOINT =
             URI.create("https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/countries/");
+    private static final URI DISCORD_STATUS_ENDPOINT = URI.create("https://discord.com/api/v10/gateway");
     private static final Duration TIMEOUT = Duration.ofSeconds(2);
     private static final int TEST_BATCH_SIZE = 16;
 
@@ -52,6 +53,10 @@ final class ProxiflyProxySelector extends ProxySelector {
         Objects.requireNonNull(uri.getHost(), "uri.host");
 
         if (!uri.getScheme().equalsIgnoreCase("http") && !uri.getScheme().equalsIgnoreCase("https")) {
+            return ProxySelector.getDefault().select(uri);
+        }
+
+        if (!Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
             return ProxySelector.getDefault().select(uri);
         }
 
@@ -81,22 +86,16 @@ final class ProxiflyProxySelector extends ProxySelector {
             if (!force && this.refreshAt.isAfter(Instant.now())) {
                 return this.proxy;
             }
-            final var endpoint = NoHornySetting.API_ENDPOINT.get();
-            if (endpoint == null) {
-                this.refreshAt = Instant.MIN;
-                return null;
-            }
 
             final var countries = Objects.requireNonNullElse(NoHornySetting.PROXY_COUNTRIES.get(), "US");
             final var proxies = this.fetchProxies(Arrays.stream(countries.split(",", -1))
                     .map(c -> c.toUpperCase(Locale.ROOT))
                     .toList());
-            final var status = HttpUtils.appendPathSegments(endpoint, "status");
 
             Proxy result = null;
             for (int start = 0; start < proxies.size(); start += TEST_BATCH_SIZE) {
                 final var batch = proxies.subList(start, Math.min(start + TEST_BATCH_SIZE, proxies.size()));
-                final var proxy = this.testProxyBatch(batch, status);
+                final var proxy = this.testProxyBatch(batch);
                 if (proxy != null) {
                     log.debug("Selected the Proxifly proxy {}", proxy.address());
                     result = proxy;
@@ -107,6 +106,7 @@ final class ProxiflyProxySelector extends ProxySelector {
                 this.proxy = result;
             } else {
                 log.error("No working Proxifly proxy was found for the countries {}", countries);
+                this.proxy = null;
             }
 
             this.refreshAt = Instant.now().plus(10, ChronoUnit.MINUTES);
@@ -114,12 +114,12 @@ final class ProxiflyProxySelector extends ProxySelector {
         }
     }
 
-    private @Nullable Proxy testProxyBatch(final List<InetSocketAddress> batch, final URI status) {
+    private @Nullable Proxy testProxyBatch(final List<InetSocketAddress> batch) {
         final var completion = new ExecutorCompletionService<Optional<Proxy>>(this.executor);
         final var tasks = new ArrayList<Future<Optional<Proxy>>>(batch.size());
         try {
             for (final var address : batch) {
-                tasks.add(completion.submit(() -> this.testProxy(address, status)));
+                tasks.add(completion.submit(() -> this.testProxy(address)));
             }
             final var deadline = System.nanoTime() + TIMEOUT.toNanos();
             for (int i = 0; i < tasks.size(); i++) {
@@ -156,13 +156,16 @@ final class ProxiflyProxySelector extends ProxySelector {
     }
 
     @SuppressWarnings("EmptyCatch")
-    private Optional<Proxy> testProxy(final InetSocketAddress address, final URI status) {
+    private Optional<Proxy> testProxy(final InetSocketAddress address) {
         try (final var http = HttpClient.newBuilder()
                 .proxy(ProxySelector.of(address))
                 .connectTimeout(TIMEOUT)
                 .build()) {
             final var response = http.send(
-                    HttpRequest.newBuilder(status).timeout(TIMEOUT).GET().build(),
+                    HttpRequest.newBuilder(DISCORD_STATUS_ENDPOINT)
+                            .timeout(TIMEOUT)
+                            .GET()
+                            .build(),
                     HttpResponse.BodyHandlers.discarding());
             if (response.statusCode() == 200) {
                 return Optional.of(new Proxy(Proxy.Type.HTTP, address));
@@ -200,14 +203,18 @@ final class ProxiflyProxySelector extends ProxySelector {
                             "The Proxifly proxy list of {} returned the http code {}", country, response.statusCode());
                     continue;
                 }
-                for (final var element : Jval.read(response.body()).asArray()) {
-                    try {
-                        final var address = this.parseProxy(element);
-                        if (address != null) {
-                            addresses.add(address);
+                try {
+                    for (final var element : Jval.read(response.body()).asArray()) {
+                        try {
+                            final var address = this.parseProxy(element);
+                            if (address != null) {
+                                addresses.add(address);
+                            }
+                        } catch (final Exception _) {
                         }
-                    } catch (final Exception _) {
                     }
+                } catch (final Exception e) {
+                    log.error("Failed to parse the Proxifly proxy list of {}", country, e);
                 }
             }
             return List.copyOf(addresses);

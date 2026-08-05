@@ -28,6 +28,7 @@ public final class HuggingFaceViTModelSource implements ViTModelSource {
         return this.properties.repository() + ":" + this.properties.revision();
     }
 
+    @SuppressWarnings("EmptyCatch")
     @Override
     public Path retrieve() {
         final var name =

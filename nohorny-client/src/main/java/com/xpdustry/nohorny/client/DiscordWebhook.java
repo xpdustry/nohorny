@@ -50,9 +50,13 @@ final class DiscordWebhook implements LifecycleListener {
             if (webhook == null) {
                 return;
             }
-            if (event.key().equals(NoHornySetting.API_ENDPOINT) || event.key().equals(NoHornySetting.PROXY_COUNTRIES)) {
+            if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
+                    || event.key().equals(NoHornySetting.PROXY_COUNTRIES)) {
                 this.executor.execute(() -> {
-                    this.proxy.refresh(true);
+                    if (event.key().equals(NoHornySetting.PROXY_COUNTRIES)) {
+                        this.proxy.refresh(true);
+                    }
                     if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
                         this.onWebhookConfigure(webhook, "NSFW alerts will now be sent here.");
                     } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {

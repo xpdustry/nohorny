@@ -54,7 +54,7 @@ public final class NoHornyPlugin extends Plugin {
             try {
                 this.listeners.get(i).onInit();
             } catch (final Exception e1) {
-                for (; i > 0; --i) {
+                for (; i >= 0; --i) {
                     try {
                         this.listeners.get(i).onExit();
                     } catch (final Exception e2) {

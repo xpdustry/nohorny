@@ -65,8 +65,8 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
-    NoHornySetting<Boolean> DISCORD_WEBHOOK_PROXY_ENABLED =
-            new AdminConfigNoHornySetting<>("proxy-countries", """
+    NoHornySetting<Boolean> DISCORD_WEBHOOK_PROXY_ENABLED = new AdminConfigNoHornySetting<>(
+            "discord-webhook-proxy-enabled", """
             Whether discord requests should be proxied.
             Useful if discord is banned in the server's country.
             eg: "true", "false".
