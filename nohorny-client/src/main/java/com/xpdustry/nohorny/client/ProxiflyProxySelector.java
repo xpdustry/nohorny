@@ -127,12 +127,13 @@ final class ProxiflyProxySelector extends ProxySelector {
             }
             if (result != null) {
                 this.proxy = result;
+                this.refreshAt = Instant.now().plus(10, ChronoUnit.MINUTES);
             } else {
                 log.error("No working Proxifly proxy was found for the countries {}", countries);
                 this.proxy = null;
+                this.refreshAt = Instant.MIN;
             }
 
-            this.refreshAt = Instant.now().plus(10, ChronoUnit.MINUTES);
             return this.proxy;
         }
     }
