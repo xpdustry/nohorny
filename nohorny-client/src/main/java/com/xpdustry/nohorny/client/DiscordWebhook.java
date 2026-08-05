@@ -46,27 +46,28 @@ final class DiscordWebhook implements LifecycleListener {
 
     DiscordWebhook() {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
-            final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
-            if (webhook == null) {
+            if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED)
+                    || event.key().equals(NoHornySetting.PROXY_COUNTRIES))) {
                 return;
             }
-            if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
-                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
-                    || event.key().equals(NoHornySetting.PROXY_COUNTRIES)) {
-                this.executor.execute(() -> {
-                    if (event.key().equals(NoHornySetting.PROXY_COUNTRIES)) {
-                        this.proxy.refresh(true);
-                    }
-                    if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
-                        this.onWebhookConfigure(webhook, "NSFW alerts will now be sent here.");
-                    } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
-                        this.onWebhookConfigure(
-                                webhook,
-                                "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get()
-                                        + ".");
-                    }
-                });
-            }
+            this.executor.execute(() -> {
+                final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
+                if (webhook == null) {
+                    return;
+                }
+                if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+                    this.proxy.refresh(true);
+                }
+                if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
+                    this.onWebhookConfigure(webhook, "NSFW alerts will now be sent here.");
+                } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
+                    this.onWebhookConfigure(
+                            webhook,
+                            "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get() + ".");
+                }
+            });
         });
     }
 
