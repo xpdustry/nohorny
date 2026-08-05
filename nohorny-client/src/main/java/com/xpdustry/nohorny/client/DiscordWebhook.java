@@ -44,7 +44,10 @@ final class DiscordWebhook implements LifecycleListener {
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
 
-    DiscordWebhook() {
+    @Override
+    public void onInit() {
+        MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
+
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
@@ -69,11 +72,12 @@ final class DiscordWebhook implements LifecycleListener {
                 }
             });
         });
-    }
 
-    @Override
-    public void onInit() {
-        MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
+        this.executor.execute(() -> {
+            if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+                this.proxy.refresh(true);
+            }
+        });
     }
 
     @Override

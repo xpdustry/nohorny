@@ -39,7 +39,8 @@ final class NoHornyClient implements LifecycleListener {
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).build();
 
-    NoHornyClient() {
+    @Override
+    public void onInit() {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.API_ENDPOINT)
                     || event.key().equals(NoHornySetting.API_AUTH_TYPE)
@@ -47,10 +48,7 @@ final class NoHornyClient implements LifecycleListener {
                 this.checkEndpointStatus();
             }
         });
-    }
 
-    @Override
-    public void onInit() {
         this.checkEndpointStatus();
     }
 
