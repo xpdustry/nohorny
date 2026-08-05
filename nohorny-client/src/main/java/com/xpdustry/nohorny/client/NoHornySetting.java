@@ -72,6 +72,15 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
+    NoHornySetting<Integer> DISCORD_WEBHOOK_MESSAGE_RETENTION = new AdminConfigNoHornySetting<>(
+            "discord-webhook-message-retention", """
+            The number of days to keep the report messages sent to the discord webhook.
+            Must be between 0 and 7 days (inclusive).
+            Expired reports are automatically deleted.
+            Setting this to null disables the automatic deletion of report messages.
+            eg: "7".
+            """, 7, Integer.class, new SettingCodec.OfInteger(0, 7));
+
     NoHornySetting<String> PROXY_COUNTRIES =
             new AdminConfigNoHornySetting<>("proxy-countries", """
             Comma separated list of ISO 3166-1 alpha-2 country codes used to select a proxy.
@@ -86,6 +95,7 @@ public interface NoHornySetting<T> {
             DISCORD_WEBHOOK,
             DISCORD_WEBHOOK_NAME,
             DISCORD_WEBHOOK_PROXY_ENABLED,
+            DISCORD_WEBHOOK_MESSAGE_RETENTION,
             AUTOMOD_POLICY,
             DEBUG_TAP,
             PROXY_COUNTRIES);

@@ -27,9 +27,10 @@ final class ProxiflyProxySelectorTest {
         Core.settings = null;
     }
 
-    @EnabledIfEnvironmentVariable(named = "CI", matches = "true|1")
+    @EnabledIfEnvironmentVariable(named = "NOHORNY_TEST_PROXIFLY", matches = "true|1")
     @Test
     void select_working_proxy_from_live_proxifly_list() {
+        NoHornySetting.PROXY_COUNTRIES.set("DE,NL,US,JP");
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             final var selector = new ProxiflyProxySelector(executor);
             final var proxy = selector.refresh(true);

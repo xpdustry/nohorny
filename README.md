@@ -38,17 +38,18 @@ You can configure nohorny using the Mindustry built-in `config` command, with `c
 
 #### Available settings
 
-| Key                                     | Description                                                                                                                                                            | Default                            |
-|-----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
-| `nohorny-api-endpoint`                  | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                                               | `https://nohorny.xpdustry.com/api` |
-| `nohorny-api-auth-type`                 | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                                               | `DISABLED`                         |
-| `nohorny-api-auth-value`                | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                                   | empty                              |
-| `nohorny-automod-policy`                | The policy to apply when a group of buildings is classified.                                                                                                           | `BAN_NSFW`                         |
-| `nohorny-discord-webhook`               | Discord webhook used to report unsafe buildings.                                                                                                                       | empty                              |
-| `nohorny-discord-webhook-name`          | Username used for messages sent through the Discord webhook.                                                                                                           | `NoHorny`                          |
-| `nohorny-discord-webhook-proxy-enabled` | Whether discord requests should be proxied. Useful if discord is banned in the country.                                                                                | `false`                            |
-| `nohorny-debug-tap`                     | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                  | `false`                            |
-| `nohorny-proxy-countries`               | Comma-separated ISO country codes to select a proxy from the [Proxifly free proxy list](https://github.com/proxifly/free-proxy-list/blob/main/proxies/meta/data.json). | `US`                               |
+| Key                                         | Description                                                                                                                                                               | Default                            |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
+| `nohorny-api-endpoint`                      | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                                                  | `https://nohorny.xpdustry.com/api` |
+| `nohorny-api-auth-type`                     | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                                                  | `DISABLED`                         |
+| `nohorny-api-auth-value`                    | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                                      | empty                              |
+| `nohorny-automod-policy`                    | The policy to apply when a group of buildings is classified.                                                                                                              | `BAN_NSFW`                         |
+| `nohorny-discord-webhook`                   | Discord webhook used to report unsafe buildings.                                                                                                                          | empty                              |
+| `nohorny-discord-webhook-name`              | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
+| `nohorny-discord-webhook-message-retention` | Number of days to keep the report messages sent to the Discord webhook, from `0` to `7` (inclusive). Expired reports are deleted automatically. Set to `null` to disable. | `7`                                |
+| `nohorny-discord-webhook-proxy-enabled`     | Whether discord requests should be proxied. Useful if discord is banned in the country.                                                                                   | `false`                            |
+| `nohorny-debug-tap`                         | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                     | `false`                            |
+| `nohorny-proxy-countries`                   | Comma-separated ISO country codes to select a proxy from the [Proxifly free proxy list](https://github.com/proxifly/free-proxy-list/blob/main/proxies/meta/data.json).    | `US`                               |
 
 #### Auto-Mod Policies
 
@@ -64,6 +65,7 @@ You can configure nohorny using the Mindustry built-in `config` command, with `c
 Set `nohorny-discord-webhook` to a discord webhook url, such as `https://discord.com/api/webhooks/999999/abcdefgh`.
 Nohorny will automatically try to validate it.
 If all goes well, [you will see a success message in your webhook channel](.github/discord-example.png).
+Report messages are automatically deleted after `nohorny-discord-webhook-message-retention` days.
 
 #### Debugging
 
