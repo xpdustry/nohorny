@@ -257,8 +257,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
     }
 
     private @Nullable InetSocketAddress parseProxy(final Jval element) {
-        final var protocol = element.getString("protocol", "");
-        if (!protocol.equals("http") && !protocol.equals("https")) {
+        if (!(element.getString("protocol", "").equals("http") && element.getBool("https", false))) {
             return null;
         }
         final var ip = element.getString("ip", "");
