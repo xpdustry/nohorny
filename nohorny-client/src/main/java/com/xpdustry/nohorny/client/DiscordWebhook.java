@@ -367,11 +367,15 @@ final class DiscordWebhook implements LifecycleListener {
                             .build(),
                     HttpResponse.BodyHandlers.discarding());
             if (response.statusCode() >= 200 && response.statusCode() <= 299) {
-                log.info("Deleted the expired NoHorny discord report {}", report);
+                log.debug("Deleted the expired NoHorny discord report {}", report);
+                return true;
+            }
+            if (response.statusCode() == 429) {
+                log.debug("Report {} deletion failed due to rate limit, retrying later.", report);
                 return true;
             }
             if (response.statusCode() >= 400 && response.statusCode() <= 499) {
-                log.info(
+                log.debug(
                         "Discarding the NoHorny discord report {} that can no longer be deleted (http-code={})",
                         report,
                         response.statusCode());
