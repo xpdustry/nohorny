@@ -204,7 +204,7 @@ project(":nohorny-server") {
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
-        "implementation"("org.springframework.shell:spring-shell-starter:4.0.2")
+        "implementation"("org.springframework.shell:spring-shell-starter:4.0.3")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
 
