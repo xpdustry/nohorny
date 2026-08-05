@@ -12,10 +12,11 @@ sealed interface MiniLogger {
 
     static MiniLogger forClass(final Class<?> clazz) {
         final var fallback = MindustryMiniLogger.INSTANCE;
-        if (Vars.mods.getMod("slf4md") != null) {
+        if (!SLF4MDMiniLogger.isFailureReported && Vars.mods != null && Vars.mods.getMod("slf4md") != null) {
             try {
                 return new SLF4MDMiniLogger(clazz);
             } catch (final ReflectiveOperationException e) {
+                SLF4MDMiniLogger.isFailureReported = true;
                 fallback.error("Failed to create slf4md logger", e);
             }
         }
@@ -43,8 +44,8 @@ sealed interface MiniLogger {
     void log(final Level level, final String message, final @Nullable Object... args);
 
     final class SLF4MDMiniLogger implements MiniLogger {
+        private static boolean isFailureReported = false;
         private final Object logger;
-        private boolean isFailureReported = false;
 
         private SLF4MDMiniLogger(final Class<?> clazz) throws ReflectiveOperationException {
             final var factory = Class.forName("org.slf4j.LoggerFactory");
@@ -60,9 +61,9 @@ sealed interface MiniLogger {
                 log.invoke(this.logger, message, args);
             } catch (final ReflectiveOperationException e) {
                 final var fallback = MindustryMiniLogger.INSTANCE;
-                if (!this.isFailureReported) {
+                if (!isFailureReported) {
                     fallback.error("Failed to log message using slf4md", e);
-                    this.isFailureReported = true;
+                    isFailureReported = true;
                 }
                 fallback.log(level, message, args);
             }

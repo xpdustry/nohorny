@@ -36,21 +36,38 @@ final class DiscordWebhook implements LifecycleListener {
     private static final int COMPONENT_TYPE_CONTAINER = 17;
     private static final int MESSAGE_FLAG_IS_COMPONENTS_V2 = 1 << 15;
 
-    private final HttpClient http;
     private final Mods.ModMeta metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
+    private final ProxiflyProxySelector proxy = new ProxiflyProxySelector(this.executor);
+    private final HttpClient http =
+            HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
 
-    DiscordWebhook(final HttpClient http) {
-        this.http = http;
+    DiscordWebhook() {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
-            if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
-                this.onWebhookConfigure("NSFW alerts will now be sent here.");
-            } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
-                this.onWebhookConfigure(
-                        "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get() + ".");
+            if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED)
+                    || event.key().equals(NoHornySetting.PROXY_COUNTRIES))) {
+                return;
             }
+            this.executor.execute(() -> {
+                final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
+                if (webhook == null) {
+                    return;
+                }
+                if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+                    this.proxy.refresh(true);
+                }
+                if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
+                    this.onWebhookConfigure(webhook, "NSFW alerts will now be sent here.");
+                } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)) {
+                    this.onWebhookConfigure(
+                            webhook,
+                            "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get() + ".");
+                }
+            });
         });
     }
 
@@ -62,6 +79,16 @@ final class DiscordWebhook implements LifecycleListener {
     @Override
     public void onExit() {
         this.executor.close();
+        this.http.close();
+        this.proxy.close();
+    }
+
+    private void onWebhookConfigure(final URI webhook, final String message) {
+        try {
+            this.send(webhook, this.createConfigurationSuccessFormPayload(message));
+        } catch (final Exception e) {
+            log.error("Failed to test the Discord webhook", e);
+        }
     }
 
     private void onClassificationEvent(final ClassificationEvent event) {
@@ -81,20 +108,6 @@ final class DiscordWebhook implements LifecycleListener {
                         event.group().x(),
                         event.group().y(),
                         e);
-            }
-        });
-    }
-
-    private void onWebhookConfigure(final String message) {
-        final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
-        if (webhook == null) {
-            return;
-        }
-        this.executor.execute(() -> {
-            try {
-                this.send(webhook, this.createConfigurationSuccessFormPayload(message));
-            } catch (final Exception e) {
-                log.error("Failed to test the Discord webhook", e);
             }
         });
     }

@@ -3,7 +3,6 @@ package com.xpdustry.nohorny.client;
 
 import arc.ApplicationListener;
 import arc.Core;
-import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import mindustry.Vars;
@@ -20,9 +19,7 @@ public final class NoHornyPlugin extends Plugin {
     public void init() {
         final var directory = Vars.mods.getConfigFolder(this).file().toPath();
 
-        final var http = HttpClient.newHttpClient();
-
-        final var client = new NoHornyClient(http);
+        final var client = new NoHornyClient();
         this.addListener(client);
 
         final var displays = new DisplayTracker(client);
@@ -34,19 +31,13 @@ public final class NoHornyPlugin extends Plugin {
         final var debug = new DebugHelper(directory.resolve("debug"), canvases, displays);
         this.addListener(debug);
 
-        this.addListener(new DiscordWebhook(http));
+        this.addListener(new DiscordWebhook());
 
         this.addListener(new AutoModerator());
 
-        this.addListener(new LifecycleListener() {
-            @Override
-            public void onExit() {
-                http.close();
-            }
-        });
-
         this.init0();
         Core.app.addListener(new ApplicationListener() {
+
             @Override
             public void dispose() {
                 NoHornyPlugin.this.exit0();
@@ -63,7 +54,7 @@ public final class NoHornyPlugin extends Plugin {
             try {
                 this.listeners.get(i).onInit();
             } catch (final Exception e1) {
-                for (; i > 0; --i) {
+                for (; i >= 0; --i) {
                     try {
                         this.listeners.get(i).onExit();
                     } catch (final Exception e2) {
