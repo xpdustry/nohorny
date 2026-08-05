@@ -31,7 +31,7 @@ public final class NoHornyPlugin extends Plugin {
         final var debug = new DebugHelper(directory.resolve("debug"), canvases, displays);
         this.addListener(debug);
 
-        this.addListener(new DiscordWebhook());
+        this.addListener(new DiscordWebhook(directory));
 
         this.addListener(new AutoModerator());
 

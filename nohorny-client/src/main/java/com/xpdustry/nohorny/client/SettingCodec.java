@@ -72,6 +72,23 @@ interface SettingCodec<T> {
         }
     };
 
+    SettingCodec<Integer> OfInteger = new SettingCodec<>() {
+        @Override
+        public String encode(final Integer value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public Integer decode(final String value) {
+            return Integer.valueOf(value);
+        }
+
+        @Override
+        public String toString() {
+            return "SettingCodec.OfInteger";
+        }
+    };
+
     SettingCodec<Boolean> OfBoolean = new SettingCodec<>() {
         @Override
         public String encode(final Boolean value) {

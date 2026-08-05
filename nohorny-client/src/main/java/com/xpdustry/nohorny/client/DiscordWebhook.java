@@ -2,6 +2,8 @@
 package com.xpdustry.nohorny.client;
 
 import arc.Core;
+import arc.util.Strings;
+import arc.util.Timer;
 import arc.util.serialization.Jval;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.MonoRateLimiter;
@@ -14,14 +16,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
-import mindustry.mod.Mods;
 import org.jspecify.annotations.Nullable;
 
 // https://docs.discord.com/developers/resources/webhook#execute-webhook
@@ -36,13 +47,30 @@ final class DiscordWebhook implements LifecycleListener {
     private static final int COMPONENT_TYPE_CONTAINER = 17;
     private static final int MESSAGE_FLAG_IS_COMPONENTS_V2 = 1 << 15;
 
-    private final Mods.ModMeta metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
-    private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
+
+    private final String userAgent;
+
     private final ProxiflyProxySelector proxy = new ProxiflyProxySelector(this.executor);
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
+    private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
+
+    private final Path directory;
+    private final Object lock = new Object();
+    private Timer.@Nullable Task cleanupTask = null;
+
+    DiscordWebhook(final Path directory) {
+        final var metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
+        this.directory = directory;
+        this.userAgent = "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")";
+    }
+
+    DiscordWebhook(final Path directory, final String userAgent) {
+        this.directory = directory;
+        this.userAgent = userAgent;
+    }
 
     @Override
     public void onInit() {
@@ -78,10 +106,13 @@ final class DiscordWebhook implements LifecycleListener {
                 this.proxy.refresh(true);
             }
         });
+
+        this.cleanupTask = Timer.schedule(() -> this.executor.execute(this::deleteExpiredReports), 60F, 6F * 60F * 60F);
     }
 
     @Override
     public void onExit() {
+        Objects.requireNonNull(this.cleanupTask, "cleanup-task").cancel();
         this.executor.close();
         this.http.close();
         this.proxy.close();
@@ -105,8 +136,11 @@ final class DiscordWebhook implements LifecycleListener {
         }
         this.executor.execute(() -> {
             try {
-                this.send(webhook, this.createClassificationFormPayload(event));
-            } catch (final Exception e) {
+                final var id = this.send(webhook, this.createClassificationFormPayload(event));
+                this.recordReport(webhook, id);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (final IOException | URISyntaxException e) {
                 log.error(
                         "Failed to send Discord warning for group at ({}, {})",
                         event.group().x(),
@@ -116,15 +150,14 @@ final class DiscordWebhook implements LifecycleListener {
         });
     }
 
-    private void send(final URI webhook, final MultipartFormBodyPublisher form) throws Exception {
+    private long send(final URI webhook, final MultipartFormBodyPublisher form)
+            throws IOException, InterruptedException, URISyntaxException {
         this.rateLimiter.waitIfRateLimited();
         final var response = this.http.send(
-                HttpRequest.newBuilder(this.withComponentsV2Enabled(webhook))
+                HttpRequest.newBuilder(this.withWebhookQueryParameters(webhook))
                         .timeout(Duration.ofSeconds(15L))
                         .POST(form)
-                        .header(
-                                "User-Agent",
-                                "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")")
+                        .header("User-Agent", this.userAgent)
                         .header("Content-Type", form.contentType())
                         .build(),
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -132,17 +165,23 @@ final class DiscordWebhook implements LifecycleListener {
             throw new IOException(
                     "Discord webhook returned http code " + response.statusCode() + ": " + response.body());
         }
+        final var id = Strings.parseLong(Jval.read(response.body()).getString("id", "-1"), -1);
+        if (id == -1) {
+            throw new IOException("Failed to extract the created webhook message id from discord: " + response.body());
+        }
+        return id;
     }
 
-    private URI withComponentsV2Enabled(final URI webhook) throws URISyntaxException {
+    private URI withWebhookQueryParameters(final URI webhook) throws URISyntaxException {
         final var query = webhook.getQuery();
+        final var parameters = "with_components=true&wait=true";
         return new URI(
                 webhook.getScheme(),
                 webhook.getUserInfo(),
                 webhook.getHost(),
                 webhook.getPort(),
                 webhook.getPath(),
-                query == null ? "with_components=true" : query + "&with_components=true",
+                query == null ? parameters : query + "&" + parameters,
                 webhook.getFragment());
     }
 
@@ -254,5 +293,123 @@ final class DiscordWebhook implements LifecycleListener {
             payload.put("username", username);
         }
         return payload;
+    }
+
+    void deleteExpiredReports() {
+        final var webhook = NoHornySetting.DISCORD_WEBHOOK.get();
+        if (webhook == null) {
+            return;
+        }
+
+        final var hash = this.hash(webhook);
+        final var src = this.directory.resolve("reports.txt");
+        final var tmp = this.directory.resolve("reports.txt.tmp");
+        if (Files.notExists(src)) {
+            return;
+        }
+
+        try (final var reader = Files.newBufferedReader(src);
+                final var writer =
+                        Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                final var parts = line.split("/", -1);
+                if (parts.length != 3) {
+                    continue;
+                }
+                final var messageId = Strings.parseLong(parts[0], -1);
+                if (messageId == -1) {
+                    continue;
+                }
+                final var deleteFor = Strings.parseLong(parts[1], -1);
+                if (deleteFor == -1) {
+                    continue;
+                }
+                if (!parts[2].equalsIgnoreCase(hash)) {
+                    continue;
+                }
+                if (Instant.ofEpochMilli(deleteFor).isBefore(Instant.now())) {
+                    this.executor.execute(() -> this.deleteReport(webhook, messageId));
+                } else {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        } catch (final IOException e) {
+            log.error("Failed to read the sent NoHorny discord reports from the settings", e);
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (final IOException _) {
+            }
+        }
+
+        try {
+            Files.move(tmp, src, StandardCopyOption.REPLACE_EXISTING);
+        } catch (final IOException e) {
+            log.error("Failed to save processed reports", e);
+        }
+    }
+
+    private void recordReport(final URI webhook, final long report) {
+        final var retention = NoHornySetting.DISCORD_WEBHOOK_MESSAGE_RETENTION.get();
+        if (retention == null || retention < 0 || retention > 7) {
+            return;
+        }
+        synchronized (this.lock) {
+            try (final var writer = Files.newBufferedWriter(
+                    this.directory.resolve("reports.txt"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+                writer.write(Long.toString(report));
+                writer.write('/');
+                writer.write(Long.toString(
+                        Instant.now().plus(retention, ChronoUnit.DAYS).toEpochMilli()));
+                writer.write('/');
+                writer.write(this.hash(webhook));
+                writer.newLine();
+            } catch (final IOException e) {
+                log.error("Failed to schedule webhook message {} for deletion", report, e);
+            }
+        }
+    }
+
+    private void deleteReport(final URI webhook, final long report) {
+        try {
+            this.rateLimiter.waitIfRateLimited();
+            final var response = this.http.send(
+                    HttpRequest.newBuilder(HttpUtils.appendPathSegments(webhook, "messages", Long.toString(report)))
+                            .timeout(Duration.ofSeconds(15L))
+                            .DELETE()
+                            .header("User-Agent", this.userAgent)
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() >= 200 && response.statusCode() <= 299) {
+                log.info("Deleted the expired NoHorny discord report {}", report);
+                return;
+            }
+            if (response.statusCode() >= 400 && response.statusCode() <= 499) {
+                log.info(
+                        "Discarding the NoHorny discord report {} that can no longer be deleted (http-code={})",
+                        report,
+                        response.statusCode());
+                return;
+            }
+            log.error(
+                    "Discord webhook returned http code {} while deleting the report {}",
+                    response.statusCode(),
+                    report);
+        } catch (final InterruptedException _) {
+            Thread.currentThread().interrupt();
+        } catch (final IOException e) {
+            log.error("Failed to delete the NoHorny discord report {}", report, e);
+        }
+    }
+
+    private String hash(final URI webhook) {
+        try {
+            final var digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(webhook.toString().getBytes(StandardCharsets.UTF_8)));
+        } catch (final NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to obtain the SHA-256 MessageDigest", e);
+        }
     }
 }
