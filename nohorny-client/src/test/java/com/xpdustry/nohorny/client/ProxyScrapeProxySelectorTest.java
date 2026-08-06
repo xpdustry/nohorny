@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-final class ProxiflyProxySelectorTest {
+final class ProxyScrapeProxySelectorTest {
 
     @BeforeEach
     void before() {
@@ -27,14 +27,13 @@ final class ProxiflyProxySelectorTest {
         Core.settings = null;
     }
 
-    @EnabledIfEnvironmentVariable(named = "NOHORNY_TEST_PROXIFLY", matches = "true|1")
+    @EnabledIfEnvironmentVariable(named = "NOHORNY_TEST_PROXYSCRAPE", matches = "true|1")
     @Test
-    void select_working_proxy_from_live_proxifly_list() {
-        NoHornySetting.PROXY_COUNTRIES.set("DE,NL,US,JP");
+    void select_working_proxy_from_live_proxyScrape_list() {
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            final var selector = new ProxiflyProxySelector(executor);
+            final var selector = new ProxyScrapeProxySelector(executor);
             final var proxy = selector.refresh(true);
-            assertNotNull(proxy, "Expected a Proxifly HTTP proxy capable of reaching Discord's gateway endpoint");
+            assertNotNull(proxy, "Expected a ProxyScrape HTTP proxy capable of reaching Discord's gateway endpoint");
             assertEquals(Proxy.Type.HTTP, proxy.type());
             assertInstanceOf(InetSocketAddress.class, proxy.address());
         }

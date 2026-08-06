@@ -2,7 +2,10 @@
 package com.xpdustry.nohorny.client;
 
 import arc.util.serialization.Jval;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -19,10 +22,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -32,12 +33,12 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.HttpsURLConnection;
 import org.jspecify.annotations.Nullable;
 
-final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable {
+final class ProxyScrapeProxySelector extends ProxySelector implements AutoCloseable {
 
-    private static final MiniLogger log = MiniLogger.forClass(ProxiflyProxySelector.class);
+    private static final MiniLogger log = MiniLogger.forClass(ProxyScrapeProxySelector.class);
 
-    private static final URI PROXY_LIST_ENDPOINT =
-            URI.create("https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/countries/");
+    private static final URI PROXY_LIST_ENDPOINT = URI.create(
+            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=ipport&format=text");
     private static final URL DISCORD_STATUS_ENDPOINT;
 
     static {
@@ -50,11 +51,11 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
     }
 
     private static final Duration PROXY_LIST_TIMEOUT = Duration.ofSeconds(2);
-    private static final Duration PROXY_CONNECT_TIMEOUT = Duration.ofSeconds(2);
-    private static final Duration PROXY_READ_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration PROXY_CONNECT_TIMEOUT = Duration.ofSeconds(4);
+    private static final Duration PROXY_READ_TIMEOUT = Duration.ofSeconds(4);
     private static final Duration PROXY_BATCH_TIMEOUT =
             PROXY_CONNECT_TIMEOUT.plus(PROXY_READ_TIMEOUT).plusSeconds(1L);
-    private static final int TEST_BATCH_SIZE = 128;
+    private static final int TEST_BATCH_SIZE = 32;
 
     private final Executor executor;
     private final HttpClient http;
@@ -62,7 +63,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
     private @Nullable Proxy proxy = null;
     private Instant refreshAt = Instant.MIN;
 
-    ProxiflyProxySelector(final Executor executor) {
+    ProxyScrapeProxySelector(final Executor executor) {
         this.executor = executor;
         this.http = HttpClient.newBuilder()
                 .connectTimeout(PROXY_LIST_TIMEOUT)
@@ -111,10 +112,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
             }
 
             final var start = System.currentTimeMillis();
-            final var countries = Objects.requireNonNullElse(NoHornySetting.PROXY_COUNTRIES.get(), "US");
-            final var proxies = this.fetchProxies(Arrays.stream(countries.split(",", -1))
-                    .map(c -> c.toUpperCase(Locale.ROOT))
-                    .toList());
+            final var proxies = this.fetchProxies();
 
             Proxy result = null;
             for (int i = 0; i < proxies.size(); i += TEST_BATCH_SIZE) {
@@ -122,7 +120,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
                 final var proxy = this.testProxyBatch(batch);
                 if (proxy != null) {
                     log.debug(
-                            "Selected the Proxifly proxy {} in {}ms",
+                            "Selected the ProxyScrape proxy {} in {}ms",
                             proxy.address(),
                             System.currentTimeMillis() - start);
                     result = proxy;
@@ -133,7 +131,7 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
                 this.proxy = result;
                 this.refreshAt = Instant.now().plus(10, ChronoUnit.MINUTES);
             } else {
-                log.error("No working Proxifly proxy was found for the countries {}", countries);
+                log.error("No working ProxyScrape proxy was found");
                 this.proxy = null;
                 this.refreshAt = Instant.MIN;
             }
@@ -236,60 +234,49 @@ final class ProxiflyProxySelector extends ProxySelector implements AutoCloseable
         }
     }
 
-    // TODO Parallelize too?
     @SuppressWarnings("EmptyCatch")
-    private List<InetSocketAddress> fetchProxies(final List<String> countries) {
-        final var addresses = new HashSet<InetSocketAddress>();
-        for (final var country : countries) {
-            final var request = HttpRequest.newBuilder(
-                            HttpUtils.appendPathSegments(PROXY_LIST_ENDPOINT, country, "data.json"))
-                    .timeout(PROXY_LIST_TIMEOUT)
-                    .GET()
-                    .build();
-            final HttpResponse<String> response;
-            try {
-                response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                continue;
-            } catch (final IOException e) {
-                log.error("Failed to fetch the Proxifly proxy list of {}", country, e);
-                continue;
-            }
-            if (response.statusCode() != 200) {
-                log.error("The Proxifly proxy list of {} returned the http code {}", country, response.statusCode());
-                continue;
-            }
-            try {
-                for (final var element : Jval.read(response.body()).asArray()) {
-                    try {
-                        final var address = this.parseProxy(element);
-                        if (address != null) {
-                            addresses.add(address);
-                        }
-                    } catch (final Exception _) {
+    private List<InetSocketAddress> fetchProxies() {
+        final var addresses = new ArrayList<InetSocketAddress>();
+        final var request = HttpRequest.newBuilder(PROXY_LIST_ENDPOINT)
+                .timeout(PROXY_LIST_TIMEOUT)
+                .GET()
+                .build();
+        final HttpResponse<InputStream> response;
+        try {
+            response = this.http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return List.of();
+        } catch (final IOException e) {
+            log.error("Failed to fetch the ProxyScrape proxy list", e);
+            return List.of();
+        }
+        if (response.statusCode() != 200) {
+            log.error("The ProxyScrape proxy list returned http code {}", response.statusCode());
+            return List.of();
+        }
+        try (final var stream = response.body();
+                final var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                try {
+                    final var split = line.lastIndexOf(':');
+                    if (split == -1) {
+                        continue;
                     }
+                    final var address = InetAddress.ofLiteral(line.substring(0, split));
+                    final var port = Integer.parseInt(line.substring(split + 1));
+                    if (port <= 0 || port > 65535) {
+                        continue;
+                    }
+                    addresses.add(new InetSocketAddress(address, port));
+                } catch (final IllegalArgumentException _) {
                 }
-            } catch (final Exception e) {
-                log.error("Failed to parse the Proxifly proxy list of {}", country, e);
             }
+        } catch (final Exception e) {
+            log.error("Failed to parse the ProxyScrape list", e);
         }
-        return List.copyOf(addresses);
-    }
-
-    private @Nullable InetSocketAddress parseProxy(final Jval element) {
-        if (!(element.getString("protocol", "").equals("http") && element.getBool("https", false))) {
-            return null;
-        }
-        final var ip = element.getString("ip", "");
-        if (ip.isEmpty()) {
-            return null;
-        }
-        final var port = element.getInt("port", -1);
-        if (port <= 0 || port > 65535) {
-            return null;
-        }
-        return new InetSocketAddress(InetAddress.ofLiteral(ip), port);
+        return Collections.unmodifiableList(addresses);
     }
 
     @Override
