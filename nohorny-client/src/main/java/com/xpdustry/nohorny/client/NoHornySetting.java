@@ -81,13 +81,6 @@ public interface NoHornySetting<T> {
             eg: "7".
             """, 7, Integer.class, new SettingCodec.OfInteger(0, 7));
 
-    NoHornySetting<String> PROXY_COUNTRIES =
-            new AdminConfigNoHornySetting<>("proxy-countries", """
-            Comma separated list of ISO 3166-1 alpha-2 country codes used to select a proxy.
-            Setting this to null defaults to the "US".
-            eg: "FR,DE,US".
-            """, "US", String.class, SettingCodec.OfCountryCodeList);
-
     List<NoHornySetting<?>> ALL = List.of(
             API_ENDPOINT,
             API_AUTH_TYPE,
@@ -97,8 +90,7 @@ public interface NoHornySetting<T> {
             DISCORD_WEBHOOK_PROXY_ENABLED,
             DISCORD_WEBHOOK_MESSAGE_RETENTION,
             AUTOMOD_POLICY,
-            DEBUG_TAP,
-            PROXY_COUNTRIES);
+            DEBUG_TAP);
 
     String name();
 

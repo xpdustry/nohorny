@@ -49,7 +49,7 @@ final class DiscordWebhook implements LifecycleListener {
 
     private final String userAgent;
 
-    private final ProxiflyProxySelector proxy = new ProxiflyProxySelector(this.executor);
+    private final ProxyScrapeProxySelector proxy = new ProxyScrapeProxySelector(this.executor);
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
@@ -76,8 +76,7 @@ final class DiscordWebhook implements LifecycleListener {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
-                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED)
-                    || event.key().equals(NoHornySetting.PROXY_COUNTRIES))) {
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED))) {
                 return;
             }
             this.executor.execute(() -> {

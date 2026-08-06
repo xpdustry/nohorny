@@ -57,7 +57,7 @@ jobs:
       - name: "Build Gradle"
         run: ./gradlew build
         env:
-          NOHORNY_TEST_PROXIFLY: "${{ github.event_name != 'release' && 'true' || '' }}"
+          NOHORNY_TEST_PROXYSCRAPE: "${{ github.event_name != 'release' && 'true' || '' }}"
           NOHORNY_TEST_DISCORD_WEBHOOK: "${{ github.event_name != 'release' && secrets.NOHORNY_TEST_DISCORD_WEBHOOK || '' }}"
 
       - name: "Upload Client Jar"
