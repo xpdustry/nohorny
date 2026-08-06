@@ -38,7 +38,7 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
     private static final MiniLogger log = MiniLogger.forClass(ProxyScrapeProxySelector.class);
 
     private static final URI PROXY_LIST_ENDPOINT = URI.create(
-            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=ipport&format=text");
+            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=http&ssl=yes&proxy_format=ipport&format=text");
     private static final URL DISCORD_STATUS_ENDPOINT;
 
     static {
@@ -56,6 +56,7 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
     private static final Duration PROXY_BATCH_TIMEOUT =
             PROXY_CONNECT_TIMEOUT.plus(PROXY_READ_TIMEOUT).plusSeconds(1L);
     private static final int TEST_BATCH_SIZE = 32;
+    private static final int PROXY_LIST_SIZE_LIMIT = 256;
 
     private final Executor executor;
     private final HttpClient http;
@@ -253,12 +254,16 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
         }
         if (response.statusCode() != 200) {
             log.error("The ProxyScrape proxy list returned http code {}", response.statusCode());
+            try {
+                response.body().close();
+            } catch (final IOException _) {
+            }
             return List.of();
         }
         try (final var stream = response.body();
                 final var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
             String line;
-            while ((line = reader.readLine()) != null) {
+            while ((line = reader.readLine()) != null && addresses.size() < PROXY_LIST_SIZE_LIMIT) {
                 try {
                     final var split = line.lastIndexOf(':');
                     if (split == -1) {
