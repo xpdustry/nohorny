@@ -2,10 +2,7 @@
 package com.xpdustry.nohorny.client;
 
 import arc.util.serialization.Jval;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -22,7 +19,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -237,14 +233,13 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
 
     @SuppressWarnings("EmptyCatch")
     private List<InetSocketAddress> fetchProxies() {
-        final var addresses = new ArrayList<InetSocketAddress>();
         final var request = HttpRequest.newBuilder(PROXY_LIST_ENDPOINT)
                 .timeout(PROXY_LIST_TIMEOUT)
                 .GET()
                 .build();
-        final HttpResponse<InputStream> response;
+        final HttpResponse<String> response;
         try {
-            response = this.http.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            response = this.http.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             return List.of();
@@ -254,34 +249,39 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
         }
         if (response.statusCode() != 200) {
             log.error("The ProxyScrape proxy list returned http code {}", response.statusCode());
-            try {
-                response.body().close();
-            } catch (final IOException _) {
-            }
             return List.of();
         }
-        try (final var stream = response.body();
-                final var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null && addresses.size() < PROXY_LIST_SIZE_LIMIT) {
-                try {
+
+        return response.body()
+                .lines()
+                .map(line -> {
                     final var split = line.lastIndexOf(':');
                     if (split == -1) {
-                        continue;
+                        return null;
                     }
-                    final var address = InetAddress.ofLiteral(line.substring(0, split));
-                    final var port = Integer.parseInt(line.substring(split + 1));
+
+                    final InetAddress address;
+                    try {
+                        address = InetAddress.ofLiteral(line.substring(0, split));
+                    } catch (final IllegalArgumentException _) {
+                        return null;
+                    }
+
+                    final int port;
+                    try {
+                        port = Integer.parseInt(line.substring(split + 1));
+                    } catch (final NumberFormatException _) {
+                        return null;
+                    }
                     if (port <= 0 || port > 65535) {
-                        continue;
+                        return null;
                     }
-                    addresses.add(new InetSocketAddress(address, port));
-                } catch (final IllegalArgumentException _) {
-                }
-            }
-        } catch (final Exception e) {
-            log.error("Failed to parse the ProxyScrape list", e);
-        }
-        return Collections.unmodifiableList(addresses);
+
+                    return new InetSocketAddress(address, port);
+                })
+                .filter(Objects::nonNull)
+                .limit(PROXY_LIST_SIZE_LIMIT)
+                .toList();
     }
 
     @Override
