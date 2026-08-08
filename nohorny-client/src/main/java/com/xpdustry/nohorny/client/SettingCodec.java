@@ -2,7 +2,6 @@
 package com.xpdustry.nohorny.client;
 
 import java.net.URI;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 
 interface SettingCodec<T> {
@@ -28,33 +27,6 @@ interface SettingCodec<T> {
         }
     };
 
-    SettingCodec<String> OfCountryCodeList = new SettingCodec<>() {
-        @Override
-        public String encode(final String value) {
-            return value;
-        }
-
-        @Override
-        public String decode(final String value) {
-            final var countries = new LinkedHashSet<String>();
-            for (final var element : value.split(",", -1)) {
-                final var country = element.trim().toUpperCase(Locale.ROOT);
-                if (country.length() != 2 || country.chars().anyMatch(c -> c < 'A' || c > 'Z')) {
-                    throw new IllegalArgumentException("'" + element + "' is not a two letter country code");
-                }
-                if (!countries.add(country)) {
-                    throw new IllegalArgumentException("'" + country + "' appears more than once");
-                }
-            }
-            return String.join(",", countries);
-        }
-
-        @Override
-        public String toString() {
-            return "SettingCodec.OfCountryCodeList";
-        }
-    };
-
     SettingCodec<URI> OfURI = new SettingCodec<>() {
         @Override
         public String encode(final URI value) {
@@ -71,23 +43,6 @@ interface SettingCodec<T> {
             return "SettingCodec.OfURI";
         }
     };
-
-    record OfInteger(int minimum, int maximum) implements SettingCodec<Integer> {
-        @Override
-        public String encode(final Integer value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public Integer decode(final String value) {
-            final var integer = Integer.parseInt(value);
-            if (integer < this.minimum || integer > this.maximum) {
-                throw new IllegalArgumentException(
-                        "The integer must be between " + this.minimum + " and " + this.maximum + " (inclusive)");
-            }
-            return integer;
-        }
-    }
 
     SettingCodec<Boolean> OfBoolean = new SettingCodec<>() {
         @Override
