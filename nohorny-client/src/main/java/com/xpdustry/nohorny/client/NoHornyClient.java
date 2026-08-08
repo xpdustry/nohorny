@@ -162,7 +162,9 @@ final class NoHornyClient implements LifecycleListener {
             throw new IllegalStateException("NoHorny API endpoint is disabled");
         }
         final var request = HttpRequest.newBuilder(HttpUtils.appendPathSegments(endpoint, path))
-                .timeout(timeout);
+                .timeout(timeout)
+                .header("User-Agent", NoHornyPlugin.USER_AGENT)
+                .header("X-NoHorny-Version", NoHornyPlugin.VERSION);
         final var authorization = this.authorization();
         if (authorization != null) {
             request.header("Authorization", authorization);

@@ -11,12 +11,18 @@ import mindustry.mod.Plugin;
 public final class NoHornyPlugin extends Plugin {
 
     static final String MESSAGE_PREFIX = "[pink][[NoHorny]: [white]";
+    static String VERSION = "unknown";
+    static String USER_AGENT = "NoHorny (unknown, unknown)";
 
     private final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
     private final List<LifecycleListener> listeners = new ArrayList<>();
 
     @Override
     public void init() {
+        final var metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
+        VERSION = metadata.version;
+        USER_AGENT = "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")";
+
         final var directory = Vars.mods.getConfigFolder(this).file().toPath();
 
         final var client = new NoHornyClient();

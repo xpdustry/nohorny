@@ -37,17 +37,10 @@ final class DiscordWebhook implements LifecycleListener {
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-discord-webhook-", 0).factory());
 
-    private final String userAgent;
-
     private final ProxyScrapeProxySelector proxy = new ProxyScrapeProxySelector(this.executor);
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
-
-    DiscordWebhook() {
-        final var metadata = Vars.mods.getMod(NoHornyPlugin.class).meta;
-        this.userAgent = "NoHorny (https://github/" + metadata.repo + ", v" + metadata.version + ")";
-    }
 
     @Override
     public void onInit() {
@@ -133,7 +126,7 @@ final class DiscordWebhook implements LifecycleListener {
                 HttpRequest.newBuilder(this.withWebhookQueryParameters(webhook))
                         .timeout(Duration.ofSeconds(15L))
                         .POST(form)
-                        .header("User-Agent", this.userAgent)
+                        .header("User-Agent", NoHornyPlugin.USER_AGENT)
                         .header("Content-Type", form.contentType())
                         .build(),
                 HttpResponse.BodyHandlers.ofString());
