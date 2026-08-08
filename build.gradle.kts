@@ -158,7 +158,8 @@ project(":nohorny-client") {
         exclude(group = "com.google.errorprone")
     }
 
-    val generateMetadataFile by tasks.registering {
+    val generateMetadataFile = tasks.register("generateMetadataFile") {
+        description = "Generate the plugin.json file."
         inputs.property("metadata", metadata)
         val output = temporaryDir.resolve("plugin.json")
         outputs.file(output)
@@ -178,7 +179,8 @@ project(":nohorny-client") {
         dependsOn(tasks.named<ShadowJar>(ShadowJar.SHADOW_JAR_TASK_NAME))
     }
 
-    val downloadSlf4md by tasks.registering(GithubAssetDownload::class) {
+    val downloadSlf4md = tasks.register<GithubAssetDownload>("downloadSlf4md") {
+        description = "Download sl4md.jar from GitHub."
         owner = "xpdustry"
         repo = "slf4md"
         asset = "slf4md.jar"
@@ -232,8 +234,6 @@ project(":nohorny-server") {
 configure(listOf(project(":nohorny-common"), project(":nohorny-client"))) {
     apply(plugin = "net.kyori.indra.publishing")
     configure<SigningExtension> {
-        val signingKey: String? by project
-        val signingPassword: String? by project
-        useInMemoryPgpKeys(signingKey, signingPassword)
+        useInMemoryPgpKeys(findProperty("signingKey")?.toString(), findProperty("signingPassword")?.toString())
     }
 }
