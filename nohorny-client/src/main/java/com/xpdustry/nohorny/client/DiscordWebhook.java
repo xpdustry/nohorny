@@ -56,7 +56,7 @@ final class DiscordWebhook implements LifecycleListener {
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
-                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED))) {
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY))) {
                 return;
             }
             this.executor.execute(() -> {
@@ -64,7 +64,7 @@ final class DiscordWebhook implements LifecycleListener {
                 if (webhook == null) {
                     return;
                 }
-                if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+                if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY.get())) {
                     this.proxy.refresh(true);
                 }
                 if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK)) {
@@ -78,7 +78,7 @@ final class DiscordWebhook implements LifecycleListener {
         });
 
         this.executor.execute(() -> {
-            if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+            if (Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY.get())) {
                 this.proxy.refresh(true);
             }
         });

@@ -1,4 +1,4 @@
-# nohorny
+# NoHorny
 
 [![Maven](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny-client?color=008080&name=nohorny&prefix=v)](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny-client)
 [![Downloads](https://img.shields.io/github/downloads/xpdustry/nohorny/total?color=008080)](https://github.com/xpdustry/nohorny/releases)
@@ -11,7 +11,7 @@ Are you sick of players turning your awesome server into a NSFW gallery?
 Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
 Well, worry no more, xpdustry cooked another plugin just for this situation.
 
-Introducing **nohorny**, the successor of [BMI](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage).
+Introducing **NoHorny**, the successor of [BMI](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage).
 This project consists of a Mindustry plugin client that automatically tracks logic displays and canvases,
 and a standalone classification server that processes them, for automatic NSFW moderation.
 
@@ -23,7 +23,7 @@ Enjoy this family friendly factory building game as the [cat](https://github.com
 
 This plugin requires at least:
 
-- Mindustry 157
+- Mindustry 159
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
@@ -34,21 +34,20 @@ Then the buildings will be deleted and refunded to the player's team.
 
 ### Configuration
 
-You can configure nohorny using the Mindustry built-in `config` command, with `config key value`.
+You can configure NoHorny using the Mindustry built-in `config` command in your server console, with `config key value`.
 
 #### Available settings
 
-| Key                                         | Description                                                                                                                                                               | Default                            |
-|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
-| `nohorny-api-endpoint`                      | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                                                  | `https://nohorny.xpdustry.com/api` |
-| `nohorny-api-auth-type`                     | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                                                  | `DISABLED`                         |
-| `nohorny-api-auth-value`                    | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                                      | empty                              |
-| `nohorny-automod-policy`                    | The policy to apply when a group of buildings is classified.                                                                                                              | `BAN_NSFW`                         |
-| `nohorny-discord-webhook`                   | Discord webhook used to report unsafe buildings.                                                                                                                          | empty                              |
-| `nohorny-discord-webhook-name`              | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
-| `nohorny-discord-webhook-message-retention` | Number of days to keep the report messages sent to the Discord webhook, from `0` to `7` (inclusive). Expired reports are deleted automatically. Set to `null` to disable. | `7`                                |
-| `nohorny-discord-webhook-proxy-enabled`     | Whether discord requests should be proxied. Useful if discord is banned in the country. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list)                       | `false`                            |
-| `nohorny-debug-tap`                         | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                     | `false`                            |
+| Key                             | Description                                                                                                                                         | Default Value                      |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
+| `nohorny-auto-mod-policy`       | The policy to apply when a group of buildings is classified.                                                                                        | `BAN_NSFW`                         |
+| `nohorny-api-endpoint`          | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                            | `https://nohorny.xpdustry.com/api` |
+| `nohorny-api-auth-type`         | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                            | `DISABLED`                         |
+| `nohorny-api-auth-value`        | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                | empty                              |
+| `nohorny-discord-webhook`       | Discord webhook used to report unsafe buildings.                                                                                                    | empty                              |
+| `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                        | `NoHorny`                          |
+| `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the country. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list) | `false`                            |
+| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                               | `false`                            |
 
 #### Auto-Mod Policies
 
@@ -61,10 +60,16 @@ You can configure nohorny using the Mindustry built-in `config` command, with `c
 
 #### Discord Webhook
 
-Set `nohorny-discord-webhook` to a discord webhook url, such as `https://discord.com/api/webhooks/999999/abcdefgh`.
-Nohorny will automatically try to validate it.
-If all goes well, [you will see a success message in your webhook channel](.github/discord-example.png).
-Report messages are automatically deleted after `nohorny-discord-webhook-message-retention` days.
+You can set up a discord webhook to be alerted when a NSFW building is detected.
+
+Just configure the webhook url using `config nohorny-discord-webhook https://discord.com/api/webhooks/999999/abcdefgh`.
+
+![discord example](.github/discord-example.png)
+
+> [!Note]
+> 
+> If discord is banned in your country, run `config nohorny-discord-webhook-proxy true`.
+> NoHorny will try to find a suitable proxy to send the alerts from.
 
 #### Debugging
 
@@ -73,7 +78,7 @@ canvas group labels the detected group in-game, then creates a PNG render and bi
 
 ### Developing
 
-You can integrate your plugin with the nohorny client by just adding the following to your `build.gradle`:
+You can integrate your plugin with the NoHorny client by just adding the following to your `build.gradle`:
 
 ```gradle
 repositories {
@@ -106,7 +111,7 @@ public final class MyPlugin extends Plugin {
 }
 ```
 
-- Programmatically configure nohorny using its [setting system](nohorny-client/src/main/java/com/xpdustry/nohorny/client/NoHornySetting.java):
+- Programmatically configure NoHorny using its [setting system](nohorny-client/src/main/java/com/xpdustry/nohorny/client/NoHornySetting.java):
 
 ```java
 import com.xpdustry.nohorny.client.AutoModeratorPolicy;

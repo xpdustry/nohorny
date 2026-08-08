@@ -10,6 +10,22 @@ import org.jspecify.annotations.Nullable;
 
 public interface NoHornySetting<T> {
 
+    NoHornySetting<AutoModeratorPolicy> AUTO_MOD_POLICY = new AdminConfigNoHornySetting<>(
+            "auto-mod-policy",
+            "The policy to adopt when a group of buildings is classified."
+                    + Arrays.stream(AutoModeratorPolicy.values())
+                            .map(p -> "\"" + p.name().toLowerCase(Locale.ROOT) + "\"")
+                            .sorted()
+                            .collect(Collectors.joining(", ", "\neg: ", ".")),
+            AutoModeratorPolicy.BAN_NSFW,
+            AutoModeratorPolicy.class,
+            new SettingCodec.OfEnum<>(AutoModeratorPolicy.class));
+
+    /// @deprecated Use [#AUTO_MOD_POLICY] instead.
+    @SuppressWarnings("SpellCheckingInspection")
+    @Deprecated(forRemoval = true)
+    NoHornySetting<AutoModeratorPolicy> AUTOMOD_POLICY = AUTO_MOD_POLICY;
+
     NoHornySetting<URI> API_ENDPOINT = new AdminConfigNoHornySetting<>(
             "api-endpoint", """
             The NoHorny server endpoint to query for image classification.
@@ -45,16 +61,12 @@ public interface NoHornySetting<T> {
             eg: "NoHorny".
             """, null, String.class, SettingCodec.OfString);
 
-    NoHornySetting<AutoModeratorPolicy> AUTOMOD_POLICY = new AdminConfigNoHornySetting<>(
-            "automod-policy",
-            "The policy to adopt when a group of buildings is classified."
-                    + Arrays.stream(AutoModeratorPolicy.values())
-                            .map(p -> "\"" + p.name().toLowerCase(Locale.ROOT) + "\"")
-                            .sorted()
-                            .collect(Collectors.joining(", ", "\neg: ", ".")),
-            AutoModeratorPolicy.BAN_NSFW,
-            AutoModeratorPolicy.class,
-            new SettingCodec.OfEnum<>(AutoModeratorPolicy.class));
+    NoHornySetting<Boolean> DISCORD_WEBHOOK_PROXY =
+            new AdminConfigNoHornySetting<>("discord-webhook-proxy", """
+            Whether discord requests should be proxied.
+            Useful if discord is banned in the server's country.
+            eg: "true", "false".
+            """, false, Boolean.class, SettingCodec.OfBoolean);
 
     NoHornySetting<Boolean> DEBUG_TAP =
             new AdminConfigNoHornySetting<>("debug-tap", """
@@ -65,31 +77,14 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
-    NoHornySetting<Boolean> DISCORD_WEBHOOK_PROXY_ENABLED = new AdminConfigNoHornySetting<>(
-            "discord-webhook-proxy-enabled", """
-            Whether discord requests should be proxied.
-            Useful if discord is banned in the server's country.
-            eg: "true", "false".
-            """, false, Boolean.class, SettingCodec.OfBoolean);
-
-    NoHornySetting<Integer> DISCORD_WEBHOOK_MESSAGE_RETENTION = new AdminConfigNoHornySetting<>(
-            "discord-webhook-message-retention", """
-            The number of days to keep the report messages sent to the discord webhook.
-            Must be between 0 and 7 days (inclusive).
-            Expired reports are automatically deleted.
-            Setting this to null disables the automatic deletion of report messages.
-            eg: "7".
-            """, 7, Integer.class, new SettingCodec.OfInteger(0, 7));
-
     List<NoHornySetting<?>> ALL = List.of(
+            AUTO_MOD_POLICY,
             API_ENDPOINT,
             API_AUTH_TYPE,
             API_AUTH_VALUE,
             DISCORD_WEBHOOK,
             DISCORD_WEBHOOK_NAME,
-            DISCORD_WEBHOOK_PROXY_ENABLED,
-            DISCORD_WEBHOOK_MESSAGE_RETENTION,
-            AUTOMOD_POLICY,
+            DISCORD_WEBHOOK_PROXY,
             DEBUG_TAP);
 
     String name();

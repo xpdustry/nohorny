@@ -77,7 +77,7 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
             return ProxySelector.getDefault().select(uri);
         }
 
-        if (!Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY_ENABLED.get())) {
+        if (!Boolean.TRUE.equals(NoHornySetting.DISCORD_WEBHOOK_PROXY.get())) {
             return ProxySelector.getDefault().select(uri);
         }
 

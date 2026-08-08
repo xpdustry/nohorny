@@ -31,7 +31,7 @@ final class AutoModerator implements LifecycleListener {
     }
 
     private void onClassificationEvent(final ClassificationEvent event) {
-        final var policy = NoHornySetting.AUTOMOD_POLICY.get();
+        final var policy = NoHornySetting.AUTO_MOD_POLICY.get();
         if (policy == null) {
             return;
         }
