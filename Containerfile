@@ -42,7 +42,8 @@ RUN --mount=type=cache,target=/cache/.gradle \
 FROM docker.io/eclipse-temurin:26-jre AS runtime
 
 RUN groupadd -g 1001 appgroup && \
-    useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser
+    useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
+    install -d -o appuser -g appgroup -m 0755 /data
 
 WORKDIR /app
 
