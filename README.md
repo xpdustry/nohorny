@@ -7,13 +7,12 @@
 
 ## Description
 
-Are you sick of players turning your awesome server into a NSFW gallery?
+Are you sick of players turning your awesome Mindustry server into a NSFW gallery?
 Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
 Well, worry no more, xpdustry cooked another plugin just for this situation.
 
-Introducing **NoHorny**, the successor of [BMI](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage).
-This project consists of a Mindustry plugin client that automatically tracks logic displays and canvases,
-and a standalone classification server that processes them, for automatic NSFW moderation.
+Introducing **NoHorny**, your autonomous NSFW moderation plugin.
+It can detect NSFW logic displays and canvases and ban the offending players.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
@@ -27,7 +26,7 @@ This plugin requires at least:
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
-Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) (and [`slf4md.jar`](https://github.com/xpdustry/slf4md/releases/latest) if needed) in your `config/mods` directory and start your mindustry server.
+Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) in your `config/mods` directory and start your mindustry server.
 
 Now, players placing unsafe buildings will be automatically banned.
 Then the buildings will be deleted and refunded to the player's team.
@@ -127,9 +126,9 @@ public final class MyPlugin extends Plugin {
 
     @Override
     public void init() {
+        NoHornySetting.API_ENDPOINT.set(URI.create("https://localhost:8080"));
         NoHornySetting.API_AUTH_TYPE.set(NoHornyClientAuthType.BEARER);
         NoHornySetting.API_AUTH_VALUE.set("my-token");
-        NoHornySetting.API_ENDPOINT.set(URI.create("https://localhost:8080"));
         NoHornySetting.AUTOMOD_POLICY.set(AutoModeratorPolicy.DELETE_WARN);
     }
 }
@@ -181,5 +180,5 @@ java -jar nohorny-server.jar start -- --server.port=9090
 
 ## Support
 
-Need a helping hand ? You can talk to the maintainers in the [Chaotic Neutral discord](https://discord.xpdustry.com) in
-the `#support` channel.
+Need a helping hand? You can talk to the maintainers in [our discord server](https://discord.xpdustry.com)
+in the `#support` channel.
