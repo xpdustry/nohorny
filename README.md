@@ -66,6 +66,8 @@ Just configure the webhook url using `config nohorny-discord-webhook https://dis
 
 ![discord example](.github/discord-example.png)
 
+Checkout [MAD](https://github.com/phinner/mad) if you want to automatically delete the reports.
+
 > [!Note]
 > 
 > If discord is banned in your country, run `config nohorny-discord-webhook-proxy true`.
