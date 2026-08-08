@@ -44,7 +44,7 @@ You can configure NoHorny using the Mindustry built-in `config` command in your 
 | `nohorny-api-endpoint`          | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                            | `https://nohorny.xpdustry.com/api` |
 | `nohorny-api-auth-type`         | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                            | `DISABLED`                         |
 | `nohorny-api-auth-value`        | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                | empty                              |
-| `nohorny-discord-webhook`       | Discord webhook used to report unsafe buildings.                                                                                                    | empty                              |
+| `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                             | empty                              |
 | `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                        | `NoHorny`                          |
 | `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the country. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list) | `false`                            |
 | `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                               | `false`                            |
@@ -66,11 +66,12 @@ Just configure the webhook url using `config nohorny-discord-webhook https://dis
 
 ![discord example](.github/discord-example.png)
 
-Checkout [MAD](https://github.com/phinner/mad) if you want to automatically delete the reports.
+Checkout [MAD](https://github.com/phinner/mad) if you want to automatically delete the alerts.
 
 > [!Note]
 > 
 > If discord is banned in your country, run `config nohorny-discord-webhook-proxy true`.
+>
 > NoHorny will try to find a suitable proxy to send the alerts from.
 
 #### Debugging
