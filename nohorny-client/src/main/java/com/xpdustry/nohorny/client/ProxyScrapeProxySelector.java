@@ -116,7 +116,8 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
                 final var batch = proxies.subList(i, Math.min(i + TEST_BATCH_SIZE, proxies.size()));
                 final var proxy = this.testProxyBatch(batch);
                 if (proxy != null) {
-                    log.debug(
+                    log.log(
+                            force ? MiniLogger.Level.INFO : MiniLogger.Level.DEBUG,
                             "Selected the ProxyScrape proxy {} in {}ms",
                             proxy.address(),
                             System.currentTimeMillis() - start);
