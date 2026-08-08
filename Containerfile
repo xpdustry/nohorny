@@ -1,7 +1,7 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-FROM docker.io/eclipse-temurin:26-jdk AS build
+FROM docker.io/eclipse-temurin:26-jdk@sha256:72f06e2d7b40aaf9d237ff46611f2c3001e799f8d510c12170f4ceed847676db AS build
 
 ARG IS_RELEASE=false
 
@@ -39,7 +39,7 @@ COPY nohorny-server/src/ nohorny-server/src/
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
 
-FROM docker.io/eclipse-temurin:26-jre AS runtime
+FROM docker.io/eclipse-temurin:26-jre@sha256:92969270a1c1f9fc399ba05aeefed8b7c48bc882db2bdfb33352075a498a3a85 AS runtime
 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
