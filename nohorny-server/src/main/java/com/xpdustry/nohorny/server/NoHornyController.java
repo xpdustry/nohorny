@@ -2,11 +2,13 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ClassificationResponse;
+import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
 import com.xpdustry.nohorny.persistence.ClassificationRequest;
 import com.xpdustry.nohorny.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.persistence.RequestProperties;
 import com.xpdustry.nohorny.server.classifier.Classifier;
+import com.xpdustry.nohorny.server.classifier.ClassifierChain;
 import jakarta.servlet.http.HttpServletRequest;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -33,17 +35,17 @@ public final class NoHornyController {
     private static final Logger log = LoggerFactory.getLogger(NoHornyController.class);
 
     private final StatusProperties status;
-    private final Classifier classifier;
+    private final ClassifierChain classifiers;
     private final ClassificationRequestRepository requests;
     private final RequestProperties requestProperties;
 
     public NoHornyController(
             final StatusProperties status,
-            final Classifier classifier,
+            final ClassifierChain classifiers,
             final ClassificationRequestRepository requests,
             final RequestProperties requestProperties) {
         this.status = status;
-        this.classifier = classifier;
+        this.classifiers = classifiers;
         this.requests = requests;
         this.requestProperties = requestProperties;
     }
@@ -76,43 +78,93 @@ public final class NoHornyController {
             final byte[] data,
             final HttpServletRequest request,
             final @Nullable Principal principal) {
-        final var startedAt = Instant.now();
-        final var startedNanos = System.nanoTime();
         final var mediaType = MediaType.parseMediaType(request.getContentType());
         final var imageMediaType = mediaType.getType() + "/" + mediaType.getSubtype();
-        final Classifier.Result result;
+        final var username = principal == null ? null : principal.getName();
+        final var chain = this.classifiers.classifiers();
+        final var firstClassifier = chain.getFirst();
+        final var firstStartedAt = Instant.now();
+        final var firstStartedNanos = System.nanoTime();
+        final Classifier.Result firstResult;
         try {
-            result = this.classifier.classify(image);
+            firstResult = firstClassifier.classify(image);
         } catch (final Exception exception) {
-            final var id = this.saveRequest(new ClassificationRequest(
-                    startedAt,
-                    Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
-                    this.classifier.name(),
+            final var id = this.saveRequest(this.newRequest(
+                    firstStartedAt,
+                    firstStartedNanos,
+                    firstClassifier,
                     null,
-                    null,
-                    false,
-                    exception.getClass().getSimpleName(),
-                    principal == null ? null : principal.getName(),
-                    request.getRemoteAddr(),
+                    exception,
+                    username,
+                    request,
                     imageMediaType,
                     data));
             log.error("Classification request {} has failed", id, exception);
             return ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));
         }
-        final var id = this.saveRequest(new ClassificationRequest(
-                startedAt,
-                Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
-                this.classifier.name(),
-                result.rating(),
-                result.confidence(),
-                true,
+        final var firstId = this.saveRequest(this.newRequest(
+                firstStartedAt,
+                firstStartedNanos,
+                firstClassifier,
+                firstResult,
                 null,
-                principal == null ? null : principal.getName(),
-                request.getRemoteAddr(),
+                username,
+                request,
                 imageMediaType,
                 data));
+        var classifierResult = new Classification(firstClassifier, firstResult, firstId);
+
+        for (final var classifier : chain.subList(1, chain.size())) {
+            if (classifierResult.result().rating() != Rating.NSFW) {
+                break;
+            }
+            final var startedAt = Instant.now();
+            final var startedNanos = System.nanoTime();
+            final Classifier.Result result;
+            try {
+                result = classifier.classify(image);
+            } catch (final Exception exception) {
+                final var id = this.saveRequest(this.newRequest(
+                        startedAt, startedNanos, classifier, null, exception, username, request, imageMediaType, data));
+                log.error(
+                        "Classification chain request {} has failed, falling back to the previous result",
+                        id,
+                        exception);
+                break;
+            }
+            final var id = this.saveRequest(this.newRequest(
+                    startedAt, startedNanos, classifier, result, null, username, request, imageMediaType, data));
+            classifierResult = new Classification(classifier, result, id);
+        }
         return ResponseEntity.ok(new ClassificationResponse(
-                this.classifier.name(), result.rating(), result.confidence(), Long.toString(id)));
+                classifierResult.classifier().name(),
+                classifierResult.result().rating(),
+                classifierResult.result().confidence(),
+                Long.toString(classifierResult.identifier())));
+    }
+
+    private ClassificationRequest newRequest(
+            final Instant startedAt,
+            final long startedNanos,
+            final Classifier classifier,
+            final Classifier.@Nullable Result result,
+            final @Nullable Exception error,
+            final @Nullable String username,
+            final HttpServletRequest request,
+            final String imageMediaType,
+            final byte[] data) {
+        return new ClassificationRequest(
+                startedAt,
+                Duration.ofNanos(System.nanoTime() - startedNanos).toMillis(),
+                classifier.name(),
+                result == null ? null : result.rating(),
+                result == null ? null : result.confidence(),
+                error == null,
+                error == null ? null : error.getClass().getSimpleName(),
+                username,
+                request.getRemoteAddr(),
+                imageMediaType,
+                data);
     }
 
     private long saveRequest(final ClassificationRequest request) {
@@ -120,4 +172,6 @@ public final class NoHornyController {
         this.requests.deleteOverCapacity(this.requestProperties.capacity());
         return id;
     }
+
+    private record Classification(Classifier classifier, Classifier.Result result, long identifier) {}
 }

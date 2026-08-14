@@ -30,8 +30,12 @@ nohorny:
     # How often the public Mindustry server list is refreshed to label request origins.
     refresh-interval: 10m
   classifier:
-    # Use vit for using a local model, or sight-engine to classify through SightEngine.
+    # Accepted values are vit or sight-engine or an array of those.
+    # An array is a classification chain, where images advance while the latest result is NSFW.
+    # For example, [vit, sight-engine] sends all requests to vit, and validates flagged NSFW with SightEngine.
     type: vit
+
+    # Use vit for using a local model, or sight-engine to classify through SightEngine.
     vit:
       source:
         type: hugging-face
@@ -61,7 +65,8 @@ nohorny:
         # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.
         warn: 0.6
         # Scores at or above nsfw are NSFW. Keep this greater than or equal to warn.
-        nsfw: 0.9
+        nsfw: 0.95
+
     # Enable sight-engine by setting nohorny.classifier.type to sight-engine
     sight-engine:
       # SightEngine API user.
