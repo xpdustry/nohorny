@@ -9,7 +9,6 @@
 
 Are you sick of players turning your awesome Mindustry server into a NSFW gallery?
 Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
-Well, worry no more, xpdustry cooked another plugin just for this situation.
 
 Introducing **NoHorny**, your autonomous NSFW moderation plugin.
 It can detect NSFW logic displays and canvases and ban the offending players.
@@ -37,25 +36,25 @@ You can configure NoHorny using the Mindustry built-in `config` command in your 
 
 #### Available settings
 
-| Key                             | Description                                                                                                                                         | Default Value                      |
-|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
-| `nohorny-auto-mod-policy`       | The policy to apply when a group of buildings is classified.                                                                                        | `BAN_NSFW`                         |
-| `nohorny-api-endpoint`          | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                            | `https://nohorny.xpdustry.com/api` |
-| `nohorny-api-auth-type`         | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                            | `DISABLED`                         |
-| `nohorny-api-auth-value`        | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                | empty                              |
-| `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                             | empty                              |
-| `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                        | `NoHorny`                          |
-| `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the country. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list) | `false`                            |
-| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                               | `false`                            |
+| Key                             | Description                                                                                                                                                               | Default Value                      |
+|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------|
+| `nohorny-auto-mod-policy`       | The policy to apply when a group of buildings is classified.                                                                                                              | `BAN_NSFW`                         |
+| `nohorny-api-endpoint`          | Base URL used by the plugin. The client resolves `status` and `classify` relative to it.                                                                                  | `https://nohorny.xpdustry.com/api` |
+| `nohorny-api-auth-type`         | HTTP auth mode for the API. Valid values: `DISABLED`, `BASIC`, `BEARER`.                                                                                                  | `DISABLED`                         |
+| `nohorny-api-auth-value`        | Auth payload. For `BASIC`, use `username:password`. For `BEARER`, use the raw token.                                                                                      | empty                              |
+| `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                                                   | empty                              |
+| `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
+| `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the host country of your servers. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list). | `false`                            |
+| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                     | `false`                            |
 
 #### Auto-Mod Policies
 
-| Policy        | Behavior                                                |
-|---------------|---------------------------------------------------------|
-| `DISABLED`    | No action taken.                                        |
-| `DELETE_NSFW` | Delete buildings rated NSFW.                            |
-| `DELETE_WARN` | Delete buildings rated WARN or NSFW.                    |
-| `BAN_NSFW`    | Ban the author and delete buildings rated WARN or NSFW. |
+| Policy        | Behavior                                        |
+|---------------|-------------------------------------------------|
+| `DISABLED`    | No action taken.                                |
+| `DELETE_NSFW` | Delete buildings rated NSFW.                    |
+| `DELETE_WARN` | Delete buildings rated WARN or NSFW.            |
+| `BAN_NSFW`    | Ban the author and delete buildings rated NSFW. |
 
 #### Discord Webhook
 
