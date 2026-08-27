@@ -59,7 +59,7 @@ final class DisplayTracker implements LifecycleListener {
                     links.add(GeometryUtils.pack(link.x, link.y));
                 }
                 final var instructions = DisplayTracker.this.instructions(building.executor);
-                if (instructions == null || instructions.size() < MIN_DRAW_INSTRUCTION_COUNT) {
+                if (instructions == null) {
                     return;
                 }
                 final var data = new MindustryDisplay.Processor(instructions, author);
@@ -248,7 +248,8 @@ final class DisplayTracker implements LifecycleListener {
     }
 
     private boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
-        return !building.data().processors().isEmpty();
+        return building.data().processors().values().stream()
+                .anyMatch(processor -> processor.instructions().size() >= MIN_DRAW_INSTRUCTION_COUNT);
     }
 
     private void continueGrouperProcessing() {
