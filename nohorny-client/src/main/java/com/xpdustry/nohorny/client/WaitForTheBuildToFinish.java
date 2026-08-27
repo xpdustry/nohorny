@@ -6,6 +6,10 @@ import mindustry.Vars;
 import mindustry.gen.Groups;
 import mindustry.world.Block;
 
+// TODO
+//  Fix possible exploit where a malicious player can fill up its build queue
+//  and cancel it to the delay initial scan.
+//  Leaving time for other players to see the unsafe buildings, then delete
 final class WaitForTheBuildToFinish {
 
     private int counter = 0;
