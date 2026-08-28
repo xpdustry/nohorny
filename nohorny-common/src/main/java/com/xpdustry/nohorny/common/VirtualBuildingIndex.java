@@ -113,20 +113,12 @@ public final class VirtualBuildingIndex<T> {
 
     public Grouper startGrouperAt(final int initialX, final int initialY, final int range, final int steps) {
         return new Grouper(
-                this.index.clone(),
-                initialX,
-                initialY,
-                steps,
-                initialX - range,
-                initialY - range,
-                initialX + range,
-                initialY + range);
+                initialX, initialY, steps, initialX - range, initialY - range, initialX + range, initialY + range);
     }
 
     // Buildings removed from the live index remain available in this frozen view.
     public final class Grouper {
 
-        private final Int2ObjectOpenHashMap<VirtualBuilding<T>> snapshot;
         private final int maxSteps;
         private final IntArrayFIFOQueue queue = new IntArrayFIFOQueue();
         private final IntSet visited = new IntOpenHashSet();
@@ -144,7 +136,6 @@ public final class VirtualBuildingIndex<T> {
         private VirtualBuilding.@Nullable Group<T> result;
 
         private Grouper(
-                final Int2ObjectOpenHashMap<VirtualBuilding<T>> snapshot,
                 final int initialX,
                 final int initialY,
                 final int maxSteps,
@@ -152,14 +143,13 @@ public final class VirtualBuildingIndex<T> {
                 final int boundingBoxY1,
                 final int boundingBoxX2,
                 final int boundingBoxY2) {
-            this.snapshot = snapshot;
             this.maxSteps = maxSteps;
             this.boundingBoxX1 = boundingBoxX1;
             this.boundingBoxY1 = boundingBoxY1;
             this.boundingBoxX2 = boundingBoxX2;
             this.boundingBoxY2 = boundingBoxY2;
 
-            final var building = this.snapshot.get(GeometryUtils.pack(initialX, initialY));
+            final var building = VirtualBuildingIndex.this.index.get(GeometryUtils.pack(initialX, initialY));
             if (building == null) {
                 return;
             }
@@ -176,7 +166,7 @@ public final class VirtualBuildingIndex<T> {
         public void progress() {
             for (int i = 0; i < this.maxSteps && !this.isCompleted(); i++) {
                 final int visitingPacked = this.queue.dequeueInt();
-                final var visiting = this.snapshot.get(visitingPacked);
+                final var visiting = VirtualBuildingIndex.this.index.get(visitingPacked);
                 if (visiting == null) {
                     continue;
                 }
@@ -188,10 +178,10 @@ public final class VirtualBuildingIndex<T> {
                 this.buildings.add(visiting);
                 this.result = null;
 
-                this.resolveNeighborsOnXAxis(visiting, this.visited, this.queue, visiting.y());
+                this.resolveNeighborsOnXAxis(visiting, this.visited, this.queue, visiting.y() - 1);
                 this.resolveNeighborsOnXAxis(visiting, this.visited, this.queue, visiting.y() + visiting.size());
 
-                this.resolveNeighborsOnYAxis(visiting, this.visited, this.queue, visiting.x());
+                this.resolveNeighborsOnYAxis(visiting, this.visited, this.queue, visiting.x() - 1);
                 this.resolveNeighborsOnYAxis(visiting, this.visited, this.queue, visiting.x() + visiting.size());
             }
         }
@@ -223,8 +213,8 @@ public final class VirtualBuildingIndex<T> {
         private void resolveNeighborsOnXAxis(
                 final VirtualBuilding<T> visiting, final IntSet visited, final IntArrayFIFOQueue queue, final int y) {
             int x = visiting.x();
-            while (x < visiting.x() + visiting.size() && !this.snapshot.isEmpty()) {
-                final var neighbor = this.snapshot.get(GeometryUtils.pack(x, y));
+            while (x < visiting.x() + visiting.size() && !VirtualBuildingIndex.this.index.isEmpty()) {
+                final var neighbor = VirtualBuildingIndex.this.index.get(GeometryUtils.pack(x, y));
                 if (neighbor == null) {
                     x++;
                     continue;
@@ -240,8 +230,8 @@ public final class VirtualBuildingIndex<T> {
         private void resolveNeighborsOnYAxis(
                 final VirtualBuilding<T> visiting, final IntSet visited, final IntArrayFIFOQueue queue, final int x) {
             int y = visiting.y();
-            while (y < visiting.y() + visiting.size() && !this.snapshot.isEmpty()) {
-                final var neighbor = this.snapshot.get(GeometryUtils.pack(x, y));
+            while (y < visiting.y() + visiting.size() && !VirtualBuildingIndex.this.index.isEmpty()) {
+                final var neighbor = VirtualBuildingIndex.this.index.get(GeometryUtils.pack(x, y));
                 if (neighbor == null) {
                     y++;
                     continue;

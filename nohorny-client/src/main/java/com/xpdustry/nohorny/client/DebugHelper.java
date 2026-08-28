@@ -102,7 +102,7 @@ final class DebugHelper implements LifecycleListener {
 
     private <T extends MindustryImage> void groupDebugSnapshotAt(
             final Player player, final VirtualBuildingIndex<T> index, final int x, final int y) {
-        final var grouper = index.startGrouperAt(x, y, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        final var grouper = index.startGrouperAt(x, y, 9999, 9999);
         grouper.progress();
         final var group = grouper.create();
         if (group == null) {
