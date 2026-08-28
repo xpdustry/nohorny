@@ -147,6 +147,7 @@ project(":nohorny-client") {
 
     repositories {
         anukeXpdustry()
+        google()
     }
 
     dependencies {
@@ -180,7 +181,12 @@ project(":nohorny-client") {
         mergeServiceFiles()
         from(generateMetadataFile)
         relocate("it.unimi.dsi.fastutil", "com.xpdustry.nohorny.fastutil")
-        minimize()
+        minimize {
+            r8 {
+                enableOptimization()
+                keepRuleFiles.from(file("nohorny.pro"))
+            }
+        }
     }
 
     tasks.named(LifecycleBasePlugin.BUILD_TASK_NAME) {

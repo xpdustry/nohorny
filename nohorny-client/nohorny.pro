@@ -1,0 +1,11 @@
+-keep,allowshrinking,allowoptimization class !com.xpdustry.nohorny.fastutil.**,com.xpdustry.nohorny.**
+-keep,includedescriptorclasses public class com.xpdustry.nohorny.common.** { public protected *; }
+-keep,includedescriptorclasses public class com.xpdustry.nohorny.client.** { public protected *; }
+-keep class com.xpdustry.nohorny.client.MiniLogger { *; }
+-keep class com.xpdustry.nohorny.client.SettingCodec { *; }
+-keep class com.xpdustry.nohorny.common.package-info
+-keep class com.xpdustry.nohorny.client.package-info
+-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod,MethodParameters,Record,PermittedSubclasses
+-dontwarn arc.**
+-dontwarn mindustry.**
+-dontwarn org.jspecify.annotations.**
