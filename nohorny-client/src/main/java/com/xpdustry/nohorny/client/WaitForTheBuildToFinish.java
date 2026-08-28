@@ -37,6 +37,7 @@ final class WaitForTheBuildToFinish {
             }
             this.counter = Math.max(this.counter, ticks);
         }
+        this.counter *= 2;
     }
 
     public void countdown() {
