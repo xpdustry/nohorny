@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.common;
 
-import java.util.ArrayDeque;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -14,24 +15,23 @@ import org.jspecify.annotations.Nullable;
 /// Internal, don't use for now...
 public final class VirtualBuildingIndex<T> {
 
-    private final TroveIntObjectMap<VirtualBuilding<T>> index = new TroveIntObjectMap<>();
+    private final Int2ObjectOpenHashMap<VirtualBuilding<T>> index = new Int2ObjectOpenHashMap<>();
 
     public @Nullable VirtualBuilding<T> select(final int x, final int y) {
         return this.index.get(GeometryUtils.pack(x, y));
     }
 
     public Collection<VirtualBuilding<T>> selectAllWithinSquare(final int x, final int y, final int size) {
-        return this.selectAllWithinBounds(x, y, x + size, y + size, new TroveIntObjectMap<>());
+        return this.selectAllWithinBounds(x, y, x + size, y + size, new IntOpenHashSet());
     }
 
     private Collection<VirtualBuilding<T>> selectAllWithinBounds(
-            final int x1, final int y1, final int x2, final int y2, final TroveIntObjectMap<Boolean> visited) {
+            final int x1, final int y1, final int x2, final int y2, final IntSet visited) {
         final var results = new ArrayList<VirtualBuilding<T>>();
         for (int x = x1; x < x2; x++) {
             for (int y = y1; y < y2; y++) {
                 final var building = this.select(x, y);
-                if (building != null
-                        && visited.put(GeometryUtils.pack(building.x(), building.y()), Boolean.TRUE) == null) {
+                if (building != null && visited.add(GeometryUtils.pack(building.x(), building.y()))) {
                     results.add(building);
                 }
             }
@@ -41,12 +41,12 @@ public final class VirtualBuildingIndex<T> {
 
     public Collection<VirtualBuilding<T>> selectAll() {
         final var results = new ArrayList<VirtualBuilding<T>>();
-        final var visited = new HashSet<Integer>();
-        this.index.forEachValue(building -> {
+        final var visited = new IntOpenHashSet();
+        for (final var building : this.index.values()) {
             if (visited.add(GeometryUtils.pack(building.x(), building.y()))) {
                 results.add(building);
             }
-        });
+        }
         return Collections.unmodifiableCollection(results);
     }
 
@@ -126,10 +126,10 @@ public final class VirtualBuildingIndex<T> {
     // Buildings removed from the live index remain available in this frozen view.
     public final class Grouper {
 
-        private final TroveIntObjectMap<VirtualBuilding<T>> snapshot;
+        private final Int2ObjectOpenHashMap<VirtualBuilding<T>> snapshot;
         private final int maxSteps;
-        private final Deque<Integer> queue = new ArrayDeque<>();
-        private final TroveIntObjectMap<Boolean> visited = new TroveIntObjectMap<>();
+        private final IntArrayFIFOQueue queue = new IntArrayFIFOQueue();
+        private final IntSet visited = new IntOpenHashSet();
         private final List<VirtualBuilding<T>> buildings = new ArrayList<>();
 
         private final int boundingBoxX1;
@@ -144,7 +144,7 @@ public final class VirtualBuildingIndex<T> {
         private VirtualBuilding.@Nullable Group<T> result;
 
         private Grouper(
-                final TroveIntObjectMap<VirtualBuilding<T>> snapshot,
+                final Int2ObjectOpenHashMap<VirtualBuilding<T>> snapshot,
                 final int initialX,
                 final int initialY,
                 final int maxSteps,
@@ -164,8 +164,8 @@ public final class VirtualBuildingIndex<T> {
                 return;
             }
 
-            this.visited.put(GeometryUtils.pack(building.x(), building.y()), Boolean.TRUE);
-            this.queue.addLast(GeometryUtils.pack(building.x(), building.y()));
+            this.visited.add(GeometryUtils.pack(building.x(), building.y()));
+            this.queue.enqueue(GeometryUtils.pack(building.x(), building.y()));
 
             this.minX = building.x();
             this.minY = building.y();
@@ -175,7 +175,7 @@ public final class VirtualBuildingIndex<T> {
 
         public void progress() {
             for (int i = 0; i < this.maxSteps && !this.isCompleted(); i++) {
-                final var visitingPacked = this.queue.removeFirst();
+                final int visitingPacked = this.queue.dequeueInt();
                 final var visiting = this.snapshot.get(visitingPacked);
                 if (visiting == null) {
                     continue;
@@ -201,7 +201,7 @@ public final class VirtualBuildingIndex<T> {
         }
 
         public boolean isVisited(final int packed) {
-            return this.visited.containsKey(packed);
+            return this.visited.contains(packed);
         }
 
         public VirtualBuilding.@Nullable Group<T> create() {
@@ -221,10 +221,7 @@ public final class VirtualBuildingIndex<T> {
 
         @SuppressWarnings("DuplicatedCode")
         private void resolveNeighborsOnXAxis(
-                final VirtualBuilding<T> visiting,
-                final TroveIntObjectMap<Boolean> visited,
-                final Deque<Integer> queue,
-                final int y) {
+                final VirtualBuilding<T> visiting, final IntSet visited, final IntArrayFIFOQueue queue, final int y) {
             int x = visiting.x();
             while (x < visiting.x() + visiting.size() && !this.snapshot.isEmpty()) {
                 final var neighbor = this.snapshot.get(GeometryUtils.pack(x, y));
@@ -232,8 +229,8 @@ public final class VirtualBuildingIndex<T> {
                     x++;
                     continue;
                 }
-                if (isInsideTheBoundingBox(neighbor) && visited.put(neighbor.packed(), Boolean.TRUE) == null) {
-                    queue.add(neighbor.packed());
+                if (isInsideTheBoundingBox(neighbor) && visited.add(neighbor.packed())) {
+                    queue.enqueue(neighbor.packed());
                 }
                 x = Math.max(x + 1, neighbor.x() + neighbor.size());
             }
@@ -241,10 +238,7 @@ public final class VirtualBuildingIndex<T> {
 
         @SuppressWarnings("DuplicatedCode")
         private void resolveNeighborsOnYAxis(
-                final VirtualBuilding<T> visiting,
-                final TroveIntObjectMap<Boolean> visited,
-                final Deque<Integer> queue,
-                final int x) {
+                final VirtualBuilding<T> visiting, final IntSet visited, final IntArrayFIFOQueue queue, final int x) {
             int y = visiting.y();
             while (y < visiting.y() + visiting.size() && !this.snapshot.isEmpty()) {
                 final var neighbor = this.snapshot.get(GeometryUtils.pack(x, y));
@@ -252,8 +246,8 @@ public final class VirtualBuildingIndex<T> {
                     y++;
                     continue;
                 }
-                if (isInsideTheBoundingBox(neighbor) && visited.put(neighbor.packed(), Boolean.TRUE) == null) {
-                    queue.add(neighbor.packed());
+                if (isInsideTheBoundingBox(neighbor) && visited.add(neighbor.packed())) {
+                    queue.enqueue(neighbor.packed());
                 }
                 y = Math.max(y + 1, neighbor.y() + neighbor.size());
             }

@@ -12,6 +12,7 @@ import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.http.HttpClient;
@@ -21,7 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -216,12 +216,12 @@ final class NoHornyClient implements LifecycleListener {
             return null;
         }
 
-        final var counts = new HashMap<String, Integer>();
+        final var counts = new Object2IntOpenHashMap<String>();
         MindustryAuthor best = null;
         for (final var author : authors) {
             final var address = author.ip();
-            counts.compute(address, (_, v) -> v == null ? 1 : v + 1);
-            if (best == null || counts.get(address) > counts.get(best.ip())) {
+            final int count = counts.addTo(address, 1) + 1;
+            if (best == null || count > counts.getInt(best.ip())) {
                 best = author;
             }
         }

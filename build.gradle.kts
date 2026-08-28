@@ -95,10 +95,6 @@ subprojects {
             forbidModuleImports()
             forbidWildcardImports()
             licenseHeader("// SPDX-License-Identifier: MIT")
-            targetExclude(
-                "src/main/java/com/xpdustry/nohorny/common/TroveIntObjectMap.java",
-                "src/main/java/com/xpdustry/nohorny/common/TrovePrimeFinder.java",
-            )
         }
         kotlinGradle {
             ktlint()
@@ -116,6 +112,12 @@ subprojects {
             option("NullAway:OnlyNullMarked")
             check("NullAway", CheckSeverity.ERROR)
         }
+    }
+}
+
+project(":nohorny-common") {
+    dependencies {
+        "implementation"("it.unimi.dsi:fastutil-core:8.5.19")
     }
 }
 
@@ -149,6 +151,7 @@ project(":nohorny-client") {
 
     dependencies {
         "api"(project(":nohorny-common"))
+        "implementation"("it.unimi.dsi:fastutil-core:8.5.19")
         "compileOnly"(toxopid.dependencies.mindustryCore)
         "testImplementation"(toxopid.dependencies.mindustryCore)
         "compileOnly"(toxopid.dependencies.arcCore)
@@ -176,6 +179,7 @@ project(":nohorny-client") {
         from(rootProject.file("LICENSE.md")) { into("META-INF") }
         mergeServiceFiles()
         from(generateMetadataFile)
+        relocate("it.unimi.dsi.fastutil", "com.xpdustry.nohorny.fastutil")
         minimize()
     }
 

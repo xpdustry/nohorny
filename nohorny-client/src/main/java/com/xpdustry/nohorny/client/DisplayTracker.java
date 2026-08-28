@@ -7,17 +7,16 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import com.xpdustry.nohorny.common.VirtualBuildingIndex;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntSets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.SequencedSet;
-import java.util.Set;
-import java.util.stream.Collectors;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.logic.LExecutor;
@@ -37,10 +36,10 @@ final class DisplayTracker implements LifecycleListener {
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
+    private final IntLinkedOpenHashSet queue = new IntLinkedOpenHashSet();
     private VirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
-    record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
+    record ProcessorWithLinks(MindustryDisplay.Processor processor, IntSet links) {}
 
     public DisplayTracker(final NoHornyClient client) {
         this.client = client;
@@ -55,7 +54,7 @@ final class DisplayTracker implements LifecycleListener {
                 final var x = MindustryUtils.anchorTileX(building);
                 final var y = MindustryUtils.anchorTileY(building);
                 final var size = building.block.size;
-                final var links = new HashSet<Integer>(building.links.size);
+                final var links = new IntOpenHashSet(building.links.size);
                 for (final var link : building.links) {
                     links.add(GeometryUtils.pack(link.x, link.y));
                 }
@@ -65,7 +64,7 @@ final class DisplayTracker implements LifecycleListener {
                 }
                 final var data = new MindustryDisplay.Processor(instructions, author);
                 final var processor = DisplayTracker.this.processors.upsert(
-                        x, y, size, new ProcessorWithLinks(data, Collections.unmodifiableSet(links)));
+                        x, y, size, new ProcessorWithLinks(data, IntSets.unmodifiable(links)));
                 DisplayTracker.this.forEachLinkUpdateDisplay(processor, LinkUpdateKind.CREATE, queue);
             }
 
@@ -96,41 +95,23 @@ final class DisplayTracker implements LifecycleListener {
                 final int y = MindustryUtils.anchorTileY(building);
                 final int size = building.block.size;
                 final int resolution = ((LogicDisplay) building.block).displaySize;
-                final var processors = DisplayTracker.this
-                        .processors
-                        .selectAllWithinSquare(
-                                x - PROCESSOR_SEARCH_RADIUS,
-                                y - PROCESSOR_SEARCH_RADIUS,
-                                (PROCESSOR_SEARCH_RADIUS * 2) + size)
-                        .stream()
-                        .filter(entry -> {
-                            final var links = entry.data().links();
-                            // Processors can link their whole radius to inflate link scans, so large link sets are
-                            // matched by scanning the display area instead.
-                            if (links.size() <= size * size) {
-                                return links.stream().anyMatch(link -> {
-                                    final var linkX = GeometryUtils.x(link);
-                                    final var linkY = GeometryUtils.y(link);
-                                    return x <= linkX && linkX < x + size && y <= linkY && linkY < y + size;
-                                });
-                            }
-                            for (int i = x; i < x + size; i++) {
-                                for (int j = y; j < y + size; j++) {
-                                    if (links.contains(GeometryUtils.pack(i, j))) {
-                                        return true;
-                                    }
-                                }
-                            }
-                            return false;
-                        })
-                        .collect(Collectors.toUnmodifiableMap(
-                                processor -> GeometryUtils.pack(processor.x() - x, processor.y() - y),
-                                processor -> processor.data().processor(),
-                                // That should never happen, but meh...
-                                (a, b) -> a.instructions().size()
-                                                > b.instructions().size()
-                                        ? a
-                                        : b));
+                final var processors = new Int2ObjectOpenHashMap<MindustryDisplay.Processor>();
+                for (final var processor : DisplayTracker.this.processors.selectAllWithinSquare(
+                        x - PROCESSOR_SEARCH_RADIUS,
+                        y - PROCESSOR_SEARCH_RADIUS,
+                        (PROCESSOR_SEARCH_RADIUS * 2) + size)) {
+                    if (!isLinkedToDisplay(processor.data().links(), x, y, size)) {
+                        continue;
+                    }
+                    final int point = GeometryUtils.pack(processor.x() - x, processor.y() - y);
+                    final var candidate = processor.data().processor();
+                    final var existing = processors.get(point);
+                    if (existing == null
+                            || candidate.instructions().size()
+                                    > existing.instructions().size()) {
+                        processors.put(point, candidate);
+                    }
+                }
                 final var added =
                         DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
                 if (queue) {
@@ -210,7 +191,7 @@ final class DisplayTracker implements LifecycleListener {
         }
 
         while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirst();
+            final int point = this.queue.removeFirstInt();
             final var x = GeometryUtils.x(point);
             final var y = GeometryUtils.y(point);
             final var anchor = this.displays.select(x, y);
@@ -226,12 +207,14 @@ final class DisplayTracker implements LifecycleListener {
 
     private void forEachLinkUpdateDisplay(
             final VirtualBuilding<ProcessorWithLinks> processor, final LinkUpdateKind kind, final boolean queue) {
-        for (final var link : processor.data().links()) {
+        final IntIterator links = processor.data().links().iterator();
+        while (links.hasNext()) {
+            final int link = links.nextInt();
             var display = this.displays.select(GeometryUtils.x(link), GeometryUtils.y(link));
             if (display == null) {
                 continue;
             }
-            final var processors = new HashMap<>(display.data().processors());
+            final var processors = new Int2ObjectOpenHashMap<>(display.data().processors());
             final var point = GeometryUtils.pack(processor.x() - display.x(), processor.y() - display.y());
             switch (kind) {
                 case CREATE -> processors.put(point, processor.data().processor());
@@ -241,7 +224,7 @@ final class DisplayTracker implements LifecycleListener {
                     display.x(),
                     display.y(),
                     display.size(),
-                    new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
+                    new MindustryDisplay(display.data().resolution(), processors));
             if (queue) {
                 this.enqueue(GeometryUtils.pack(display.x(), display.y()));
             }
@@ -260,7 +243,12 @@ final class DisplayTracker implements LifecycleListener {
             return;
         }
         this.grouper.progress();
-        this.queue.removeIf(this.grouper::isVisited);
+        final IntIterator iterator = this.queue.iterator();
+        while (iterator.hasNext()) {
+            if (this.grouper.isVisited(iterator.nextInt())) {
+                iterator.remove();
+            }
+        }
         if (this.grouper.isCompleted()) {
             final var group = this.grouper.create();
             if (group == null) {
@@ -277,7 +265,34 @@ final class DisplayTracker implements LifecycleListener {
         if (this.grouper != null && this.grouper.isVisited(packed)) {
             return;
         }
-        this.queue.addLast(packed);
+        this.queue.addAndMoveToLast(packed);
+    }
+
+    private static boolean isLinkedToDisplay(final IntSet links, final int x, final int y, final int size) {
+        // Processors can link their whole radius to inflate link scans,
+        // so large link sets are matched by scanning the display area instead.
+        if (links.size() <= size * size) {
+            final var iterator = links.iterator();
+            while (iterator.hasNext()) {
+                final int link = iterator.nextInt();
+                final int linkX = GeometryUtils.x(link);
+                final int linkY = GeometryUtils.y(link);
+                if (x <= linkX && linkX < x + size && y <= linkY && linkY < y + size) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        for (int i = x; i < x + size; i++) {
+            for (int j = y; j < y + size; j++) {
+                if (links.contains(GeometryUtils.pack(i, j))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private enum LinkUpdateKind {

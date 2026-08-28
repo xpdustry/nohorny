@@ -8,9 +8,9 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import com.xpdustry.nohorny.common.VirtualBuildingIndex;
-import java.util.LinkedHashSet;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import java.util.Objects;
-import java.util.SequencedSet;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.world.blocks.logic.CanvasBlock;
@@ -24,7 +24,7 @@ final class CanvasTracker implements LifecycleListener {
 
     final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
-    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
+    private final IntLinkedOpenHashSet queue = new IntLinkedOpenHashSet();
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private VirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
 
@@ -98,7 +98,7 @@ final class CanvasTracker implements LifecycleListener {
         }
 
         while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirst();
+            final int point = this.queue.removeFirstInt();
             final var x = GeometryUtils.x(point);
             final var y = GeometryUtils.y(point);
             final var anchor = this.canvases.select(x, y);
@@ -131,7 +131,12 @@ final class CanvasTracker implements LifecycleListener {
             return;
         }
         this.grouper.progress();
-        this.queue.removeIf(this.grouper::isVisited);
+        final IntIterator iterator = this.queue.iterator();
+        while (iterator.hasNext()) {
+            if (this.grouper.isVisited(iterator.nextInt())) {
+                iterator.remove();
+            }
+        }
         if (this.grouper.isCompleted()) {
             final var group = this.grouper.create();
             if (group == null || group.w() < MIN_CANVAS_GROUP_SIZE || group.h() < MIN_CANVAS_GROUP_SIZE) {
@@ -148,6 +153,6 @@ final class CanvasTracker implements LifecycleListener {
         if (this.grouper != null && this.grouper.isVisited(packed)) {
             return;
         }
-        this.queue.addLast(packed);
+        this.queue.addAndMoveToLast(packed);
     }
 }
