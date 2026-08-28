@@ -95,6 +95,10 @@ subprojects {
             forbidModuleImports()
             forbidWildcardImports()
             licenseHeader("// SPDX-License-Identifier: MIT")
+            targetExclude(
+                "src/main/java/com/xpdustry/nohorny/common/TroveIntObjectMap.java",
+                "src/main/java/com/xpdustry/nohorny/common/TrovePrimeFinder.java",
+            )
         }
         kotlinGradle {
             ktlint()

@@ -7,6 +7,7 @@ import com.xpdustry.nohorny.common.ImmutableIntArray;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.VirtualBuilding;
+import com.xpdustry.nohorny.common.VirtualBuildingIndex;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.SequencedSet;
@@ -21,11 +22,11 @@ final class CanvasTracker implements LifecycleListener {
     private static final int MAX_GROUP_STEPS = 50;
     private static final int MIN_CANVAS_GROUP_SIZE = 2 * 4;
 
-    final GroupingVirtualBuildingIndex<MindustryCanvas> canvases = new GroupingVirtualBuildingIndex<>();
+    final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private GroupingVirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
+    private VirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
 
     public CanvasTracker(final NoHornyClient client) {
         this.client = client;

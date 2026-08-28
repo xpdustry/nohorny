@@ -6,6 +6,7 @@ import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.VirtualBuilding;
+import com.xpdustry.nohorny.common.VirtualBuildingIndex;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,12 +33,12 @@ final class DisplayTracker implements LifecycleListener {
     private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
     private static final int MAX_GROUP_STEPS = 50;
 
-    final GroupingVirtualBuildingIndex<MindustryDisplay> displays = new GroupingVirtualBuildingIndex<>();
+    final VirtualBuildingIndex<MindustryDisplay> displays = new VirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
     private final NoHornyClient client;
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
-    private GroupingVirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
+    private VirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
     record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
