@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.GeometryUtils;
+import arc.Core;
 import com.xpdustry.nohorny.common.ImmutableByteArray;
 import com.xpdustry.nohorny.common.ImmutableIntArray;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import com.xpdustry.nohorny.common.VirtualBuildingIndex;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
-import java.util.Objects;
+import com.xpdustry.nohorny.common.VirtualBuildingIndex2;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.world.blocks.logic.CanvasBlock;
@@ -19,14 +18,16 @@ import org.jspecify.annotations.Nullable;
 final class CanvasTracker implements LifecycleListener {
 
     private static final int MAX_GROUP_RANGE = 50 * 3; // 50 large canvases around the anchor
-    private static final int MAX_GROUP_STEPS = 50;
     private static final int MIN_CANVAS_GROUP_SIZE = 2 * 4;
+    private static final int CHUNK_SIZE = 6;
 
-    final VirtualBuildingIndex<MindustryCanvas> canvases = new VirtualBuildingIndex<>();
+    private final VirtualBuildingIndex2<MindustryCanvas> canvasIndex = VirtualBuildingIndex2.create(CHUNK_SIZE);
+    final VirtualBuildingIndex2.BaseView<MindustryCanvas> baseCanvases = this.canvasIndex.withBaseView();
+    final VirtualBuildingIndex2.LiveView<MindustryCanvas> canvases = this.canvasIndex.withLiveView();
     private final NoHornyClient client;
-    private final IntLinkedOpenHashSet queue = new IntLinkedOpenHashSet();
+    private TrackerCollectionState state = TrackerCollectionState.IDLE;
+    private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private VirtualBuildingIndex<MindustryCanvas>.@Nullable Grouper grouper = null;
 
     public CanvasTracker(final NoHornyClient client) {
         this.client = client;
@@ -46,22 +47,18 @@ final class CanvasTracker implements LifecycleListener {
                 final var data = CanvasTracker.this.data(building, author);
                 final var added = CanvasTracker.this.canvases.upsert(x, y, size, data);
                 if (queue) {
-                    CanvasTracker.this.enqueue(added.packed());
+                    CanvasTracker.this.canvases.markDirty(added.x(), added.y());
                 }
             }
 
             @Override
             public void onRemoveAll() {
                 CanvasTracker.this.canvases.removeAll();
-                CanvasTracker.this.queue.clear();
-                CanvasTracker.this.grouper = null;
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
-                for (final var removed : CanvasTracker.this.canvases.removeAllWithinSquare(x, y, size)) {
-                    CanvasTracker.this.queue.remove(removed.packed());
-                }
+                CanvasTracker.this.canvases.removeAllWithinSquare(x, y, size);
             }
         });
 
@@ -89,26 +86,46 @@ final class CanvasTracker implements LifecycleListener {
 
     private void collect() {
         if (!Vars.state.isGame()) {
-            return;
-        }
-
-        if (this.grouper != null) {
-            this.continueGrouperProcessing();
-            return;
-        }
-
-        while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirstInt();
-            final var x = GeometryUtils.x(point);
-            final var y = GeometryUtils.y(point);
-            final var anchor = this.canvases.select(x, y);
-            if (anchor == null || !this.isEligible(anchor)) {
-                continue;
+            if (this.state == TrackerCollectionState.WAITING) {
+                this.state = TrackerCollectionState.IDLE;
             }
-            this.waiter.estimateWaitTimeFor(block -> block instanceof CanvasBlock);
-            this.grouper = this.canvases.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
-            this.continueGrouperProcessing();
-            break;
+            return;
+        }
+
+        if (this.state == TrackerCollectionState.PROCESSING || this.canvases.hasNoDirtyTiles()) {
+            return;
+        }
+
+        if (this.waiter.isNotDone()) {
+            this.waiter.countdown();
+            return;
+        }
+
+        switch (this.state) {
+            case IDLE -> {
+                this.waiter.estimateWaitTimeFor(block -> block instanceof CanvasBlock);
+                this.state = TrackerCollectionState.WAITING;
+            }
+            case WAITING -> {
+                this.canvases.writeToBase(false);
+                this.state = TrackerCollectionState.PROCESSING;
+                this.executor.execute(() -> {
+                    try {
+                        for (final var group : this.baseCanvases.selectAllDirtyGroupsWithRange(MAX_GROUP_RANGE)) {
+                            if (group.elements().size() >= MIN_CANVAS_GROUP_SIZE
+                                    && group.elements().stream().anyMatch(this::isEligible)) {
+                                this.client.offer(group);
+                            }
+                        }
+                    } finally {
+                        Core.app.post(() -> {
+                            this.canvases.writeToBase(true);
+                            this.state = TrackerCollectionState.IDLE;
+                        });
+                    }
+                });
+            }
+            case PROCESSING -> {}
         }
     }
 
@@ -122,37 +139,5 @@ final class CanvasTracker implements LifecycleListener {
             }
         }
         return !isSolidColor;
-    }
-
-    private void continueGrouperProcessing() {
-        Objects.requireNonNull(this.grouper);
-        if (this.waiter.isNotDone()) {
-            this.waiter.countdown();
-            return;
-        }
-        this.grouper.progress();
-        final IntIterator iterator = this.queue.iterator();
-        while (iterator.hasNext()) {
-            if (this.grouper.isVisited(iterator.nextInt())) {
-                iterator.remove();
-            }
-        }
-        if (this.grouper.isCompleted()) {
-            final var group = this.grouper.create();
-            if (group == null || group.w() < MIN_CANVAS_GROUP_SIZE || group.h() < MIN_CANVAS_GROUP_SIZE) {
-                this.grouper = null;
-                return;
-            }
-            if (this.client.tryAccept(group)) {
-                this.grouper = null;
-            }
-        }
-    }
-
-    private void enqueue(final int packed) {
-        if (this.grouper != null && this.grouper.isVisited(packed)) {
-            return;
-        }
-        this.queue.addAndMoveToLast(packed);
     }
 }

@@ -84,13 +84,11 @@ final class NoHornyClient implements LifecycleListener {
         }
     }
 
-    public <T extends MindustryImage> boolean tryAccept(final VirtualBuilding.Group<T> group) {
-        if (!this.classificationPermits.tryAcquire()) {
-            return false;
-        }
+    public <T extends MindustryImage> void offer(final VirtualBuilding.Group<T> group) {
         try {
             this.executor.execute(() -> {
                 try {
+                    this.classificationPermits.acquire();
                     this.classify(group);
                 } catch (final ConnectException e) {
                     log.error(
@@ -103,10 +101,7 @@ final class NoHornyClient implements LifecycleListener {
                     this.classificationPermits.release();
                 }
             });
-            return true;
         } catch (final RejectedExecutionException _) {
-            this.classificationPermits.release();
-            return false;
         }
     }
 

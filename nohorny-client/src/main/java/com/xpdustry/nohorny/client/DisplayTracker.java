@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.Core;
 import com.xpdustry.nohorny.common.DrawInstruction;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import com.xpdustry.nohorny.common.VirtualBuildingIndex;
+import com.xpdustry.nohorny.common.VirtualBuildingIndex2;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.logic.LExecutor;
@@ -30,14 +31,17 @@ final class DisplayTracker implements LifecycleListener {
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 20;
     private static final int PROCESSOR_SEARCH_RADIUS = 8;
     private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
-    private static final int MAX_GROUP_STEPS = 50;
+    private static final int CHUNK_SIZE = 6;
 
-    final VirtualBuildingIndex<MindustryDisplay> displays = new VirtualBuildingIndex<>();
-    final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
+    private final VirtualBuildingIndex2<MindustryDisplay> displayIndex = VirtualBuildingIndex2.create(CHUNK_SIZE);
+    final VirtualBuildingIndex2.BaseView<MindustryDisplay> baseDisplays = this.displayIndex.withBaseView();
+    final VirtualBuildingIndex2.LiveView<MindustryDisplay> displays = this.displayIndex.withLiveView();
+    final VirtualBuildingIndex2.LiveView<ProcessorWithLinks> processors =
+            VirtualBuildingIndex2.<ProcessorWithLinks>create(CHUNK_SIZE).withLiveView();
     private final NoHornyClient client;
+    private TrackerCollectionState state = TrackerCollectionState.IDLE;
+    private final Executor executor = Executors.newVirtualThreadPerTaskExecutor();
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private final IntLinkedOpenHashSet queue = new IntLinkedOpenHashSet();
-    private VirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
 
     record ProcessorWithLinks(MindustryDisplay.Processor processor, IntSet links) {}
 
@@ -115,22 +119,18 @@ final class DisplayTracker implements LifecycleListener {
                 final var added =
                         DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
                 if (queue) {
-                    DisplayTracker.this.enqueue(added.packed());
+                    DisplayTracker.this.displays.markDirty(added.x(), added.y());
                 }
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
-                for (final var removed : DisplayTracker.this.displays.removeAllWithinSquare(x, y, size)) {
-                    DisplayTracker.this.queue.remove(removed.packed());
-                }
+                DisplayTracker.this.displays.removeAllWithinSquare(x, y, size);
             }
 
             @Override
             public void onRemoveAll() {
                 DisplayTracker.this.displays.removeAll();
-                DisplayTracker.this.queue.clear();
-                DisplayTracker.this.grouper = null;
             }
         });
 
@@ -182,26 +182,45 @@ final class DisplayTracker implements LifecycleListener {
 
     private void collect() {
         if (!Vars.state.isGame()) {
-            return;
-        }
-
-        if (this.grouper != null) {
-            this.continueGrouperProcessing();
-            return;
-        }
-
-        while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirstInt();
-            final var x = GeometryUtils.x(point);
-            final var y = GeometryUtils.y(point);
-            final var anchor = this.displays.select(x, y);
-            if (anchor == null || !this.isEligible(anchor)) {
-                continue;
+            if (this.state == TrackerCollectionState.WAITING) {
+                this.state = TrackerCollectionState.IDLE;
             }
-            this.waiter.estimateWaitTimeFor(block -> block instanceof LogicBlock || block instanceof LogicDisplay);
-            this.grouper = this.displays.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
-            this.continueGrouperProcessing();
-            break;
+            return;
+        }
+
+        if (this.state == TrackerCollectionState.PROCESSING || this.displays.hasNoDirtyTiles()) {
+            return;
+        }
+
+        if (this.waiter.isNotDone()) {
+            this.waiter.countdown();
+            return;
+        }
+
+        switch (this.state) {
+            case IDLE -> {
+                this.waiter.estimateWaitTimeFor(block -> block instanceof LogicBlock || block instanceof LogicDisplay);
+                this.state = TrackerCollectionState.WAITING;
+            }
+            case WAITING -> {
+                this.displays.writeToBase(false);
+                this.state = TrackerCollectionState.PROCESSING;
+                this.executor.execute(() -> {
+                    try {
+                        for (final var group : this.baseDisplays.selectAllDirtyGroupsWithRange(MAX_GROUP_RANGE)) {
+                            if (group.elements().stream().anyMatch(this::isEligible)) {
+                                this.client.offer(group);
+                            }
+                        }
+                    } finally {
+                        Core.app.post(() -> {
+                            this.displays.writeToBase(true);
+                            this.state = TrackerCollectionState.IDLE;
+                        });
+                    }
+                });
+            }
+            case PROCESSING -> {}
         }
     }
 
@@ -226,7 +245,7 @@ final class DisplayTracker implements LifecycleListener {
                     display.size(),
                     new MindustryDisplay(display.data().resolution(), processors));
             if (queue) {
-                this.enqueue(GeometryUtils.pack(display.x(), display.y()));
+                this.displays.markDirty(display.x(), display.y());
             }
         }
     }
@@ -234,38 +253,6 @@ final class DisplayTracker implements LifecycleListener {
     private boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
         return building.data().processors().values().stream()
                 .anyMatch(processor -> processor.instructions().size() >= MIN_DRAW_INSTRUCTION_COUNT);
-    }
-
-    private void continueGrouperProcessing() {
-        Objects.requireNonNull(this.grouper);
-        if (this.waiter.isNotDone()) {
-            this.waiter.countdown();
-            return;
-        }
-        this.grouper.progress();
-        final IntIterator iterator = this.queue.iterator();
-        while (iterator.hasNext()) {
-            if (this.grouper.isVisited(iterator.nextInt())) {
-                iterator.remove();
-            }
-        }
-        if (this.grouper.isCompleted()) {
-            final var group = this.grouper.create();
-            if (group == null) {
-                this.grouper = null;
-                return;
-            }
-            if (this.client.tryAccept(group)) {
-                this.grouper = null;
-            }
-        }
-    }
-
-    private void enqueue(final int packed) {
-        if (this.grouper != null && this.grouper.isVisited(packed)) {
-            return;
-        }
-        this.queue.addAndMoveToLast(packed);
     }
 
     private static boolean isLinkedToDisplay(final IntSet links, final int x, final int y, final int size) {

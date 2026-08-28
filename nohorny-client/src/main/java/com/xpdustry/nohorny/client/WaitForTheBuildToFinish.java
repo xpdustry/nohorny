@@ -16,7 +16,7 @@ final class WaitForTheBuildToFinish {
 
     public void estimateWaitTimeFor(final Predicate<Block> predicate) {
         for (final var player : Groups.player) {
-            int ticks = 5;
+            int ticks = 60;
             for (final var plan : player.getPreviewPlans()) {
                 final var unit = player.unit();
                 final var block = plan.block;

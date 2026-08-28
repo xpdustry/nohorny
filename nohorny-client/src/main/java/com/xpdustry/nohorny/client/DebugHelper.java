@@ -10,7 +10,7 @@ import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import com.xpdustry.nohorny.common.VirtualBuildingIndex;
+import com.xpdustry.nohorny.common.VirtualBuildingIndex2;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -90,9 +90,9 @@ final class DebugHelper implements LifecycleListener {
             final var player = event.player;
 
             switch (Vars.world.build(x, y)) {
-                case CanvasBlock.CanvasBuild _ -> this.groupDebugSnapshotAt(player, this.canvases.canvases, x, y);
+                case CanvasBlock.CanvasBuild _ -> this.groupDebugSnapshotAt(player, this.canvases.baseCanvases, x, y);
                 case LogicDisplay.LogicDisplayBuild _ ->
-                    this.groupDebugSnapshotAt(player, this.displays.displays, x, y);
+                    this.groupDebugSnapshotAt(player, this.displays.baseDisplays, x, y);
                 case null, default -> {}
             }
 
@@ -101,10 +101,8 @@ final class DebugHelper implements LifecycleListener {
     }
 
     private <T extends MindustryImage> void groupDebugSnapshotAt(
-            final Player player, final VirtualBuildingIndex<T> index, final int x, final int y) {
-        final var grouper = index.startGrouperAt(x, y, 9999, 9999);
-        grouper.progress();
-        final var group = grouper.create();
+            final Player player, final VirtualBuildingIndex2.BaseView<T> index, final int x, final int y) {
+        final var group = index.selectGroupWithinRange(x, y, 9999);
         if (group == null) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]No group at (" + x + ", " + y + ")");
             return;
