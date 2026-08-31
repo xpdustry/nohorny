@@ -12,6 +12,9 @@ import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
@@ -100,15 +103,19 @@ final class DebugHelper implements LifecycleListener {
 
     private <T extends MindustryImage> void groupDebugSnapshotAt(
             final Player player, final VirtualBuildingIndex<T> index, final int x, final int y) {
-        final var grouper = index.selectGroupWithinRangeIncremental(x, y, 9999, 9999);
+        // TODO We love lag spikes...
+        final var grouper = index.selectGroupWithinRangeIncremental(x, y, 999, Integer.MAX_VALUE);
         grouper.progress();
         final var group = grouper.create();
         if (group == null) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]No group at (" + x + ", " + y + ")");
             return;
         }
-        this.render(player, group);
-        final var prefix = x + "_" + y + "_" + System.currentTimeMillis();
+        this.highlight(player, group);
+        final var prefix = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                        .format(LocalDateTime.now(ZoneId.systemDefault()))
+                        .replace(':', '-')
+                + "_" + x + "_" + y;
         final var png = this.directory.resolve(prefix + ".png").toAbsolutePath();
         try (final var pngStream = Files.newOutputStream(png)) {
             ImageIO.write(MindustryImageRenderer.render(group), "png", pngStream);
@@ -119,10 +126,11 @@ final class DebugHelper implements LifecycleListener {
             return;
         }
         player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + png);
+        log.info("{} rendered the group at ({}, {}) to {}", player.plainName(), x, y, png);
     }
 
     @SuppressWarnings("fallthrough")
-    public <T extends MindustryImage> void render(final Player player, final VirtualBuilding.Group<T> group) {
+    public <T extends MindustryImage> void highlight(final Player player, final VirtualBuilding.Group<T> group) {
         final var color = KELLY_COLORS[new Random().nextInt(KELLY_COLORS.length)];
         for (final var building : group.elements()) {
             switch (building.data()) {
