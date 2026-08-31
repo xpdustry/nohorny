@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.math.Mathf;
+import arc.util.Time;
 import java.util.function.Predicate;
 import mindustry.Vars;
 import mindustry.gen.Groups;
@@ -12,32 +14,32 @@ import mindustry.world.Block;
 //  Leaving time for other players to see the unsafe buildings, then delete
 final class WaitForTheBuildToFinish {
 
-    private int counter = 0;
+    private long counter = 0;
 
     public void estimateWaitTimeFor(final Predicate<Block> predicate) {
         for (final var player : Groups.player) {
-            int ticks = 5;
+            float ticks = 5f;
+            final var unit = player.unit();
+            if (unit == null) {
+                continue;
+            }
             for (final var plan : player.getPreviewPlans()) {
-                final var unit = player.unit();
                 final var block = plan.block;
                 if (!predicate.test(block)) {
                     continue;
                 }
-                if (unit == null
-                        || Vars.state.rules.infiniteResources
-                        || unit.team().rules().infiniteResources) {
-                    ticks += 1;
+                if (Vars.state.rules.infiniteResources) {
+                    ticks += 1F;
                 } else {
-                    final var buildTime = block.buildTime * Vars.state.rules.buildCostMultiplier;
-                    final var buildSpeed = unit.type().buildSpeed
+                    final float buildTime = block.buildTime * Vars.state.rules.buildCostMultiplier;
+                    final float buildSpeed = unit.type().buildSpeed
                             * unit.buildSpeedMultiplier()
                             * Vars.state.rules.buildSpeed(unit.team());
-                    ticks += (int) Math.ceil(buildTime / Math.max(buildSpeed, 0.1));
+                    ticks += Mathf.ceil(buildTime / Math.max(buildSpeed, 0.1F));
                 }
             }
-            this.counter = Math.max(this.counter, ticks);
+            this.counter = (long) Math.min(15 * Time.toSeconds, ticks);
         }
-        this.counter *= 2;
     }
 
     public void countdown() {
