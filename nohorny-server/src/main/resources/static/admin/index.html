@@ -186,13 +186,13 @@
     </style>
 </head>
 <body>
-<main class="container" x-data="requests" x-init="load()">
+<main class="container" x-data="requests" x-init="start()">
     <div class="page-head">
         <hgroup>
             <h1>NoHorny Admin</h1>
             <p>Latest image moderation decisions</p>
         </hgroup>
-        <button type="button" @click="load()" :aria-busy="loading" :disabled="loading">
+        <button type="button" @click="refresh()" :aria-busy="loading" :disabled="loading">
             <span x-show="!loading">Refresh</span>
             <span x-show="loading">Loading</span>
         </button>
@@ -204,7 +204,7 @@
     </article>
 
     <section class="stats" x-show="items.length">
-        <div class="tile"><small>Total</small><b x-text="stats.total"></b></div>
+        <div class="tile"><small>Loaded</small><b x-text="stats.total"></b></div>
         <div class="tile" data-rating="safe"><small>Safe</small><b x-text="stats.safe"></b></div>
         <div class="tile" data-rating="warn"><small>Warn</small><b x-text="stats.warn"></b></div>
         <div class="tile" data-rating="nsfw"><small>NSFW</small><b x-text="stats.nsfw"></b></div>
@@ -271,7 +271,13 @@
 
     <p class="state" x-show="loading && !items.length"><span class="spin">↻</span> Loading requests…</p>
     <p class="state" x-show="!loading && !items.length && !error">No classification requests yet. Once images are classified, they'll show up here.</p>
-    <p class="state" x-show="items.length && !visible.length">No <span x-text="filter"></span> requests in the latest batch.</p>
+    <p class="state" x-show="items.length && !visible.length">No <span x-text="filter"></span> requests loaded yet.</p>
+    <div class="state" x-ref="sentinel">
+        <span x-show="loading && items.length"><span class="spin">↻</span> Loading more…</span>
+        <button type="button" x-show="error && items.length" @click="loadMore()">Try again</button>
+        <button type="button" x-show="hasMore && !loading && !error" @click="loadMore()">Load more</button>
+        <span x-show="!hasMore && items.length && visible.length">All requests loaded.</span>
+    </div>
 </main>
 
 <script>
@@ -282,6 +288,21 @@
             error: null,
             filter: 'all',
             revealed: {},
+            nextCursor: null,
+            hasMore: true,
+            observer: null,
+
+            async start() {
+                await this.refresh();
+                this.observer = new IntersectionObserver(entries => {
+                    if (entries[0].isIntersecting) this.loadMore();
+                }, { rootMargin: '400px' });
+                this.observer.observe(this.$refs.sentinel);
+            },
+
+            destroy() {
+                this.observer?.disconnect();
+            },
 
             rating(request) {
                 if (!request.successful) return 'failed';
@@ -333,13 +354,26 @@
                 return this.items.filter(request => this.rating(request) === this.filter);
             },
 
-            async load() {
+            async refresh() {
+                this.items = [];
+                this.nextCursor = null;
+                this.hasMore = true;
+                this.revealed = {};
+                await this.loadMore();
+            },
+
+            async loadMore() {
+                if (this.loading || !this.hasMore) return;
                 this.loading = true;
                 this.error = null;
                 try {
-                    const response = await fetch('api/requests');
+                    const query = this.nextCursor === null ? '' : `?before=${this.nextCursor}`;
+                    const response = await fetch(`api/requests${query}`);
                     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-                    this.items = await response.json();
+                    const page = await response.json();
+                    this.items.push(...page.items);
+                    this.nextCursor = page.nextCursor;
+                    this.hasMore = page.nextCursor !== null;
                 } catch (error) {
                     this.error = error.message;
                 } finally {

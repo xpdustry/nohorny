@@ -14,6 +14,8 @@ public interface ClassificationRequestRepository extends JpaRepository<Classific
 
     List<ClassificationRequestSummary> findAllByOrderByIdDesc(final Limit limit);
 
+    List<ClassificationRequestSummary> findAllByIdLessThanOrderByIdDesc(final long id, final Limit limit);
+
     Optional<ClassificationRequestImage> findImageById(final long id);
 
     @Modifying
