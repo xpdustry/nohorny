@@ -21,7 +21,7 @@ final class VirtualBuildingIndexTest {
         final var second = insert(index, 1, 0, 1, "second");
         final var third = insert(index, 1, 1, 1, "third");
 
-        final var grouper = index.startGrouperAt(0, 0, 10, 10);
+        final var grouper = index.selectGroupWithinRangeIncremental(0, 0, 10, 10);
         grouper.progress();
 
         assertTrue(grouper.isCompleted());
@@ -40,7 +40,7 @@ final class VirtualBuildingIndexTest {
         final var first = insert(index, 0, 0, 1, "first");
         insert(index, 1, 1, 1, "diagonal");
 
-        final var grouper = index.startGrouperAt(0, 0, 10, 10);
+        final var grouper = index.selectGroupWithinRangeIncremental(0, 0, 10, 10);
         grouper.progress();
 
         final var group = grouper.create();
@@ -54,7 +54,7 @@ final class VirtualBuildingIndexTest {
         final var first = insert(index, 0, 0, 1, "first");
         final var second = insert(index, 1, 0, 1, "second");
         final var third = insert(index, 2, 0, 1, "third");
-        final var grouper = index.startGrouperAt(0, 0, 10, 1);
+        final var grouper = index.selectGroupWithinRangeIncremental(0, 0, 10, 1);
 
         grouper.progress();
 
@@ -84,7 +84,7 @@ final class VirtualBuildingIndexTest {
         final var second = insert(index, 1, 0, 1, "inside");
         final var outside = insert(index, 2, 0, 1, "outside");
 
-        final var grouper = index.startGrouperAt(0, 0, 2, 10);
+        final var grouper = index.selectGroupWithinRangeIncremental(0, 0, 2, 10);
         grouper.progress();
 
         assertTrue(grouper.isCompleted());
@@ -103,14 +103,14 @@ final class VirtualBuildingIndexTest {
 
         assertEquals(removed, index.remove(1, 0));
 
-        final var disconnectedGrouper = index.startGrouperAt(0, 0, 10, 10);
+        final var disconnectedGrouper = index.selectGroupWithinRangeIncremental(0, 0, 10, 10);
         disconnectedGrouper.progress();
         final var disconnected = disconnectedGrouper.create();
         assertNotNull(disconnected);
         assertEquals(Set.of(first), Set.copyOf(disconnected.elements()));
 
         final var replacement = insert(index, 1, 0, 1, "replacement");
-        final var reconnectedGrouper = index.startGrouperAt(0, 0, 10, 10);
+        final var reconnectedGrouper = index.selectGroupWithinRangeIncremental(0, 0, 10, 10);
         reconnectedGrouper.progress();
         final var reconnected = reconnectedGrouper.create();
         assertNotNull(reconnected);
@@ -123,7 +123,7 @@ final class VirtualBuildingIndexTest {
         final var first = insert(index, -2, -1, 2, "first");
         final var second = insert(index, 0, -1, 3, "second");
 
-        final var grouper = index.startGrouperAt(-1, 0, 10, 10);
+        final var grouper = index.selectGroupWithinRangeIncremental(-1, 0, 10, 10);
         grouper.progress();
 
         final var group = grouper.create();
@@ -140,7 +140,7 @@ final class VirtualBuildingIndexTest {
     void complete_without_a_group_when_start_is_empty() {
         final var index = new VirtualBuildingIndex<String>();
 
-        final var grouper = index.startGrouperAt(4, 7, 10, 10);
+        final var grouper = index.selectGroupWithinRangeIncremental(4, 7, 10, 10);
         grouper.progress();
 
         assertTrue(grouper.isCompleted());

@@ -9,7 +9,6 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;

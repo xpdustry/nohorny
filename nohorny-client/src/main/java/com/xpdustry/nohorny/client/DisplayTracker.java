@@ -28,7 +28,7 @@ import org.jspecify.annotations.Nullable;
 final class DisplayTracker implements LifecycleListener {
 
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 20;
-    private static final int PROCESSOR_SEARCH_RADIUS = 8;
+    private static final int PROCESSOR_SEARCH_RADIUS = 10;
     private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
     private static final int MAX_GROUP_STEPS = 50;
 
@@ -37,7 +37,7 @@ final class DisplayTracker implements LifecycleListener {
     private final NoHornyClient client;
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
-    private VirtualBuildingIndex<MindustryDisplay>.@Nullable Grouper grouper = null;
+    private VirtualBuildingIndex<MindustryDisplay>.@Nullable IncrementalGrouper grouper = null;
 
     record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
@@ -87,10 +87,6 @@ final class DisplayTracker implements LifecycleListener {
                     final LogicDisplay.LogicDisplayBuild building,
                     final @Nullable MindustryAuthor author,
                     final boolean queue) {
-                // TODO Add proper support for tileable display
-                if (building instanceof TileableLogicDisplay.TileableLogicDisplayBuild) {
-                    return;
-                }
                 final int x = MindustryUtils.anchorTileX(building);
                 final int y = MindustryUtils.anchorTileY(building);
                 final int size = building.block.size;
@@ -130,8 +126,12 @@ final class DisplayTracker implements LifecycleListener {
                                                 > b.instructions().size()
                                         ? a
                                         : b));
-                final var added =
-                        DisplayTracker.this.displays.upsert(x, y, size, new MindustryDisplay(resolution, processors));
+
+                final var tiled = building.block instanceof TileableLogicDisplay t
+                        ? new MindustryDisplay.Tiled(t.frameSize)
+                        : null;
+                final var added = DisplayTracker.this.displays.upsert(
+                        x, y, size, new MindustryDisplay(resolution, processors, tiled));
                 if (queue) {
                     DisplayTracker.this.enqueue(added.packed());
                 }
@@ -155,6 +155,9 @@ final class DisplayTracker implements LifecycleListener {
         MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
     }
 
+    // TODO
+    //  Track DrawFlush targets to partition processors linked to multiple displays
+    //  Common picture-to-logic tools only link one processor to one display so it's fine for now.
     private @Nullable List<DrawInstruction> instructions(final LExecutor executor) {
         if (Arrays.stream(executor.instructions).noneMatch(LExecutor.DrawFlushI.class::isInstance)) {
             return null;
@@ -217,7 +220,7 @@ final class DisplayTracker implements LifecycleListener {
                 continue;
             }
             this.waiter.estimateWaitTimeFor(block -> block instanceof LogicBlock || block instanceof LogicDisplay);
-            this.grouper = this.displays.startGrouperAt(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
+            this.grouper = this.displays.selectGroupWithinRangeIncremental(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
             this.continueGrouperProcessing();
             break;
         }
@@ -240,7 +243,10 @@ final class DisplayTracker implements LifecycleListener {
                     display.x(),
                     display.y(),
                     display.size(),
-                    new MindustryDisplay(display.data().resolution(), Collections.unmodifiableMap(processors)));
+                    new MindustryDisplay(
+                            display.data().resolution(),
+                            Collections.unmodifiableMap(processors),
+                            display.data().tiled()));
             if (queue) {
                 this.enqueue(GeometryUtils.pack(display.x(), display.y()));
             }
