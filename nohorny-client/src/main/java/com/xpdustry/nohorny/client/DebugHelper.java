@@ -8,7 +8,6 @@ import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -101,7 +100,7 @@ final class DebugHelper implements LifecycleListener {
 
     private <T extends MindustryImage> void groupDebugSnapshotAt(
             final Player player, final VirtualBuildingIndex<T> index, final int x, final int y) {
-        final var grouper = index.startGrouperAt(x, y, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        final var grouper = index.selectGroupWithinRangeIncremental(x, y, 9999, 9999);
         grouper.progress();
         final var group = grouper.create();
         if (group == null) {

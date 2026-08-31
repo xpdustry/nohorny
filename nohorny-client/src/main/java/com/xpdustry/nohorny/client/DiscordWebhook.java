@@ -3,7 +3,6 @@ package com.xpdustry.nohorny.client;
 
 import arc.Core;
 import arc.util.serialization.Jval;
-import com.xpdustry.nohorny.common.MindustryImageRenderer;
 import com.xpdustry.nohorny.common.MonoRateLimiter;
 import com.xpdustry.nohorny.common.Rating;
 import java.awt.Color;

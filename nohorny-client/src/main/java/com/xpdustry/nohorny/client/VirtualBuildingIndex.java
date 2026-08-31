@@ -91,6 +91,16 @@ final class VirtualBuildingIndex<T> {
         return Objects.requireNonNull(this.insert(x, y, size, data));
     }
 
+    public VirtualBuilding<T> upsert(final VirtualBuilding<T> building) {
+        this.removeAllWithinSquare(building.x(), building.y(), building.size());
+        for (int i = building.x(); i < building.x() + building.size(); i++) {
+            for (int j = building.y(); j < building.y() + building.size(); j++) {
+                this.index.put(GeometryUtils.pack(i, j), building);
+            }
+        }
+        return building;
+    }
+
     public void removeAll() {
         this.index.clear();
     }
@@ -111,17 +121,54 @@ final class VirtualBuildingIndex<T> {
         }
     }
 
-    public Grouper startGrouperAt(final int initialX, final int initialY, final int range, final int steps) {
-        return new Grouper(
-                initialX, initialY, steps, initialX - range, initialY - range, initialX + range, initialY + range);
+    public Collection<VirtualBuilding.Group<T>> selectAllGroups() {
+        final var groups = new ArrayList<VirtualBuilding.Group<T>>();
+        final var visited = new IntSet();
+        for (final var building : this.index.values()) {
+            if (visited.contains(building.packed())) {
+                continue;
+            }
+            final var grouper = new IncrementalGrouper(
+                    building.x(),
+                    building.y(),
+                    Integer.MAX_VALUE,
+                    Integer.MIN_VALUE,
+                    Integer.MIN_VALUE,
+                    Integer.MAX_VALUE,
+                    Integer.MAX_VALUE,
+                    visited);
+            while (!grouper.isCompleted()) {
+                grouper.progress();
+            }
+            final var group = grouper.create();
+            if (group == null) {
+                throw new NullPointerException("group for building (x=" + building.x() + ",y=" + building.y() + ",size="
+                        + building.size() + ") is null?");
+            }
+            groups.add(group);
+        }
+        return Collections.unmodifiableCollection(groups);
     }
 
-    // Buildings removed from the live index remain available in this frozen view.
-    public final class Grouper {
+    public IncrementalGrouper selectGroupWithinRangeIncremental(
+            final int initialX, final int initialY, final int range, final int steps) {
+        return new IncrementalGrouper(
+                initialX,
+                initialY,
+                steps,
+                initialX - range,
+                initialY - range,
+                initialX + range,
+                initialY + range,
+                new IntSet());
+    }
+
+    // TODO This shit does not handle integer overflows...
+    public final class IncrementalGrouper {
 
         private final int maxSteps;
         private final IntQueue queue = new IntQueue();
-        private final IntSet visited = new IntSet();
+        private final IntSet visited;
         private final List<VirtualBuilding<T>> buildings = new ArrayList<>();
 
         private final int boundingBoxX1;
@@ -135,19 +182,21 @@ final class VirtualBuildingIndex<T> {
         private int maxY;
         private VirtualBuilding.@Nullable Group<T> result;
 
-        private Grouper(
+        private IncrementalGrouper(
                 final int initialX,
                 final int initialY,
                 final int maxSteps,
                 final int boundingBoxX1,
                 final int boundingBoxY1,
                 final int boundingBoxX2,
-                final int boundingBoxY2) {
+                final int boundingBoxY2,
+                final IntSet visited) {
             this.maxSteps = maxSteps;
             this.boundingBoxX1 = boundingBoxX1;
             this.boundingBoxY1 = boundingBoxY1;
             this.boundingBoxX2 = boundingBoxX2;
             this.boundingBoxY2 = boundingBoxY2;
+            this.visited = visited;
 
             final var building = VirtualBuildingIndex.this.index.get(GeometryUtils.pack(initialX, initialY));
             if (building == null) {
