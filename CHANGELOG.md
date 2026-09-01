@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.9 - 2026-09-01
+
+### Changes & New features
+
+- Added support for tiled displays (#101) ([`f4f570f`](https://github.com/xpdustry/nohorny/commit/f4f570fdaeda87fd5ef0127307a01eeab0a071c5))
+- Add support for http proxies for discord webhooks (#96) ([`080bd1b`](https://github.com/xpdustry/nohorny/commit/080bd1b3c1ad884fa19b670e391424dfa0d5ff53))
+- Improve display tracker eligibility check, less invalid requests going out ([`5383438`](https://github.com/xpdustry/nohorny/commit/53834382121febfa1da950655f7b3365406b35b8))
+
+> :warning: **Breaking** :warning:
+`MindustryImageRenderer` has been moved to the client package.
+Update your imports from `com.xpdustry.nohorny.common.MindustryImageRenderer`
+to `com.xpdustry.nohorny.client.MindustryImageRenderer`.
+
 ## v4.0.0-beta.8 - 2026-07-20
 
 ### Changes & New features
