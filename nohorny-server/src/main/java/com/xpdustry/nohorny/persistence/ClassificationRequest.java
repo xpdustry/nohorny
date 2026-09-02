@@ -38,6 +38,8 @@ public class ClassificationRequest {
 
     private @Nullable String username;
 
+    private @Nullable String version;
+
     private String remoteAddress;
 
     private String imageMediaType;
@@ -56,6 +58,7 @@ public class ClassificationRequest {
             final boolean successful,
             final @Nullable String error,
             final @Nullable String username,
+            final @Nullable String version,
             final String remoteAddress,
             final String imageMediaType,
             final byte[] image) {
@@ -67,6 +70,7 @@ public class ClassificationRequest {
         this.successful = successful;
         this.error = error;
         this.username = username;
+        this.version = version;
         this.remoteAddress = remoteAddress;
         this.imageMediaType = imageMediaType;
         this.image = image;
@@ -106,6 +110,10 @@ public class ClassificationRequest {
 
     public @Nullable String getUsername() {
         return this.username;
+    }
+
+    public @Nullable String getVersion() {
+        return this.version;
     }
 
     public String getRemoteAddress() {

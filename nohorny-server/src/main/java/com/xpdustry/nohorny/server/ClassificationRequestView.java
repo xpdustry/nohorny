@@ -18,6 +18,7 @@ public record ClassificationRequestView(
         boolean successful,
         @Nullable String error,
         @Nullable String username,
+        @Nullable String version,
         String remoteAddress,
         String clientType,
         String clientName) {
@@ -33,6 +34,7 @@ public record ClassificationRequestView(
                 summary.isSuccessful(),
                 summary.getError(),
                 summary.getUsername(),
+                summary.getVersion(),
                 summary.getRemoteAddress(),
                 client.type(),
                 client.name());

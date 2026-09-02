@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS classification_request (
     successful          INTEGER NOT NULL,
     error               TEXT,
     username            TEXT,
+    version             TEXT,
     remote_address      TEXT NOT NULL,
     image_media_type    TEXT NOT NULL,
     image               BLOB NOT NULL

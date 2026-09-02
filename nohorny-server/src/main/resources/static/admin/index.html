@@ -56,6 +56,14 @@
         .tile[data-rating="nsfw"]   { --tile-accent: var(--r-nsfw); }
         .tile[data-rating="failed"] { --tile-accent: var(--r-failed); }
 
+        .versions { margin-bottom: 1.5rem; }
+        .versions h2 { font-size: 1rem; margin-bottom: .75rem; }
+        .version-list { display: grid; gap: .5rem; }
+        .version-row { display: grid; grid-template-columns: minmax(7rem, auto) 1fr auto; align-items: center; gap: .75rem; }
+        .version-row .meter { max-width: none; margin-top: 0; }
+        .version-row .meter > span { background: var(--pico-primary); }
+        .version-count { color: var(--pico-muted-color); font-size: .8rem; font-variant-numeric: tabular-nums; }
+
         /* Rating filter pills. */
         .filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
 
@@ -211,6 +219,19 @@
         <div class="tile" data-rating="failed"><small>Failed</small><b x-text="stats.failed"></b></div>
     </section>
 
+    <section class="versions" x-show="items.length">
+        <h2>Requests by version</h2>
+        <div class="version-list">
+            <template x-for="version in versions" :key="version.name">
+                <div class="version-row">
+                    <span class="mono" x-text="version.name"></span>
+                    <div class="meter"><span :style="`width: ${version.percentage}%`"></span></div>
+                    <span class="version-count" x-text="`${version.count} · ${version.percentage}%`"></span>
+                </div>
+            </template>
+        </div>
+    </section>
+
     <div class="filters" x-show="items.length">
         <template x-for="f in ['all', 'safe', 'warn', 'nsfw', 'failed']" :key="f">
             <button type="button" @click="filter = f" :aria-pressed="filter === f"
@@ -256,6 +277,7 @@
                     <td class="stack">
                         <div class="mono" x-text="`#${request.id}`"></div>
                         <div x-text="request.username || 'anonymous'"></div>
+                        <small class="mono" x-text="request.version ? `v${request.version}` : 'unknown version'"></small>
                         <div><span class="client" :data-client="request.clientType" x-text="clientLabel(request)"></span></div>
                         <small class="mono" style="color: var(--pico-muted-color);" x-text="request.remoteAddress"></small>
                     </td>
@@ -347,6 +369,21 @@
                 const counts = { total: this.items.length, safe: 0, warn: 0, nsfw: 0, failed: 0 };
                 for (const request of this.items) counts[this.rating(request)]++;
                 return counts;
+            },
+
+            get versions() {
+                const counts = {};
+                for (const request of this.items) {
+                    const version = request.version || 'unknown';
+                    counts[version] = (counts[version] || 0) + 1;
+                }
+                return Object.entries(counts)
+                    .map(([name, count]) => ({
+                        name,
+                        count,
+                        percentage: Math.round(count / this.items.length * 100)
+                    }))
+                    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
             },
 
             get visible() {

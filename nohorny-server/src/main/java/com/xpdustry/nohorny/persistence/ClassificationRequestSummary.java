@@ -26,6 +26,8 @@ public interface ClassificationRequestSummary {
 
     @Nullable String getUsername();
 
+    @Nullable String getVersion();
+
     String getRemoteAddress();
 
     String getImageMediaType();

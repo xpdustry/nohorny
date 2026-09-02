@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public final class NoHornyController {
 
     private static final Logger log = LoggerFactory.getLogger(NoHornyController.class);
+    private static final String VERSION_HEADER = "X-NoHorny-Version";
 
     private final StatusProperties status;
     private final ClassifierChain classifiers;
@@ -162,6 +163,7 @@ public final class NoHornyController {
                 error == null,
                 error == null ? null : error.getClass().getSimpleName(),
                 username,
+                request.getHeader(VERSION_HEADER),
                 request.getRemoteAddr(),
                 imageMediaType,
                 data);
