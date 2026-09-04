@@ -25,8 +25,8 @@ public final class MindustryImageRenderer {
 
     @SuppressWarnings("unchecked")
     public static BufferedImage render(final VirtualBuilding.Group<? extends MindustryImage> group) {
-        final long renderW = NoHornyPreconditions.positive((long) group.w() * BLOCK_SIZE, "group w");
-        final long renderH = NoHornyPreconditions.positive((long) group.h() * BLOCK_SIZE, "group h");
+        final var renderW = NoHornyPreconditions.positive(group.w() * BLOCK_SIZE, "group w");
+        final var renderH = NoHornyPreconditions.positive(group.h() * BLOCK_SIZE, "group h");
 
         final double downscaling =
                 Math.min(1D, Math.min(MAX_IMAGE_SIZE / (double) renderW, MAX_IMAGE_SIZE / (double) renderH));
@@ -34,23 +34,22 @@ public final class MindustryImageRenderer {
         final int imageH = Math.min(MAX_IMAGE_SIZE, (int) Math.ceil(renderH * downscaling));
         final var image = new BufferedImage(imageW, imageH, BufferedImage.TYPE_INT_RGB);
 
-        try (final var globalScope = new GraphicsScope(image)) {
-            globalScope.graphics().setColor(Color.BLACK);
-            globalScope.graphics().fillRect(0, 0, image.getWidth(), image.getHeight());
+        try (final var global = new GraphicsScope(image)) {
+            global.graphics().setColor(Color.BLACK);
+            global.graphics().fillRect(0, 0, image.getWidth(), image.getHeight());
             // Invert y-axis, because Mindustry uses bottom-left as the origin
             // The flip also includes downscaling in case the virtual image is too big
-            globalScope.graphics().translate(0, imageH);
-            globalScope.graphics().scale(downscaling, -downscaling);
+            global.graphics().translate(0, imageH);
+            global.graphics().scale(downscaling, -downscaling);
 
-            Map<TiledDisplayKey, VirtualBuildingIndex<MindustryDisplay>> tiled = new HashMap<>();
+            final var tiled = new HashMap<TiledDisplayKey, VirtualBuildingIndex<MindustryDisplay>>();
             for (final var building : group.elements()) {
                 if (building.data() instanceof MindustryDisplay display && display.tiled() != null) {
-                    tiled.computeIfAbsent(
-                                    new TiledDisplayKey(
-                                            building.size(),
-                                            display.resolution(),
-                                            display.tiled().frameSize()),
-                                    _ -> new VirtualBuildingIndex<>())
+                    final var key = new TiledDisplayKey(
+                            building.size(),
+                            display.resolution(),
+                            display.tiled().frameSize());
+                    tiled.computeIfAbsent(key, _ -> new VirtualBuildingIndex<>())
                             .upsert((VirtualBuilding<MindustryDisplay>) building);
                     continue;
                 }
@@ -58,15 +57,15 @@ public final class MindustryImageRenderer {
                 final int x = (building.x() - group.x()) * BLOCK_SIZE;
                 final int y = (building.y() - group.y()) * BLOCK_SIZE;
                 final int size = building.size() * BLOCK_SIZE;
-                try (final var buildingScope =
-                        new GraphicsScope((Graphics2D) globalScope.graphics().create(x, y, size, size))) {
+
+                try (final var local = global.child(x, y, size, size)) {
                     final var buildingScale = (double) size / building.data().resolution();
-                    buildingScope.graphics().scale(buildingScale, buildingScale);
-                    MindustryImageRenderer.renderTrivialDisplayOrCanvas(buildingScope.graphics(), building.data());
+                    local.graphics().scale(buildingScale, buildingScale);
+                    MindustryImageRenderer.renderTrivialDisplayOrCanvas(local.graphics(), building.data());
                 }
             }
 
-            MindustryImageRenderer.renderTiledDisplays(globalScope.graphics(), group, tiled);
+            MindustryImageRenderer.renderTiledDisplays(global, group, tiled);
         }
 
         return image;
@@ -114,7 +113,7 @@ public final class MindustryImageRenderer {
     }
 
     private static void renderTiledDisplays(
-            final Graphics2D graphics,
+            final GraphicsScope global,
             final VirtualBuilding.Group<? extends MindustryImage> parent,
             final Map<TiledDisplayKey, VirtualBuildingIndex<MindustryDisplay>> indexes) {
         for (final var entry : indexes.entrySet()) {
@@ -131,23 +130,23 @@ public final class MindustryImageRenderer {
                             building.size() * BLOCK_SIZE)));
                 }
 
-                final var displayScale = (double) (key.size * BLOCK_SIZE) / key.resolution;
-                final var frameSize = key.frameSize * displayScale;
+                final var scale = (double) (key.size * BLOCK_SIZE) / key.resolution;
+                final var frameSize = key.frameSize * scale;
                 final var originX = (group.x() - parent.x()) * BLOCK_SIZE;
                 final var originY = (group.y() - parent.y()) * BLOCK_SIZE;
                 clip.intersect(new Area(new Rectangle2D.Double(
                         originX + frameSize,
                         originY + frameSize,
-                        group.w() * BLOCK_SIZE - (frameSize * 2D),
-                        group.h() * BLOCK_SIZE - (frameSize * 2D))));
+                        (group.w() * BLOCK_SIZE) - (frameSize * 2D),
+                        (group.h() * BLOCK_SIZE) - (frameSize * 2D))));
 
-                try (final var scope = new GraphicsScope((Graphics2D) graphics.create())) {
-                    scope.graphics().clip(clip);
-                    scope.graphics().translate(originX + frameSize, originY + frameSize);
-                    scope.graphics().scale(displayScale, displayScale);
+                try (final var local = global.child()) {
+                    local.graphics().clip(clip);
+                    local.graphics().translate(originX + frameSize, originY + frameSize);
+                    local.graphics().scale(scale, scale);
 
                     for (final var building : group.elements()) {
-                        MindustryImageRenderer.renderTrivialDisplayOrCanvas(scope.graphics(), building.data());
+                        MindustryImageRenderer.renderTrivialDisplayOrCanvas(local.graphics(), building.data());
                     }
                 }
             }
