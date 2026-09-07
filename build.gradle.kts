@@ -42,7 +42,7 @@ subprojects {
 
     dependencies {
         "errorprone"("com.google.errorprone:error_prone_core:2.50.0")
-        "errorprone"("com.uber.nullaway:nullaway:0.13.8")
+        "errorprone"("com.uber.nullaway:nullaway:0.14.1")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.1")
         "testImplementation"("org.junit.jupiter:junit-jupiter:6.1.2")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
