@@ -14,7 +14,10 @@ server:
 
 nohorny:
   classifier:
-    # Use vit for using a local model, or sight-engine to classify through SightEngine.
+    # Use vit, sight-engine, or a list such as [vit, sight-engine].
+    # A chain advances only while the latest result is NSFW.
+    # Perfect when you want to filter out safe images with a cheap classifier
+    # before using the premium one on the rest.
     type: vit
     vit:
       source:
@@ -46,7 +49,7 @@ nohorny:
         warn: 0.6
         # Scores at or above nsfw are NSFW. Keep this greater than or equal to warn.
         nsfw: 0.9
-    # Enable sight-engine by setting nohorny.classifier.type to sight-engine
+    # Enable SightEngine by including sight-engine in nohorny.classifier.type.
     sight-engine:
       # SightEngine API user.
       user: ${SIGHT_ENGINE_USER}

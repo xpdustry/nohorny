@@ -2,8 +2,9 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ClassificationResponse;
+import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
-import com.xpdustry.nohorny.server.classifier.Classifier;
+import com.xpdustry.nohorny.server.classifier.ClassifierChain;
 import java.awt.image.BufferedImage;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -23,11 +24,11 @@ public final class NoHornyController {
     private static final Logger log = LoggerFactory.getLogger(NoHornyController.class);
 
     private final StatusProperties status;
-    private final Classifier classifier;
+    private final ClassifierChain classifiers;
 
-    public NoHornyController(final StatusProperties status, final Classifier classifier) {
+    public NoHornyController(final StatusProperties status, final ClassifierChain classifiers) {
         this.status = status;
-        this.classifier = classifier;
+        this.classifiers = classifiers;
     }
 
     @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -45,15 +46,23 @@ public final class NoHornyController {
 
     private ResponseEntity<?> classify(final BufferedImage image) {
         final var uuid = UUID.randomUUID().toString();
-        try {
-            log.trace("Processing image {} (w={},h={})", uuid, image.getWidth(), image.getHeight());
-            final var result = this.classifier.classify(image);
-            log.trace("Processed image {}, got {}", uuid, result);
-            return ResponseEntity.ok(
-                    new ClassificationResponse(this.classifier.name(), result.rating(), result.confidence(), uuid));
-        } catch (final Exception exception) {
-            log.error("Classification request {} has failed", uuid, exception);
-            return ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));
+        ResponseEntity<?> response =
+                ResponseEntity.internalServerError().body(new SimpleServerMessage("internal server error"));
+        log.trace("Processing image {} (w={},h={})", uuid, image.getWidth(), image.getHeight());
+        for (final var classifier : this.classifiers.classifiers()) {
+            try {
+                final var result = classifier.classify(image);
+                log.trace("Processed image {} with {}, got {}", uuid, classifier.name(), result);
+                response = ResponseEntity.ok(
+                        new ClassificationResponse(classifier.name(), result.rating(), result.confidence(), uuid));
+                if (result.rating() != Rating.NSFW) {
+                    break;
+                }
+            } catch (final Exception exception) {
+                log.error("Classification request {} failed with {}", uuid, classifier.name(), exception);
+                break;
+            }
         }
+        return response;
     }
 }

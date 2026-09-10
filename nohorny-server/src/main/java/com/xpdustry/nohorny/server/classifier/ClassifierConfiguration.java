@@ -1,12 +1,22 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.classifier;
 
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -15,10 +25,10 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableConfigurationProperties(ClassifierConfiguration.ClassifierProperties.class)
 public final class ClassifierConfiguration {
 
-    // Dummy prop to allow polymorphic configs
     @ConfigurationProperties("nohorny.classifier")
     @Validated
-    public record ClassifierProperties(@NotNull ClassifierType type) {
+    public record ClassifierProperties(
+            @DefaultValue("vit") @NotEmpty List<ClassifierType> type) {
 
         public enum ClassifierType {
             VIT,
@@ -26,8 +36,21 @@ public final class ClassifierConfiguration {
         }
     }
 
+    @Bean
+    public ClassifierChain classifierChain(
+            final ClassifierProperties properties,
+            final ObjectProvider<ViTClassifier> vit,
+            final ObjectProvider<SightEngineClassifier> sightEngine) {
+        return new ClassifierChain(properties.type().stream()
+                .map(type -> switch (type) {
+                    case VIT -> vit.getObject();
+                    case SIGHT_ENGINE -> sightEngine.getObject();
+                })
+                .toList());
+    }
+
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(name = "nohorny.classifier.type", havingValue = "vit")
+    @Conditional(ViTEnabledCondition.class)
     @EnableConfigurationProperties({ViTClassifierProperties.class, ViTConfiguration.ViTSourceProperties.class})
     static final class ViTConfiguration {
 
@@ -72,7 +95,7 @@ public final class ClassifierConfiguration {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(name = "nohorny.classifier.type", havingValue = "sight-engine")
+    @Conditional(SightEngineEnabledCondition.class)
     @EnableConfigurationProperties(SightEngineClassifierProperties.class)
     static final class SightEngineConfiguration {
 
@@ -82,6 +105,37 @@ public final class ClassifierConfiguration {
                 final SightEngineClassifierProperties properties,
                 final JsonMapper jsonMapper) {
             return new SightEngineClassifier(restClient, properties, jsonMapper);
+        }
+    }
+
+    private abstract static class ClassifierEnabledCondition implements Condition {
+
+        private final ClassifierProperties.ClassifierType type;
+
+        private ClassifierEnabledCondition(final ClassifierProperties.ClassifierType type) {
+            this.type = type;
+        }
+
+        @Override
+        public boolean matches(final ConditionContext context, final AnnotatedTypeMetadata metadata) {
+            return Binder.get(context.getEnvironment())
+                    .bind("nohorny.classifier.type", Bindable.listOf(ClassifierProperties.ClassifierType.class))
+                    .orElseGet(() -> List.of(ClassifierProperties.ClassifierType.VIT))
+                    .contains(this.type);
+        }
+    }
+
+    private static final class ViTEnabledCondition extends ClassifierEnabledCondition {
+
+        private ViTEnabledCondition() {
+            super(ClassifierProperties.ClassifierType.VIT);
+        }
+    }
+
+    private static final class SightEngineEnabledCondition extends ClassifierEnabledCondition {
+
+        private SightEngineEnabledCondition() {
+            super(ClassifierProperties.ClassifierType.SIGHT_ENGINE);
         }
     }
 }
