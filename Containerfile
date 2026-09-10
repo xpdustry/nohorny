@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-FROM docker.io/eclipse-temurin:26-jdk@sha256:72f06e2d7b40aaf9d237ff46611f2c3001e799f8d510c12170f4ceed847676db AS build
+FROM docker.io/eclipse-temurin:26-jdk@sha256:5f85d786b58064f9d653973c7e3df6c36cca7b060f76c55e3f3cda3c3a50d10b AS build
 
 ARG IS_RELEASE=false
 
