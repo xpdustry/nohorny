@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import javax.imageio.ImageIO;
 import mindustry.Vars;
 import org.jspecify.annotations.Nullable;
 
@@ -40,9 +39,11 @@ final class DiscordWebhook implements LifecycleListener {
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
+    private final ReusableImageBytes imageBuffer = new ReusableImageBytes();
 
     @Override
     public void onInit() {
+        this.imageBuffer.onInit();
         MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
 
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
@@ -85,6 +86,7 @@ final class DiscordWebhook implements LifecycleListener {
         this.executor.close();
         this.http.close();
         this.proxy.close();
+        this.imageBuffer.onExit();
     }
 
     private void onWebhookConfigure(final URI webhook, final String message) {
@@ -104,6 +106,7 @@ final class DiscordWebhook implements LifecycleListener {
             return;
         }
         this.executor.execute(() -> {
+            this.imageBuffer.lock();
             try {
                 this.send(webhook, this.createClassificationFormPayload(event));
             } catch (final InterruptedException e) {
@@ -114,6 +117,8 @@ final class DiscordWebhook implements LifecycleListener {
                         event.group().x(),
                         event.group().y(),
                         e);
+            } finally {
+                this.imageBuffer.release();
             }
         });
     }
@@ -157,7 +162,8 @@ final class DiscordWebhook implements LifecycleListener {
                 .build();
     }
 
-    private MultipartFormBodyPublisher createClassificationFormPayload(final ClassificationEvent event) {
+    private MultipartFormBodyPublisher createClassificationFormPayload(final ClassificationEvent event)
+            throws IOException {
         final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png";
         return new MultipartFormBodyPublisher.Builder()
                 .textPart(
@@ -168,9 +174,7 @@ final class DiscordWebhook implements LifecycleListener {
                         "files[0]",
                         imageName,
                         "image/png",
-                        HttpUtils.ofOutputStream(
-                                this.executor,
-                                stream -> ImageIO.write(MindustryImageRenderer.render(event.group()), "png", stream)))
+                        this.imageBuffer.encode(MindustryImageRenderer.render(event.group()), "png"))
                 .build();
     }
 
