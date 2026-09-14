@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,7 +39,20 @@ public class PersistenceConfiguration {
         final var dataSource = new SQLiteDataSource(config);
         dataSource.setUrl("jdbc:sqlite:" + absolute);
         new ResourceDatabasePopulator(new ClassPathResource("database/schema.sql")).execute(dataSource);
+        migrateClassificationRequestVersion(dataSource);
         return dataSource;
+    }
+
+    private static void migrateClassificationRequestVersion(final DataSource dataSource) {
+        final var database = new JdbcTemplate(dataSource);
+        final var hasVersionColumn = database.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM pragma_table_info('classification_request') WHERE name = 'version')",
+                Boolean.class);
+        if (!Boolean.TRUE.equals(hasVersionColumn)) {
+            new ResourceDatabasePopulator(
+                            new ClassPathResource("database/migration/add-classification-request-version.sql"))
+                    .execute(dataSource);
+        }
     }
 
     @Bean
