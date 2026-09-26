@@ -135,7 +135,7 @@ project(":nohorny-client") {
             dependencies = mutableListOf(ModDependency("slf4md", soft = true)),
         )
 
-    val toxopid = extensions.getByType<ToxopidExtension>()
+    val toxopid = the<ToxopidExtension>()
     toxopid.platforms = setOf(ModPlatform.SERVER)
     toxopid.compileVersion = "v${metadata.minGameVersion}"
 
@@ -151,6 +151,7 @@ project(":nohorny-client") {
         "testImplementation"(toxopid.dependencies.arcCore)
         "compileOnly"(toxopid.dependencies.mindustryHeadless)
         "testImplementation"(toxopid.dependencies.mindustryHeadless)
+        "testImplementation"("com.code-intelligence:jazzer-junit:0.30.0")
     }
 
     configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) {
@@ -189,6 +190,22 @@ project(":nohorny-client") {
 
     tasks.named<MindustryExec>(MindustryExec.SERVER_EXEC_TASK_NAME) {
         mods.from(downloadSlf4md)
+    }
+
+    tasks.withType<Test> {
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+    }
+
+    val testSourceSet = the<SourceSetContainer>()[SourceSet.TEST_SOURCE_SET_NAME]
+    tasks.register<Test>("fuzz") {
+        description = "Run the fuzz tests in fuzzing mode."
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        testClassesDirs = testSourceSet.output.classesDirs
+        classpath = testSourceSet.runtimeClasspath
+        useJUnitPlatform()
+        filter.includeTestsMatching("*FuzzTest")
+        environment("JAZZER_FUZZ", "1")
+        outputs.upToDateWhen { false }
     }
 
     tasks.withType<MindustryExec> {

@@ -47,3 +47,4 @@ Thumbs.db
 *.onnx
 *.db
 *.sqlite
+.cifuzz-corpus/

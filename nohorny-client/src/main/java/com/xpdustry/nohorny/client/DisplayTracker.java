@@ -170,26 +170,35 @@ final class DisplayTracker implements LifecycleListener {
             final DrawInstruction instruction;
             switch (draw.type) {
                 case LogicDisplay.commandColor -> {
-                    final int r = draw.x.numi();
-                    final int g = draw.y.numi();
-                    final int b = draw.p1.numi();
-                    final int a = draw.p2.numi();
+                    final int r = wrap(draw.x.numi());
+                    final int g = wrap(draw.y.numi());
+                    final int b = wrap(draw.p1.numi());
+                    final int a = wrap(draw.p2.numi());
+                    instruction = new DrawInstruction.SetColor(r, g, b, a);
+                }
+                case LogicDisplay.commandColorPack -> {
+                    // The rgba8888 color is stored in the lower bits of the double
+                    final int rgba = (int) Double.doubleToRawLongBits(draw.x.num());
+                    final int r = (rgba >>> 24) & 0xFF;
+                    final int g = (rgba >>> 16) & 0xFF;
+                    final int b = (rgba >>> 8) & 0xFF;
+                    final int a = rgba & 0xFF;
                     instruction = new DrawInstruction.SetColor(r, g, b, a);
                 }
                 case LogicDisplay.commandRect -> {
-                    final int x = draw.x.numi();
-                    final int y = draw.y.numi();
-                    final int w = draw.p1.numi();
-                    final int h = draw.p2.numi();
+                    final int x = wrap(draw.x.numi());
+                    final int y = wrap(draw.y.numi());
+                    final int w = wrap(draw.p1.numi());
+                    final int h = wrap(draw.p2.numi());
                     instruction = new DrawInstruction.DrawRect(x, y, w, h);
                 }
                 case LogicDisplay.commandTriangle -> {
-                    final int x1 = draw.x.numi();
-                    final int y1 = draw.y.numi();
-                    final int x2 = draw.p1.numi();
-                    final int y2 = draw.p2.numi();
-                    final int x3 = draw.p3.numi();
-                    final int y3 = draw.p4.numi();
+                    final int x1 = wrap(draw.x.numi());
+                    final int y1 = wrap(draw.y.numi());
+                    final int x2 = wrap(draw.p1.numi());
+                    final int y2 = wrap(draw.p2.numi());
+                    final int x3 = wrap(draw.p3.numi());
+                    final int y3 = wrap(draw.p4.numi());
                     instruction = new DrawInstruction.DrawTrig(x1, y1, x2, y2, x3, y3);
                 }
                 default -> {
@@ -199,6 +208,12 @@ final class DisplayTracker implements LifecycleListener {
             result.add(instruction);
         }
         return result.isEmpty() ? null : result;
+    }
+
+    // Mirrors the packSign/unpackSign round trip of the display graphics buffer,
+    // which only keeps the sign and the lower 9 bits of each argument.
+    private static int wrap(final int value) {
+        return Integer.signum(value) * (Math.abs(value) & 0x1FF);
     }
 
     private void collect() {
