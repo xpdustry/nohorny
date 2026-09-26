@@ -11,7 +11,6 @@ import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import java.io.IOException;
 import java.net.ConnectException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -25,13 +24,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
-import javax.imageio.ImageIO;
 import org.jspecify.annotations.Nullable;
 
 final class NoHornyClient implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
+    private final ReusableImageBytes imageBuffer = new ReusableImageBytes();
     private final Semaphore classificationPermits = new Semaphore(1);
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
@@ -40,6 +39,7 @@ final class NoHornyClient implements LifecycleListener {
 
     @Override
     public void onInit() {
+        this.imageBuffer.onInit();
         MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.API_ENDPOINT)
                     || event.key().equals(NoHornySetting.API_AUTH_TYPE)
@@ -55,6 +55,7 @@ final class NoHornyClient implements LifecycleListener {
     public void onExit() {
         this.executor.close();
         this.http.close();
+        this.imageBuffer.onExit();
     }
 
     private void checkEndpointStatus() {
@@ -89,6 +90,7 @@ final class NoHornyClient implements LifecycleListener {
         }
         try {
             this.executor.execute(() -> {
+                this.imageBuffer.lock();
                 try {
                     this.classify(group);
                 } catch (final ConnectException e) {
@@ -99,6 +101,7 @@ final class NoHornyClient implements LifecycleListener {
                 } catch (final Exception e) {
                     log.error("Failed to rate group at ({}, {})", group.x(), group.y(), e);
                 } finally {
+                    this.imageBuffer.release();
                     this.classificationPermits.release();
                 }
             });
@@ -112,11 +115,7 @@ final class NoHornyClient implements LifecycleListener {
     private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", "image/jpeg")
-                .POST(HttpUtils.ofOutputStream(this.executor, stream -> {
-                    if (!ImageIO.write(MindustryImageRenderer.render(group), "jpg", stream)) {
-                        throw new IOException("No JPEG image writer is available");
-                    }
-                }))
+                .POST(this.imageBuffer.encode(MindustryImageRenderer.render(group), "jpg"))
                 .build();
 
         final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

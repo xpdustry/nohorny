@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## v4.0.0-beta.10 - 2026-09-20
+
+### Changes & New features
+
+- Added classification chains on the nohorny server ([`b612aaa`](https://github.com/xpdustry/nohorny/commit/b612aaa38c9892757d580a085aa3e1f58c64264a))
+
+### Bugfixes
+
+- Fix image streaming race condition causing "Read end dead" errors ([`57443c5`](https://github.com/xpdustry/nohorny/commit/57443c5b6cc824be6ae29c135898be5883df1307))
+
 ## v4.0.0-beta.9 - 2026-09-01
 
 ### Changes & New features
