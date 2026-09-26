@@ -79,8 +79,13 @@ public final class MindustryImageRenderer {
                 for (final var processor : display.processors().values()) {
                     for (final var instruction : processor.instructions()) {
                         switch (instruction) {
-                            case DrawInstruction.SetColor(int r, int g, int b, int a) ->
-                                graphics.setColor(new Color(r, g, b, a));
+                            case DrawInstruction.SetColor(int r, int g, int b, int a) -> {
+                                // Mirrors arc's Color.toFloatBits(int, int, int, int), which does not mask
+                                // the channels, so out-of-range values bleed into the next ones.
+                                final int abgr = (a << 24) | (b << 16) | (g << 8) | r;
+                                graphics.setColor(
+                                        new Color(abgr & 0xFF, (abgr >>> 8) & 0xFF, (abgr >>> 16) & 0xFF, abgr >>> 24));
+                            }
                             case DrawInstruction.DrawRect(int x, int y, int w, int h) -> graphics.fillRect(x, y, w, h);
                             case DrawInstruction.DrawTrig(int x1, int y1, int x2, int y2, int x3, int y3) -> {
                                 xa[0] = x1;
