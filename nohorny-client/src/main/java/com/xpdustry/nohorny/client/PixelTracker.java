@@ -76,6 +76,10 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
             @Override
             public void onCreate(
                     final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
+                final var x = MindustryUtils.anchorTileX(building);
+                final var y = MindustryUtils.anchorTileY(building);
+                // Built processors are created twice, by the tile change then the build end, release the old links
+                this.onRemove(x, y, building.block.size);
                 final var links = new IntSeq(building.links.size);
                 for (final var link : building.links) {
                     final var packed = GeometryUtils.pack(link.x, link.y);
@@ -85,9 +89,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
                         PixelTracker.this.polled.add(packed);
                     }
                 }
-                PixelTracker.this.processors.put(
-                        GeometryUtils.pack(MindustryUtils.anchorTileX(building), MindustryUtils.anchorTileY(building)),
-                        links);
+                PixelTracker.this.processors.put(GeometryUtils.pack(x, y), links);
             }
 
             @Override
