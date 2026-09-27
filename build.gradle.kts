@@ -237,7 +237,7 @@ project(":nohorny-client") {
         val results = layout.buildDirectory.file("jmh/results.json")
         outputs.file(results)
         outputs.upToDateWhen { false }
-        args(findProperty("jmh")?.toString()?.split(' ')?.filter { it.isNotBlank() } ?: emptyList<String>())
+        args(providers.gradleProperty("jmh").getOrElse("").split(' ').filter { it.isNotBlank() })
         args("-rf", "json", "-rff", results.get().asFile.absolutePath)
         doFirst { results.get().asFile.parentFile.mkdirs() }
     }
