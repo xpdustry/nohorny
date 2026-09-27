@@ -13,7 +13,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
 
     final VirtualBuildingIndex<T> index = new VirtualBuildingIndex<>();
     final Class<B> buildingType;
-    final NoHornyEventBus events;
+    private final NoHornyEventBus events;
     private final GroupCollector<T> collector;
     private final int minGroupSize;
 
@@ -76,7 +76,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
         this.collector.tick();
     }
 
-    protected final void upsert(final B building, final @Nullable MindustryAuthor author, final boolean queue) {
+    private void upsert(final B building, final @Nullable MindustryAuthor author, final boolean queue) {
         final var x = MindustryUtils.anchorTileX(building);
         final var y = MindustryUtils.anchorTileY(building);
         final var added = this.index.upsert(x, y, building.block.size, this.data(building, author));

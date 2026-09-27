@@ -186,31 +186,33 @@ java -jar nohorny-server.jar start -- --server.port=9090
 
 ## Performance
 
-NoHorny does all the heavy work (rendering and classification) off the main thread,
-and bounds how much tracking and grouping it does per tick, so its impact on the main loop stays minimal.
+NoHorny renders and classifies the art on other threads, so the main loop only pays for keeping track of it.
 
-The benchmarks run on the worst possible map: entirely covered by canvases, logic displays with processors
-drawing on them, and sorter and illuminator art linked to processors, with random pieces of art changing each tick.
-The classifier is also answering instantly, so NoHorny never stops grouping.
+We measured that cost on the hardware of the Xpdustry servers (Xeon E5-1650 v4, Java 25),
+on the worst map we could make: entirely covered by canvases, logic displays, sorters and illuminators,
+with players changing random pieces of art every tick.
+The classifier also answers instantly, so NoHorny never gets to rest.
 
-Mean main loop cost of a tick, with the 16.67ms budget of a 60 TPS server in mind
-(Xeon E5-1650 v4, Java 25):
+Mean main loop cost per tick, out of the 16.67ms a 60 TPS server has:
 
-| Map                         | Changes per tick | Mindustry | Mindustry + NoHorny | NoHorny overhead |
-|-----------------------------|-----------------:|----------:|--------------------:|-----------------:|
-| 100x100 (6k buildings)      |                0 |     ~0 µs |              3.4 µs |          +3.4 µs |
-| 250x250 (38k buildings)     |                0 |     ~0 µs |             27.7 µs |         +27.7 µs |
-| 500x500 (150k buildings)    |                0 |     ~0 µs |             29.8 µs |         +29.8 µs |
-| 100x100                     |               10 |    425 µs |              615 µs |          +190 µs |
-| 250x250                     |               10 |    486 µs |              736 µs |          +250 µs |
-| 500x500                     |               10 |    484 µs |              786 µs |          +302 µs |
-| 100x100                     |              100 |   4.71 ms |             5.25 ms |          +0.54 ms |
-| 250x250                     |              100 |   5.02 ms |             5.68 ms |          +0.66 ms |
-| 500x500                     |              100 |   4.91 ms |             6.01 ms |          +1.10 ms |
+| Map                      | Art changes per tick | Without NoHorny | With NoHorny | NoHorny cost |
+|--------------------------|---------------------:|----------------:|-------------:|-------------:|
+| 100x100 (6k buildings)   |                    0 |           ~0 µs |      0.07 µs |     +0.04 µs |
+| 250x250 (38k buildings)  |                    0 |           ~0 µs |      0.07 µs |     +0.04 µs |
+| 500x500 (150k buildings) |                    0 |           ~0 µs |      0.06 µs |     +0.04 µs |
+| 100x100                  |                   10 |          401 µs |       549 µs |      +148 µs |
+| 250x250                  |                   10 |          421 µs |       681 µs |      +260 µs |
+| 500x500                  |                   10 |          425 µs |       733 µs |      +308 µs |
+| 100x100                  |                  100 |         4.05 ms |      4.58 ms |     +0.53 ms |
+| 250x250                  |                  100 |         4.27 ms |      5.62 ms |     +1.35 ms |
+| 500x500                  |                  100 |         4.36 ms |      5.41 ms |     +1.05 ms |
 
-Once built, art costs at most 0.2% of the tick budget to watch, regardless of the map size.
-And even when players change 6000 pieces of art per second, NoHorny stays under 7% of the tick budget.
-Indexing the whole map when it loads takes a one-off 6ms, 39ms and 158ms respectively.
+"Without NoHorny" is what Mindustry itself spends applying the art changes, to give a sense of scale.
+
+- When the art sits still, NoHorny costs nothing measurable.
+- At 10 changes per tick (600 per second), it costs at most 0.3ms, under 2% of a tick.
+- At 100 changes per tick (6000 per second), it costs at most 1.35ms, under 9% of a tick.
+- When a map loads, NoHorny scans it once, which takes 5ms, 33ms and 129ms for the three map sizes.
 
 ## Support
 

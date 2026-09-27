@@ -20,21 +20,18 @@ import mindustry.world.blocks.power.LightBlock;
 // A worst case world, entirely covered by pixel art, split in 4 horizontal bands:
 // - canvases
 // - large displays, each drawn by 6 processors with 100 draw instructions
-// - sorters, each 8x8 cell having a processor linked to its 63 sorters
-// - illuminators, same as sorters
+// - sorters
+// - illuminators
 final class ArtWorld {
 
     private static final Team TEAM = Team.sharded;
-    private static final int PIXEL_CELL = 8;
     private static final int DRAW_INSTRUCTIONS = 100;
 
     final List<CanvasBlock.CanvasBuild> canvases = new ArrayList<>();
     final List<LogicBlock.LogicBuild> displayProcessors = new ArrayList<>();
     final List<Sorter.SorterBuild> sorters = new ArrayList<>();
     final List<LightBlock.LightBuild> illuminators = new ArrayList<>();
-    final List<LogicBlock.LogicBuild> pixelProcessors = new ArrayList<>();
     private final List<byte[]> displayProcessorConfigs = new ArrayList<>();
-    private final List<byte[]> pixelProcessorConfigs = new ArrayList<>();
     private final SplittableRandom random;
 
     private ArtWorld(final long seed) {
@@ -60,13 +57,12 @@ final class ArtWorld {
         return this.canvases.size()
                 + this.displayProcessors.size() / 6 * 7
                 + this.sorters.size()
-                + this.illuminators.size()
-                + this.pixelProcessors.size();
+                + this.illuminators.size();
     }
 
-    // A player or a processor changing a random piece of art
+    // A player changing a random piece of art
     void change() {
-        switch (this.random.nextInt(7)) {
+        switch (this.random.nextInt(4)) {
             case 0 -> {
                 final var canvas = this.pick(this.canvases);
                 final var data = new byte[canvas.data.length];
@@ -75,17 +71,10 @@ final class ArtWorld {
             }
             case 1 -> this.pick(this.sorters).configure(this.item());
             case 2 -> this.pick(this.illuminators).configure(this.color());
-            case 3 -> {
+            default -> {
                 final var index = this.random.nextInt(this.displayProcessors.size());
                 this.displayProcessors.get(index).configure(this.displayProcessorConfigs.get(index));
             }
-            case 4 -> {
-                final var index = this.random.nextInt(this.pixelProcessors.size());
-                this.pixelProcessors.get(index).configure(this.pixelProcessorConfigs.get(index));
-            }
-            // Processors controlling linked buildings, which does not fire any event
-            case 5 -> this.pick(this.sorters).sortItem = this.item();
-            default -> this.pick(this.illuminators).color = this.color();
         }
     }
 
@@ -114,9 +103,7 @@ final class ArtWorld {
     private void placePixels(final Tiles tiles, final Block block, final int y1, final int y2) {
         for (int x = 0; x < tiles.width; x++) {
             for (int y = y1; y < y2; y++) {
-                if (x % PIXEL_CELL == 0 && (y - y1) % PIXEL_CELL == 0) {
-                    this.pixelProcessors.add((LogicBlock.LogicBuild) place(tiles, Blocks.microProcessor, x, y));
-                } else if (place(tiles, block, x, y) instanceof Sorter.SorterBuild sorter) {
+                if (place(tiles, block, x, y) instanceof Sorter.SorterBuild sorter) {
                     this.sorters.add(sorter);
                 } else {
                     this.illuminators.add((LightBlock.LightBuild) tiles.getn(x, y).build);
@@ -146,20 +133,6 @@ final class ArtWorld {
             final var config = LogicBlock.compress(drawing, links);
             this.displayProcessors.get(i).readCompressed(config, true);
             this.displayProcessorConfigs.add(config);
-        }
-
-        for (final var processor : this.pixelProcessors) {
-            final var links = new Seq<LogicBlock.LogicLink>();
-            for (int x = 0; x < PIXEL_CELL; x++) {
-                for (int y = 0; y < PIXEL_CELL; y++) {
-                    if ((x != 0 || y != 0) && Vars.world.build(processor.tileX() + x, processor.tileY() + y) != null) {
-                        links.add(new LogicBlock.LogicLink(x, y, "pixel" + links.size, true));
-                    }
-                }
-            }
-            final var config = LogicBlock.compress("control color pixel1 0 0 0 0\nset a 1", links);
-            processor.readCompressed(config, true);
-            this.pixelProcessorConfigs.add(config);
         }
     }
 

@@ -2,20 +2,13 @@
 package com.xpdustry.nohorny.client;
 
 import arc.graphics.Color;
-import arc.struct.IntIntMap;
-import arc.struct.IntMap;
-import arc.struct.IntSeq;
-import arc.struct.IntSet;
-import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.function.ToIntFunction;
-import mindustry.Vars;
 import mindustry.gen.Building;
 import mindustry.world.Block;
 import mindustry.world.blocks.distribution.Sorter;
-import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.power.LightBlock;
 import org.jspecify.annotations.Nullable;
 
@@ -25,18 +18,8 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     private static final int MAX_GROUP_RANGE = 150;
     private static final int MAX_GROUP_STEPS = 200;
     private static final int MIN_PIXEL_GROUP_SIZE = 16;
-    // Linked buildings are polled because processor color changes fire no events
-    private static final int POLL_PERIOD_TICKS = 60;
-    private static final int POLL_BUDGET_PER_TICK = 256;
 
     private final ToIntFunction<B> color;
-    // Processor anchor -> linked positions
-    private final IntMap<IntSeq> processors = new IntMap<>();
-    // Linked position -> number of processors linking it
-    private final IntIntMap linked = new IntIntMap();
-    private final IntSeq polled = new IntSeq();
-    private final IntSet polledSet = new IntSet();
-    private int cursor = 0;
 
     private PixelTracker(
             final NoHornyEventBus events,
@@ -67,64 +50,6 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     }
 
     @Override
-    public void onInit() {
-        super.onInit();
-
-        // Non-privileged processors can only control linked buildings, see LExecutor.ControlI
-        this.events.subscribe(LogicBlock.LogicBuild.class, new NoHornyEventBus.BuildingSubscriber<>() {
-            @Override
-            public void onCreate(
-                    final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
-                final var x = MindustryUtils.anchorTileX(building);
-                final var y = MindustryUtils.anchorTileY(building);
-                // Built processors are created on the tile change and again on the build end
-                this.onRemove(x, y, building.block.size);
-                final var links = new IntSeq(building.links.size);
-                for (final var link : building.links) {
-                    final var packed = GeometryUtils.pack(link.x, link.y);
-                    links.add(packed);
-                    PixelTracker.this.linked.put(packed, PixelTracker.this.linked.get(packed) + 1);
-                    if (PixelTracker.this.polledSet.add(packed)) {
-                        PixelTracker.this.polled.add(packed);
-                    }
-                }
-                PixelTracker.this.processors.put(GeometryUtils.pack(x, y), links);
-            }
-
-            @Override
-            public void onRemove(final int x, final int y, final int size) {
-                final var links = PixelTracker.this.processors.remove(GeometryUtils.pack(x, y));
-                if (links == null) {
-                    return;
-                }
-                for (int i = 0; i < links.size; i++) {
-                    final var packed = links.get(i);
-                    final var count = PixelTracker.this.linked.get(packed) - 1;
-                    if (count == 0) {
-                        PixelTracker.this.linked.remove(packed);
-                    } else {
-                        PixelTracker.this.linked.put(packed, count);
-                    }
-                }
-            }
-
-            @Override
-            public void onRemoveAll() {
-                PixelTracker.this.processors.clear();
-                PixelTracker.this.linked.clear();
-                PixelTracker.this.polled.clear();
-                PixelTracker.this.polledSet.clear();
-            }
-        });
-    }
-
-    @Override
-    public void onTick() {
-        super.onTick();
-        this.poll();
-    }
-
-    @Override
     protected MindustryPixel data(final B building, final @Nullable MindustryAuthor author) {
         return new MindustryPixel(this.color.applyAsInt(building), author);
     }
@@ -141,34 +66,5 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
             }
         }
         return false;
-    }
-
-    private void poll() {
-        final var budget = Math.min(POLL_BUDGET_PER_TICK, Math.ceilDiv(this.polled.size, POLL_PERIOD_TICKS));
-        for (int i = 0; i < budget; i++) {
-            if (this.cursor >= this.polled.size) {
-                this.cursor = 0;
-            }
-            final var packed = this.polled.get(this.cursor);
-            if (!this.linked.containsKey(packed)) {
-                // Swap remove, the swapped element is checked next
-                this.polledSet.remove(packed);
-                this.polled.set(this.cursor, this.polled.peek());
-                this.polled.pop();
-                continue;
-            }
-            this.cursor++;
-            final var tracked = this.index.select(GeometryUtils.x(packed), GeometryUtils.y(packed));
-            if (tracked == null) {
-                continue;
-            }
-            final var building = Vars.world.build(GeometryUtils.x(packed), GeometryUtils.y(packed));
-            if (this.buildingType.isInstance(building)) {
-                final var casted = this.buildingType.cast(building);
-                if (this.color.applyAsInt(casted) != tracked.data().rgba()) {
-                    this.upsert(casted, tracked.data().author(), true);
-                }
-            }
-        }
     }
 }
