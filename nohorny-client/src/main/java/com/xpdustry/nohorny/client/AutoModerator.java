@@ -8,6 +8,7 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import mindustry.Vars;
@@ -17,9 +18,11 @@ import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.io.JsonIO;
 import mindustry.type.ItemSeq;
+import mindustry.world.blocks.distribution.Sorter;
 import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
+import mindustry.world.blocks.power.LightBlock;
 
 final class AutoModerator implements LifecycleListener {
 
@@ -99,6 +102,14 @@ final class AutoModerator implements LifecycleListener {
                     }
                     positions.add(canvas.pos());
                     refunds.get(canvas.team().id, ItemSeq::new).add(canvas.block.requirements);
+                }
+                case MindustryPixel _ -> {
+                    final var building = Vars.world.build(element.x(), element.y());
+                    if (!(building instanceof Sorter.SorterBuild || building instanceof LightBlock.LightBuild)) {
+                        continue;
+                    }
+                    positions.add(building.pos());
+                    refunds.get(building.team().id, ItemSeq::new).add(building.block.requirements);
                 }
                 case MindustryDisplay data -> {
                     actualGroupSize += data.processors().size();

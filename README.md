@@ -15,7 +15,7 @@ Are you sick of players turning your awesome Mindustry server into a NSFW galler
 Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
 
 Introducing **NoHorny**, your autonomous NSFW moderation plugin.
-It can detect NSFW logic displays and canvases and ban the offending players.
+It can detect NSFW logic displays, canvases, sorter and illuminator pixel art, and ban the offending players.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
@@ -49,7 +49,7 @@ You can configure NoHorny using the Mindustry built-in `config` command in your 
 | `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                                                   | empty                              |
 | `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
 | `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the host country of your servers. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list). | `false`                            |
-| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                     | `false`                            |
+| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays, canvases, sorters and illuminators.                                                                              | `false`                            |
 
 #### Auto-Mod Policies
 
@@ -78,8 +78,8 @@ Checkout [MAD](https://github.com/phinner/mad) if you want to automatically dele
 
 #### Debugging
 
-Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display or
-canvas group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
+Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display,
+canvas, sorter or illuminator group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
 
 ### Developing
 

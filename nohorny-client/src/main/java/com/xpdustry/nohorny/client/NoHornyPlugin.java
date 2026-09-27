@@ -34,7 +34,14 @@ public final class NoHornyPlugin extends Plugin {
         final var canvases = new CanvasTracker(client);
         this.addListener(canvases);
 
-        final var debug = new DebugHelper(directory.resolve("debug"), canvases, displays);
+        final var sorters = PixelTracker.sorters(client);
+        this.addListener(sorters);
+
+        final var illuminators = PixelTracker.illuminators(client);
+        this.addListener(illuminators);
+
+        final var debug =
+                new DebugHelper(directory.resolve("debug"), displays, List.of(canvases, sorters, illuminators));
         this.addListener(debug);
 
         this.addListener(new DiscordWebhook());

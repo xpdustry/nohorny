@@ -9,6 +9,7 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.net.ConnectException;
@@ -197,6 +198,12 @@ final class NoHornyClient implements LifecycleListener {
                     total++;
                     if (canvas.author() != null) {
                         authors.add(canvas.author());
+                    }
+                }
+                case MindustryPixel pixel -> {
+                    total++;
+                    if (pixel.author() != null) {
+                        authors.add(pixel.author());
                     }
                 }
                 case MindustryDisplay display -> {
