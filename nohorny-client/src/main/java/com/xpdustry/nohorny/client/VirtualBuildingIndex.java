@@ -22,6 +22,11 @@ final class VirtualBuildingIndex<T> {
     }
 
     public Collection<VirtualBuilding<T>> selectAllWithinSquare(final int x, final int y, final int size) {
+        // Most buildings are single tiles, skip the allocations
+        if (size == 1) {
+            final var building = this.select(x, y);
+            return building == null ? List.of() : List.of(building);
+        }
         return this.selectAllWithinBounds(x, y, x + size, y + size, new IntSet());
     }
 

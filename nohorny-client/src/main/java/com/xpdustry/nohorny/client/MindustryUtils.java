@@ -1,139 +1,11 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.Events;
-import com.xpdustry.nohorny.common.MindustryAuthor;
-import mindustry.Vars;
-import mindustry.core.GameState;
-import mindustry.game.EventType;
 import mindustry.gen.Building;
-import mindustry.gen.Player;
-import mindustry.world.blocks.ConstructBlock;
-import org.jspecify.annotations.Nullable;
 
 final class MindustryUtils {
 
-    private static final MiniLogger log = MiniLogger.forClass(MindustryUtils.class);
-
     private MindustryUtils() {}
-
-    public static <T> void onEvent(final Class<T> type, final EventListener<T> listener) {
-        Events.on(type, event -> {
-            try {
-                listener.onEvent(event);
-            } catch (final Throwable e) {
-                log.error("An error occurred while handling event {}", type, e);
-            }
-        });
-    }
-
-    public static <T extends Enum<T>> void onEvent(final T type, final EventListener<T> listener) {
-        Events.run(type, () -> {
-            try {
-                listener.onEvent(type);
-            } catch (final Throwable e) {
-                log.error("An error occurred while handling event {}", type, e);
-            }
-        });
-    }
-
-    public static <B extends Building> void onEvent(
-            final Class<B> type, final BuildingLifecycleEventListener<B> listener) {
-        MindustryUtils.onEvent(EventType.BlockBuildEndEvent.class, event -> {
-            if (event.tile.build instanceof ConstructBlock.ConstructBuild constructing) {
-                if (constructing.prevBuild != null) {
-                    for (final var building : constructing.prevBuild) {
-                        if (type.isInstance(building)) {
-                            listener.onRemove(anchorTileX(building), anchorTileY(building), building.block.size);
-                        }
-                    }
-                }
-            }
-            final var building = event.tile.build;
-            if (type.isInstance(building)) {
-                final var casted = type.cast(building);
-                if (event.breaking) {
-                    listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                } else {
-                    listener.onCreate(casted, asAuthor(event.unit == null ? null : event.unit.getPlayer()), true);
-                }
-            }
-        });
-
-        MindustryUtils.onEvent(EventType.BlockDestroyEvent.class, event -> {
-            if (type.isInstance(event.tile.build)) {
-                listener.onRemove(
-                        anchorTileX(event.tile.build), anchorTileY(event.tile.build), event.tile.build.block.size);
-            }
-        });
-
-        MindustryUtils.onEvent(EventType.BuildingBulletDestroyEvent.class, event -> {
-            if (type.isInstance(event.build)) {
-                listener.onRemove(anchorTileX(event.build), anchorTileY(event.build), event.build.block.size);
-            }
-        });
-
-        MindustryUtils.onEvent(EventType.BuildTeamChangeEvent.class, event -> {
-            if (type.isInstance(event.build)) {
-                final var casted = type.cast(event.build);
-                listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, null, false);
-            }
-        });
-
-        MindustryUtils.onEvent(EventType.ConfigEvent.class, event -> {
-            if (type.isInstance(event.tile)) {
-                final var casted = type.cast(event.tile);
-                listener.onRemove(anchorTileX(casted), anchorTileY(casted), casted.block.size);
-                listener.onCreate(casted, asAuthor(event.player), true);
-            }
-        });
-
-        MindustryUtils.onEvent(EventType.StateChangeEvent.class, event -> {
-            if (event.from == GameState.State.menu
-                    && (event.to == GameState.State.playing || event.to == GameState.State.paused)) {
-                listener.onRemoveAll();
-                for (final var tile : Vars.world.tiles) {
-                    if (type.isInstance(tile.build)) {
-                        final var casted = type.cast(tile.build);
-                        listener.onCreate(casted, null, false);
-                    }
-                }
-            }
-        });
-
-        // For server side map modifications, e.g. AutoModerator#delete
-
-        final var state = new TileChangeState[] {new TileChangeState()};
-
-        MindustryUtils.onEvent(EventType.TilePreChangeEvent.class, event -> {
-            state[0].pos = event.tile.pos();
-            state[0].wasTrackedTypePreChange = type.isInstance(event.tile.build);
-        });
-
-        MindustryUtils.onEvent(EventType.TileChangeEvent.class, event -> {
-            try {
-                if (event.tile.pos() != state[0].pos) {
-                    // This should never happen...
-                    return;
-                }
-                if (type.isInstance(event.tile.build)) {
-                    final var casted = type.cast(event.tile.build);
-                    listener.onCreate(casted, null, false);
-                } else {
-                    if (state[0].wasTrackedTypePreChange) {
-                        listener.onRemove(event.tile.x, event.tile.y, 1);
-                    }
-                }
-            } finally {
-                state[0].reset();
-            }
-        });
-    }
-
-    private static @Nullable MindustryAuthor asAuthor(final @Nullable Player player) {
-        return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
-    }
 
     public static int anchorTileX(final Building building) {
         return building.tileX() + building.block.sizeOffset;
@@ -141,19 +13,5 @@ final class MindustryUtils {
 
     public static int anchorTileY(final Building building) {
         return building.tileY() + building.block.sizeOffset;
-    }
-
-    private static final class TileChangeState {
-        int pos;
-        boolean wasTrackedTypePreChange;
-
-        {
-            reset();
-        }
-
-        private void reset() {
-            this.pos = -1;
-            this.wasTrackedTypePreChange = false;
-        }
     }
 }

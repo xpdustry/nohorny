@@ -28,9 +28,15 @@ final class AutoModerator implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(AutoModerator.class);
 
+    private final NoHornyEventBus events;
+
+    public AutoModerator(final NoHornyEventBus events) {
+        this.events = events;
+    }
+
     @Override
     public void onInit() {
-        MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
+        this.events.subscribe(ClassificationEvent.class, this::onClassificationEvent);
     }
 
     private void onClassificationEvent(final ClassificationEvent event) {

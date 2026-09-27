@@ -40,13 +40,18 @@ final class DiscordWebhook implements LifecycleListener {
             HttpClient.newBuilder().executor(this.executor).proxy(this.proxy).build();
     private final MonoRateLimiter rateLimiter = new MonoRateLimiter(Duration.ofSeconds(1));
     private final ReusableImageBytes imageBuffer = new ReusableImageBytes();
+    private final NoHornyEventBus events;
+
+    public DiscordWebhook(final NoHornyEventBus events) {
+        this.events = events;
+    }
 
     @Override
     public void onInit() {
         this.imageBuffer.onInit();
-        MindustryUtils.onEvent(ClassificationEvent.class, this::onClassificationEvent);
+        this.events.subscribe(ClassificationEvent.class, this::onClassificationEvent);
 
-        MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
+        this.events.subscribe(SettingChangeEvent.class, event -> {
             if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY))) {

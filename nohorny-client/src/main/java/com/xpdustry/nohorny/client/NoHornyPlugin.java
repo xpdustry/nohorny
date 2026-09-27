@@ -16,6 +16,7 @@ public final class NoHornyPlugin extends Plugin {
 
     private final MiniLogger log = MiniLogger.forClass(NoHornyPlugin.class);
     private final List<LifecycleListener> listeners = new ArrayList<>();
+    private final NoHornyEventBus events = new NoHornyEventBus();
 
     @Override
     public void init() {
@@ -25,31 +26,37 @@ public final class NoHornyPlugin extends Plugin {
 
         final var directory = Vars.mods.getConfigFolder(this).file().toPath();
 
-        final var client = new NoHornyClient();
+        final var client = new NoHornyClient(this.events);
         this.addListener(client);
 
-        final var displays = new DisplayTracker(client);
+        final var displays = new DisplayTracker(this.events, client);
         this.addListener(displays);
 
-        final var canvases = new CanvasTracker(client);
+        final var canvases = new CanvasTracker(this.events, client);
         this.addListener(canvases);
 
-        final var sorters = PixelTracker.sorters(client);
+        final var sorters = PixelTracker.sorters(this.events, client);
         this.addListener(sorters);
 
-        final var illuminators = PixelTracker.illuminators(client);
+        final var illuminators = PixelTracker.illuminators(this.events, client);
         this.addListener(illuminators);
 
-        final var debug =
-                new DebugHelper(directory.resolve("debug"), displays, List.of(canvases, sorters, illuminators));
+        final var debug = new DebugHelper(
+                this.events, directory.resolve("debug"), displays, List.of(canvases, sorters, illuminators));
         this.addListener(debug);
 
-        this.addListener(new DiscordWebhook());
+        this.addListener(new DiscordWebhook(this.events));
 
-        this.addListener(new AutoModerator());
+        this.addListener(new AutoModerator(this.events));
 
         this.init0();
+        // Runs after the game update, so the trackers see the changes of the current frame
         Core.app.addListener(new ApplicationListener() {
+
+            @Override
+            public void update() {
+                NoHornyPlugin.this.tick0();
+            }
 
             @Override
             public void dispose() {
@@ -74,10 +81,25 @@ public final class NoHornyPlugin extends Plugin {
                         e1.addSuppressed(e2);
                     }
                 }
+                this.events.close();
                 throw new RuntimeException("Failed to initialize NoHorny", e1);
             }
         }
         log.info("NoHorny successfully initialized");
+    }
+
+    private void tick0() {
+        if (!Vars.state.isGame()) {
+            return;
+        }
+        for (final var listener : this.listeners) {
+            // Arc does not catch exceptions thrown by application listeners, it would crash the server
+            try {
+                listener.onTick();
+            } catch (final Throwable e) {
+                log.error("NoHorny failed to tick {}", listener.getClass().getSimpleName(), e);
+            }
+        }
     }
 
     private void exit0() {
@@ -91,5 +113,6 @@ public final class NoHornyPlugin extends Plugin {
                         e);
             }
         }
+        this.events.close();
     }
 }

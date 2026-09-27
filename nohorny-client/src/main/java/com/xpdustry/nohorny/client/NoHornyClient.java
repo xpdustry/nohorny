@@ -2,7 +2,6 @@
 package com.xpdustry.nohorny.client;
 
 import arc.Core;
-import arc.Events;
 import arc.util.serialization.Jval;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.MindustryAuthor;
@@ -27,7 +26,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import org.jspecify.annotations.Nullable;
 
-final class NoHornyClient implements LifecycleListener {
+final class NoHornyClient implements LifecycleListener, GroupClassifier {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
 
@@ -37,11 +36,16 @@ final class NoHornyClient implements LifecycleListener {
             Thread.ofVirtual().name("nohorny-client-worker-", 0).factory());
     private final HttpClient http =
             HttpClient.newBuilder().executor(this.executor).build();
+    private final NoHornyEventBus events;
+
+    public NoHornyClient(final NoHornyEventBus events) {
+        this.events = events;
+    }
 
     @Override
     public void onInit() {
         this.imageBuffer.onInit();
-        MindustryUtils.onEvent(SettingChangeEvent.class, event -> {
+        this.events.subscribe(SettingChangeEvent.class, event -> {
             if (event.key().equals(NoHornySetting.API_ENDPOINT)
                     || event.key().equals(NoHornySetting.API_AUTH_TYPE)
                     || event.key().equals(NoHornySetting.API_AUTH_VALUE)) {
@@ -85,7 +89,8 @@ final class NoHornyClient implements LifecycleListener {
         }
     }
 
-    public <T extends MindustryImage> boolean tryAccept(final VirtualBuilding.Group<T> group) {
+    @Override
+    public boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group) {
         if (!this.classificationPermits.tryAcquire()) {
             return false;
         }
@@ -113,7 +118,7 @@ final class NoHornyClient implements LifecycleListener {
         }
     }
 
-    private <T extends MindustryImage> void classify(final VirtualBuilding.Group<T> group) throws Exception {
+    private void classify(final VirtualBuilding.Group<? extends MindustryImage> group) throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", "image/jpeg")
                 .POST(this.imageBuffer.encode(MindustryImageRenderer.render(group), "jpg"))
@@ -152,7 +157,7 @@ final class NoHornyClient implements LifecycleListener {
                 "%.2f".formatted(classification.confidence() * 100),
                 classification.classifier(),
                 classification.identifier());
-        Core.app.post(() -> Events.fire(new ClassificationEvent(group, computeAuthor(group), classification)));
+        Core.app.post(() -> this.events.publish(new ClassificationEvent(group, author, classification)));
     }
 
     private HttpRequest.Builder request(final String path, final Duration timeout) {

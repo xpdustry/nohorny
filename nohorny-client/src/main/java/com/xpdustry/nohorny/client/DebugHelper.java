@@ -54,12 +54,17 @@ final class DebugHelper implements LifecycleListener {
     };
 
     private final IntMap<DebugTap> taps = new IntMap<>();
+    private final NoHornyEventBus events;
     private final Path directory;
     private final DisplayTracker displays;
     private final List<BuildingImageTracker<?, ?>> trackers;
 
     public DebugHelper(
-            final Path directory, final DisplayTracker displays, final List<BuildingImageTracker<?, ?>> trackers) {
+            final NoHornyEventBus events,
+            final Path directory,
+            final DisplayTracker displays,
+            final List<BuildingImageTracker<?, ?>> trackers) {
+        this.events = events;
         this.directory = directory;
         this.displays = displays;
         this.trackers = List.copyOf(trackers);
@@ -72,11 +77,11 @@ final class DebugHelper implements LifecycleListener {
 
     @Override
     public void onInit() {
-        MindustryUtils.onEvent(EventType.PlayerLeave.class, event -> {
+        this.events.subscribe(EventType.PlayerLeave.class, event -> {
             this.taps.remove(event.player.id());
         });
 
-        MindustryUtils.onEvent(EventType.TapEvent.class, event -> {
+        this.events.subscribe(EventType.TapEvent.class, event -> {
             final var enabled = NoHornySetting.DEBUG_TAP.get();
             if (enabled == null || !enabled || !event.player.admin()) {
                 return;

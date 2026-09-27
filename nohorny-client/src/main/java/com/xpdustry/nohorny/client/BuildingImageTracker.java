@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.VirtualBuilding;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.SequencedSet;
-import mindustry.Vars;
-import mindustry.game.EventType;
 import mindustry.gen.Building;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
@@ -19,28 +13,29 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
 
     final VirtualBuildingIndex<T> index = new VirtualBuildingIndex<>();
     final Class<B> buildingType;
-    private final Class<? extends Block> blockType;
-    private final NoHornyClient client;
-    private final int maxGroupRange;
-    private final int maxGroupSteps;
+    final NoHornyEventBus events;
+    private final GroupCollector<T> collector;
     private final int minGroupSize;
-    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
-    private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private VirtualBuildingIndex<T>.@Nullable IncrementalGrouper grouper = null;
 
     protected BuildingImageTracker(
-            final NoHornyClient client,
+            final NoHornyEventBus events,
+            final GroupClassifier classifier,
             final Class<B> buildingType,
             final Class<? extends Block> blockType,
             final int maxGroupRange,
             final int maxGroupSteps,
             final int minGroupSize) {
-        this.client = client;
+        this.events = events;
         this.buildingType = buildingType;
-        this.blockType = blockType;
-        this.maxGroupRange = maxGroupRange;
-        this.maxGroupSteps = maxGroupSteps;
         this.minGroupSize = minGroupSize;
+        this.collector = new GroupCollector<>(
+                this.index,
+                classifier,
+                blockType::isInstance,
+                this::isEligible,
+                this::isEligible,
+                maxGroupRange,
+                maxGroupSteps);
     }
 
     protected abstract T data(final B building, final @Nullable MindustryAuthor author);
@@ -55,7 +50,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
 
     @Override
     public void onInit() {
-        MindustryUtils.onEvent(this.buildingType, new BuildingLifecycleEventListener<>() {
+        this.events.subscribe(this.buildingType, new NoHornyEventBus.BuildingSubscriber<>() {
             @Override
             public void onCreate(final B building, final @Nullable MindustryAuthor author, final boolean queue) {
                 BuildingImageTracker.this.upsert(building, author, queue);
@@ -64,19 +59,21 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
             @Override
             public void onRemoveAll() {
                 BuildingImageTracker.this.index.removeAll();
-                BuildingImageTracker.this.queue.clear();
-                BuildingImageTracker.this.grouper = null;
+                BuildingImageTracker.this.collector.clear();
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
                 for (final var removed : BuildingImageTracker.this.index.removeAllWithinSquare(x, y, size)) {
-                    BuildingImageTracker.this.queue.remove(removed.packed());
+                    BuildingImageTracker.this.collector.dequeue(removed.packed());
                 }
             }
         });
+    }
 
-        MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
+    @Override
+    public void onTick() {
+        this.collector.tick();
     }
 
     protected final void upsert(final B building, final @Nullable MindustryAuthor author, final boolean queue) {
@@ -84,59 +81,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
         final var y = MindustryUtils.anchorTileY(building);
         final var added = this.index.upsert(x, y, building.block.size, this.data(building, author));
         if (queue) {
-            this.enqueue(added.packed());
+            this.collector.enqueue(added.packed());
         }
-    }
-
-    private void collect() {
-        if (!Vars.state.isGame()) {
-            return;
-        }
-
-        if (this.grouper != null) {
-            this.continueGrouperProcessing();
-            return;
-        }
-
-        while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirst();
-            final var x = GeometryUtils.x(point);
-            final var y = GeometryUtils.y(point);
-            final var anchor = this.index.select(x, y);
-            if (anchor == null || !this.isEligible(anchor)) {
-                continue;
-            }
-            this.waiter.estimateWaitTimeFor(this.blockType::isInstance);
-            this.grouper = this.index.selectGroupWithinRangeIncremental(x, y, this.maxGroupRange, this.maxGroupSteps);
-            this.continueGrouperProcessing();
-            break;
-        }
-    }
-
-    private void continueGrouperProcessing() {
-        Objects.requireNonNull(this.grouper);
-        if (this.waiter.isNotDone()) {
-            this.waiter.countdown();
-            return;
-        }
-        this.grouper.progress();
-        this.queue.removeIf(this.grouper::isVisited);
-        if (this.grouper.isCompleted()) {
-            final var group = this.grouper.create();
-            if (group == null || !this.isEligible(group)) {
-                this.grouper = null;
-                return;
-            }
-            if (this.client.tryAccept(group)) {
-                this.grouper = null;
-            }
-        }
-    }
-
-    private void enqueue(final int packed) {
-        if (this.grouper != null && this.grouper.isVisited(packed)) {
-            return;
-        }
-        this.queue.addLast(packed);
     }
 }

@@ -12,7 +12,6 @@ import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.function.ToIntFunction;
 import mindustry.Vars;
-import mindustry.game.EventType;
 import mindustry.gen.Building;
 import mindustry.world.Block;
 import mindustry.world.blocks.distribution.Sorter;
@@ -40,27 +39,31 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     private int cursor = 0;
 
     private PixelTracker(
-            final NoHornyClient client,
+            final NoHornyEventBus events,
+            final GroupClassifier classifier,
             final Class<B> buildingType,
             final Class<? extends Block> blockType,
             final ToIntFunction<B> color) {
-        super(client, buildingType, blockType, MAX_GROUP_RANGE, MAX_GROUP_STEPS, MIN_PIXEL_GROUP_SIZE);
+        super(events, classifier, buildingType, blockType, MAX_GROUP_RANGE, MAX_GROUP_STEPS, MIN_PIXEL_GROUP_SIZE);
         this.color = color;
     }
 
-    public static PixelTracker<Sorter.SorterBuild> sorters(final NoHornyClient client) {
+    public static PixelTracker<Sorter.SorterBuild> sorters(
+            final NoHornyEventBus events, final GroupClassifier classifier) {
         // Unconfigured sorters display a dark cross
         return new PixelTracker<>(
-                client,
+                events,
+                classifier,
                 Sorter.SorterBuild.class,
                 Sorter.class,
                 building -> building.sortItem == null ? Color.blackRgba : building.sortItem.color.rgba());
     }
 
-    public static PixelTracker<LightBlock.LightBuild> illuminators(final NoHornyClient client) {
+    public static PixelTracker<LightBlock.LightBuild> illuminators(
+            final NoHornyEventBus events, final GroupClassifier classifier) {
         // In game, the color is blended with the sprite, but we render it raw to classify the intended image
         return new PixelTracker<>(
-                client, LightBlock.LightBuild.class, LightBlock.class, building -> building.color | 0xFF);
+                events, classifier, LightBlock.LightBuild.class, LightBlock.class, building -> building.color | 0xFF);
     }
 
     @Override
@@ -68,7 +71,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
         super.onInit();
 
         // Non-privileged processors can only control linked buildings, see LExecutor.ControlI
-        MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
+        this.events.subscribe(LogicBlock.LogicBuild.class, new NoHornyEventBus.BuildingSubscriber<>() {
             @Override
             public void onCreate(
                     final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
@@ -111,12 +114,12 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
                 PixelTracker.this.polledSet.clear();
             }
         });
+    }
 
-        MindustryUtils.onEvent(EventType.Trigger.update, _ -> {
-            if (Vars.state.isGame()) {
-                this.poll();
-            }
-        });
+    @Override
+    public void onTick() {
+        super.onTick();
+        this.poll();
     }
 
     @Override

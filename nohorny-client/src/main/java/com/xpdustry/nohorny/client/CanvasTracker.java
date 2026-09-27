@@ -15,9 +15,10 @@ final class CanvasTracker extends BuildingImageTracker<CanvasBlock.CanvasBuild, 
     private static final int MAX_GROUP_STEPS = 50;
     private static final int MIN_CANVAS_GROUP_SIZE = 2 * 4;
 
-    public CanvasTracker(final NoHornyClient client) {
+    public CanvasTracker(final NoHornyEventBus events, final GroupClassifier classifier) {
         super(
-                client,
+                events,
+                classifier,
                 CanvasBlock.CanvasBuild.class,
                 CanvasBlock.class,
                 MAX_GROUP_RANGE,
