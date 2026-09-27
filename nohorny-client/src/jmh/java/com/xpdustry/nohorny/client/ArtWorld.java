@@ -10,6 +10,7 @@ import mindustry.content.Blocks;
 import mindustry.game.Team;
 import mindustry.gen.Building;
 import mindustry.gen.Groups;
+import mindustry.type.Item;
 import mindustry.world.Block;
 import mindustry.world.Tiles;
 import mindustry.world.blocks.distribution.Sorter;
@@ -159,7 +160,7 @@ final class ArtWorld {
         return list.get(this.random.nextInt(list.size()));
     }
 
-    private mindustry.type.Item item() {
+    private Item item() {
         return Vars.content.items().get(this.random.nextInt(Vars.content.items().size));
     }
 
