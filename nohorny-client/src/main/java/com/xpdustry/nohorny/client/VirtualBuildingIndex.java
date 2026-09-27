@@ -22,6 +22,11 @@ final class VirtualBuildingIndex<T> {
     }
 
     public Collection<VirtualBuilding<T>> selectAllWithinSquare(final int x, final int y, final int size) {
+        // Most buildings are single tiles, skip the allocations
+        if (size == 1) {
+            final var building = this.select(x, y);
+            return building == null ? List.of() : List.of(building);
+        }
         return this.selectAllWithinBounds(x, y, x + size, y + size, new IntSet());
     }
 
@@ -241,6 +246,14 @@ final class VirtualBuildingIndex<T> {
 
         public boolean isVisited(final int packed) {
             return this.visited.contains(packed);
+        }
+
+        public void removeVisited(final Collection<Integer> packed) {
+            if (packed.size() < this.visited.size) {
+                packed.removeIf(this.visited::contains);
+            } else {
+                this.visited.each(packed::remove);
+            }
         }
 
         public VirtualBuilding.@Nullable Group<T> create() {

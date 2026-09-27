@@ -6,6 +6,7 @@ import com.xpdustry.nohorny.common.GraphicsScope;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.NoHornyPreconditions;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.awt.Color;
@@ -61,7 +62,7 @@ public final class MindustryImageRenderer {
                 try (final var local = global.child(x, y, size, size)) {
                     final var buildingScale = (double) size / building.data().resolution();
                     local.graphics().scale(buildingScale, buildingScale);
-                    MindustryImageRenderer.renderTrivialDisplayOrCanvas(local.graphics(), building.data());
+                    MindustryImageRenderer.renderTrivialImage(local.graphics(), building.data());
                 }
             }
 
@@ -71,7 +72,7 @@ public final class MindustryImageRenderer {
         return image;
     }
 
-    private static void renderTrivialDisplayOrCanvas(final Graphics2D graphics, final MindustryImage data) {
+    private static void renderTrivialImage(final Graphics2D graphics, final MindustryImage data) {
         switch (data) {
             case MindustryDisplay display -> {
                 final var xa = new int[3];
@@ -99,6 +100,10 @@ public final class MindustryImageRenderer {
                         }
                     }
                 }
+            }
+            case MindustryPixel pixel -> {
+                graphics.setColor(new Color(pixel.rgba() >>> 8, false));
+                graphics.fillRect(0, 0, 1, 1);
             }
             case MindustryCanvas canvas -> {
                 for (int y = 0; y < canvas.resolution(); y++) {
@@ -151,7 +156,7 @@ public final class MindustryImageRenderer {
                     local.graphics().scale(scale, scale);
 
                     for (final var building : group.elements()) {
-                        MindustryImageRenderer.renderTrivialDisplayOrCanvas(local.graphics(), building.data());
+                        MindustryImageRenderer.renderTrivialImage(local.graphics(), building.data());
                     }
                 }
             }

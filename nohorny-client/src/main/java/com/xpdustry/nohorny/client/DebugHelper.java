@@ -8,6 +8,7 @@ import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
+import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,13 +16,13 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Random;
 import javax.imageio.ImageIO;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.gen.Call;
 import mindustry.gen.Player;
-import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
 
 final class DebugHelper implements LifecycleListener {
@@ -53,14 +54,20 @@ final class DebugHelper implements LifecycleListener {
     };
 
     private final IntMap<DebugTap> taps = new IntMap<>();
+    private final NoHornyEventBus events;
     private final Path directory;
-    private final CanvasTracker canvases;
     private final DisplayTracker displays;
+    private final List<BuildingImageTracker<?, ?>> trackers;
 
-    public DebugHelper(final Path directory, final CanvasTracker canvases, final DisplayTracker displays) {
+    public DebugHelper(
+            final NoHornyEventBus events,
+            final Path directory,
+            final DisplayTracker displays,
+            final List<BuildingImageTracker<?, ?>> trackers) {
+        this.events = events;
         this.directory = directory;
-        this.canvases = canvases;
         this.displays = displays;
+        this.trackers = List.copyOf(trackers);
         try {
             Files.createDirectories(directory);
         } catch (final IOException e) {
@@ -70,11 +77,11 @@ final class DebugHelper implements LifecycleListener {
 
     @Override
     public void onInit() {
-        MindustryUtils.onEvent(EventType.PlayerLeave.class, event -> {
+        this.events.subscribe(EventType.PlayerLeave.class, event -> {
             this.taps.remove(event.player.id());
         });
 
-        MindustryUtils.onEvent(EventType.TapEvent.class, event -> {
+        this.events.subscribe(EventType.TapEvent.class, event -> {
             final var enabled = NoHornySetting.DEBUG_TAP.get();
             if (enabled == null || !enabled || !event.player.admin()) {
                 return;
@@ -90,11 +97,16 @@ final class DebugHelper implements LifecycleListener {
             final var y = Point2.y(tap.lastTapPos);
             final var player = event.player;
 
-            switch (Vars.world.build(x, y)) {
-                case CanvasBlock.CanvasBuild _ -> this.groupDebugSnapshotAt(player, this.canvases.canvases, x, y);
-                case LogicDisplay.LogicDisplayBuild _ ->
-                    this.groupDebugSnapshotAt(player, this.displays.displays, x, y);
-                case null, default -> {}
+            final var building = Vars.world.build(x, y);
+            if (building instanceof LogicDisplay.LogicDisplayBuild) {
+                this.groupDebugSnapshotAt(player, this.displays.displays, x, y);
+            } else {
+                for (final var tracker : this.trackers) {
+                    if (tracker.buildingType.isInstance(building)) {
+                        this.groupDebugSnapshotAt(player, tracker.index, x, y);
+                        break;
+                    }
+                }
             }
 
             this.taps.remove(event.player.id);
@@ -143,7 +155,7 @@ final class DebugHelper implements LifecycleListener {
                                 building.x() + GeometryUtils.x(link),
                                 building.y() + GeometryUtils.y(link));
                     }
-                case MindustryCanvas _:
+                case MindustryCanvas _, MindustryPixel _:
                     this.sendLabelIcon(player, color, "I", building.x(), building.y());
             }
         }

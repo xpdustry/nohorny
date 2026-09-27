@@ -15,7 +15,7 @@ Are you sick of players turning your awesome Mindustry server into a NSFW galler
 Do you wish to bring back your logic displays without the fear of seing anime girls in questionable positions?
 
 Introducing **NoHorny**, your autonomous NSFW moderation plugin.
-It can detect NSFW logic displays and canvases and ban the offending players.
+It can detect NSFW logic displays, canvases, sorter and illuminator pixel art, and ban the offending players.
 
 Enjoy this family friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
@@ -49,7 +49,7 @@ You can configure NoHorny using the Mindustry built-in `config` command in your 
 | `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                                                   | empty                              |
 | `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
 | `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the host country of your servers. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list). | `false`                            |
-| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays and canvases.                                                                                                     | `false`                            |
+| `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays, canvases, sorters and illuminators.                                                                              | `false`                            |
 
 #### Auto-Mod Policies
 
@@ -78,8 +78,8 @@ Checkout [MAD](https://github.com/phinner/mad) if you want to automatically dele
 
 #### Debugging
 
-Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display or
-canvas group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
+Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display,
+canvas, sorter or illuminator group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
 
 ### Developing
 
@@ -180,6 +180,39 @@ java -jar nohorny-server.jar start -- --server.port=9090
 - `./gradlew runMindustryServer` to run the client plugin in a local Mindustry server.
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
+
+- `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),
+  use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
+
+## Performance
+
+NoHorny renders and classifies the art on other threads, so the main loop only pays for keeping track of it.
+
+We measured that cost on the hardware of the Xpdustry servers (Xeon E5-1650 v4, Java 25),
+on the worst map we could make: entirely covered by canvases, logic displays, sorters and illuminators,
+with players changing random pieces of art every tick.
+The classifier also answers instantly, so NoHorny never gets to rest.
+
+Mean main loop cost per tick, out of the 16ms a 60 TPS server has:
+
+| Map                      | Art changes per tick | Without NoHorny | With NoHorny | NoHorny cost |
+|--------------------------|---------------------:|----------------:|-------------:|-------------:|
+| 100x100 (6k buildings)   |                    0 |           ~0 µs |      0.07 µs |     +0.04 µs |
+| 250x250 (38k buildings)  |                    0 |           ~0 µs |      0.07 µs |     +0.04 µs |
+| 500x500 (150k buildings) |                    0 |           ~0 µs |      0.06 µs |     +0.04 µs |
+| 100x100                  |                   10 |          401 µs |       549 µs |      +148 µs |
+| 250x250                  |                   10 |          421 µs |       681 µs |      +260 µs |
+| 500x500                  |                   10 |          425 µs |       733 µs |      +308 µs |
+| 100x100                  |                  100 |         4.05 ms |      4.58 ms |     +0.53 ms |
+| 250x250                  |                  100 |         4.27 ms |      5.62 ms |     +1.35 ms |
+| 500x500                  |                  100 |         4.36 ms |      5.41 ms |     +1.05 ms |
+
+"Without NoHorny" is what Mindustry itself spends applying the art changes, to give a sense of scale.
+
+- When the art sits still, NoHorny costs nothing measurable.
+- At 10 changes per tick (600 per second), it costs at most 0.3ms, under 2% of a tick.
+- At 100 changes per tick (6000 per second), it costs at most 1.35ms, under 9% of a tick.
+- When a map loads, NoHorny scans it once, which takes 5ms, 33ms and 129ms for the three map sizes.
 
 ## Support
 

@@ -11,14 +11,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.SequencedSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-import mindustry.Vars;
-import mindustry.game.EventType;
 import mindustry.logic.LExecutor;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
@@ -34,20 +29,26 @@ final class DisplayTracker implements LifecycleListener {
 
     final VirtualBuildingIndex<MindustryDisplay> displays = new VirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
-    private final NoHornyClient client;
-    private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
-    private final SequencedSet<Integer> queue = new LinkedHashSet<>();
-    private VirtualBuildingIndex<MindustryDisplay>.@Nullable IncrementalGrouper grouper = null;
+    private final NoHornyEventBus events;
+    private final GroupCollector<MindustryDisplay> collector;
 
     record ProcessorWithLinks(MindustryDisplay.Processor processor, Set<Integer> links) {}
 
-    public DisplayTracker(final NoHornyClient client) {
-        this.client = client;
+    public DisplayTracker(final NoHornyEventBus events, final GroupClassifier classifier) {
+        this.events = events;
+        this.collector = new GroupCollector<>(
+                this.displays,
+                classifier,
+                block -> block instanceof LogicBlock || block instanceof LogicDisplay,
+                DisplayTracker::isEligible,
+                _ -> true,
+                MAX_GROUP_RANGE,
+                MAX_GROUP_STEPS);
     }
 
     @Override
     public void onInit() {
-        MindustryUtils.onEvent(LogicBlock.LogicBuild.class, new BuildingLifecycleEventListener<>() {
+        this.events.subscribe(LogicBlock.LogicBuild.class, new NoHornyEventBus.BuildingSubscriber<>() {
             @Override
             public void onCreate(
                     final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
@@ -81,7 +82,7 @@ final class DisplayTracker implements LifecycleListener {
             }
         });
 
-        MindustryUtils.onEvent(LogicDisplay.LogicDisplayBuild.class, new BuildingLifecycleEventListener<>() {
+        this.events.subscribe(LogicDisplay.LogicDisplayBuild.class, new NoHornyEventBus.BuildingSubscriber<>() {
             @Override
             public void onCreate(
                     final LogicDisplay.LogicDisplayBuild building,
@@ -133,26 +134,28 @@ final class DisplayTracker implements LifecycleListener {
                 final var added = DisplayTracker.this.displays.upsert(
                         x, y, size, new MindustryDisplay(resolution, processors, tiled));
                 if (queue) {
-                    DisplayTracker.this.enqueue(added.packed());
+                    DisplayTracker.this.collector.enqueue(added.packed());
                 }
             }
 
             @Override
             public void onRemove(final int x, final int y, final int size) {
                 for (final var removed : DisplayTracker.this.displays.removeAllWithinSquare(x, y, size)) {
-                    DisplayTracker.this.queue.remove(removed.packed());
+                    DisplayTracker.this.collector.dequeue(removed.packed());
                 }
             }
 
             @Override
             public void onRemoveAll() {
                 DisplayTracker.this.displays.removeAll();
-                DisplayTracker.this.queue.clear();
-                DisplayTracker.this.grouper = null;
+                DisplayTracker.this.collector.clear();
             }
         });
+    }
 
-        MindustryUtils.onEvent(EventType.Trigger.update, _ -> this.collect());
+    @Override
+    public void onTick() {
+        this.collector.tick();
     }
 
     // TODO
@@ -216,31 +219,6 @@ final class DisplayTracker implements LifecycleListener {
         return Integer.signum(value) * (Math.abs(value) & 0x1FF);
     }
 
-    private void collect() {
-        if (!Vars.state.isGame()) {
-            return;
-        }
-
-        if (this.grouper != null) {
-            this.continueGrouperProcessing();
-            return;
-        }
-
-        while (!this.queue.isEmpty()) {
-            final int point = this.queue.removeFirst();
-            final var x = GeometryUtils.x(point);
-            final var y = GeometryUtils.y(point);
-            final var anchor = this.displays.select(x, y);
-            if (anchor == null || !this.isEligible(anchor)) {
-                continue;
-            }
-            this.waiter.estimateWaitTimeFor(block -> block instanceof LogicBlock || block instanceof LogicDisplay);
-            this.grouper = this.displays.selectGroupWithinRangeIncremental(x, y, MAX_GROUP_RANGE, MAX_GROUP_STEPS);
-            this.continueGrouperProcessing();
-            break;
-        }
-    }
-
     private void forEachLinkUpdateDisplay(
             final VirtualBuilding<ProcessorWithLinks> processor, final LinkUpdateKind kind, final boolean queue) {
         for (final var link : processor.data().links()) {
@@ -263,41 +241,14 @@ final class DisplayTracker implements LifecycleListener {
                             Collections.unmodifiableMap(processors),
                             display.data().tiled()));
             if (queue) {
-                this.enqueue(GeometryUtils.pack(display.x(), display.y()));
+                this.collector.enqueue(display.packed());
             }
         }
     }
 
-    private boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
+    private static boolean isEligible(final VirtualBuilding<MindustryDisplay> building) {
         return building.data().processors().values().stream()
                 .anyMatch(processor -> processor.instructions().size() >= MIN_DRAW_INSTRUCTION_COUNT);
-    }
-
-    private void continueGrouperProcessing() {
-        Objects.requireNonNull(this.grouper);
-        if (this.waiter.isNotDone()) {
-            this.waiter.countdown();
-            return;
-        }
-        this.grouper.progress();
-        this.queue.removeIf(this.grouper::isVisited);
-        if (this.grouper.isCompleted()) {
-            final var group = this.grouper.create();
-            if (group == null) {
-                this.grouper = null;
-                return;
-            }
-            if (this.client.tryAccept(group)) {
-                this.grouper = null;
-            }
-        }
-    }
-
-    private void enqueue(final int packed) {
-        if (this.grouper != null && this.grouper.isVisited(packed)) {
-            return;
-        }
-        this.queue.addLast(packed);
     }
 
     private enum LinkUpdateKind {
