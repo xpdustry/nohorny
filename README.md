@@ -193,7 +193,7 @@ on the worst map we could make: entirely covered by canvases, logic displays, so
 with players changing random pieces of art every tick.
 The classifier also answers instantly, so NoHorny never gets to rest.
 
-Mean main loop cost per tick, out of the 16.67ms a 60 TPS server has:
+Mean main loop cost per tick, out of the 16ms a 60 TPS server has:
 
 | Map                      | Art changes per tick | Without NoHorny | With NoHorny | NoHorny cost |
 |--------------------------|---------------------:|----------------:|-------------:|-------------:|
