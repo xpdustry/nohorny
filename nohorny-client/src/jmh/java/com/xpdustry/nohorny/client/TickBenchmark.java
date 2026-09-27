@@ -19,9 +19,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
-// The main loop cost of a single game tick, on a world entirely covered by pixel art.
-// Each tick, players and processors change random pieces of art, which are regrouped and classified continuously.
-// Comparing with and without NoHorny gives its overhead, on top of what Mindustry already spends on these changes.
+// Measures the art changes and the tracker ticks, nohorny=false measures the changes alone
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.SampleTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -29,7 +27,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 5, time = 3)
 @Fork(
         value = 1,
-        jvmArgsAppend = {"-Xmx6g", "--enable-native-access=ALL-UNNAMED"})
+        jvmArgsAppend = {"-Xmx2g", "--enable-native-access=ALL-UNNAMED"})
 public class TickBenchmark {
 
     @Param({"100", "250", "500"})

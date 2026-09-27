@@ -3,8 +3,7 @@ package com.xpdustry.nohorny.client;
 
 import java.util.List;
 
-// Installs the trackers, with a classifier that instantly accepts every group, like an infinitely fast server.
-// It is the worst case for the main thread, since the trackers never wait and keep grouping.
+// Accepts every group instantly, so the trackers never wait for the server, the worst case for the main thread
 final class NoHornyHarness implements AutoCloseable {
 
     private final NoHornyEventBus events = new NoHornyEventBus();
@@ -28,7 +27,6 @@ final class NoHornyHarness implements AutoCloseable {
         }
     }
 
-    // Same as the plugin, minus the error handling
     void tick() {
         for (final var listener : this.listeners) {
             listener.onTick();

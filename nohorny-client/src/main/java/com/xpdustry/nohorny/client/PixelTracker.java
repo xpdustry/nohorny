@@ -25,8 +25,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     private static final int MAX_GROUP_RANGE = 150;
     private static final int MAX_GROUP_STEPS = 200;
     private static final int MIN_PIXEL_GROUP_SIZE = 16;
-    // Linked processors can change the color without firing any event,
-    // so linked positions are checked round-robin, about once per second, but never more than the budget per tick
+    // Linked buildings are polled because processor color changes fire no events
     private static final int POLL_PERIOD_TICKS = 60;
     private static final int POLL_BUDGET_PER_TICK = 256;
 
@@ -62,7 +61,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
 
     public static PixelTracker<LightBlock.LightBuild> illuminators(
             final NoHornyEventBus events, final GroupClassifier classifier) {
-        // In game, the color is blended with the sprite, but we render it raw to classify the intended image
+        // Uses the raw color, so the illuminator sprite does not tint the image
         return new PixelTracker<>(
                 events, classifier, LightBlock.LightBuild.class, LightBlock.class, building -> building.color | 0xFF);
     }
@@ -78,7 +77,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
                     final LogicBlock.LogicBuild building, final @Nullable MindustryAuthor author, final boolean queue) {
                 final var x = MindustryUtils.anchorTileX(building);
                 final var y = MindustryUtils.anchorTileY(building);
-                // Built processors are created twice, by the tile change then the build end, release the old links
+                // Built processors are created on the tile change and again on the build end
                 this.onRemove(x, y, building.block.size);
                 final var links = new IntSeq(building.links.size);
                 for (final var link : building.links) {

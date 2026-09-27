@@ -14,7 +14,6 @@ import mindustry.gen.Groups;
 import mindustry.logic.GlobalVars;
 import mindustry.net.Net;
 
-// The bare minimum of a Mindustry server to create real worlds and buildings
 final class HeadlessMindustry {
 
     private static boolean initialized = false;

@@ -33,7 +33,6 @@ final class ArtWorld {
     final List<Sorter.SorterBuild> sorters = new ArrayList<>();
     final List<LightBlock.LightBuild> illuminators = new ArrayList<>();
     final List<LogicBlock.LogicBuild> pixelProcessors = new ArrayList<>();
-    // Configs of the processors, to re-upload them
     private final List<byte[]> displayProcessorConfigs = new ArrayList<>();
     private final List<byte[]> pixelProcessorConfigs = new ArrayList<>();
     private final SplittableRandom random;

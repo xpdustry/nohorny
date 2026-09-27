@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
 
-// Groups the queued buildings a few steps per tick, then hands the groups over to the classifier
+// Groups the queued buildings a few steps per tick and sends each group to the classifier
 final class GroupCollector<T extends MindustryImage> {
 
     private final VirtualBuildingIndex<T> index;

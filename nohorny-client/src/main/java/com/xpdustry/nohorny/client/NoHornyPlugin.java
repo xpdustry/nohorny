@@ -50,7 +50,7 @@ public final class NoHornyPlugin extends Plugin {
         this.addListener(new AutoModerator(this.events));
 
         this.init0();
-        // Runs after the game update, so the trackers see the changes of the current frame
+        // Added after the game listeners, so the trackers tick after the game update
         Core.app.addListener(new ApplicationListener() {
 
             @Override
@@ -93,7 +93,6 @@ public final class NoHornyPlugin extends Plugin {
             return;
         }
         for (final var listener : this.listeners) {
-            // Arc does not catch exceptions thrown by application listeners, it would crash the server
             try {
                 listener.onTick();
             } catch (final Throwable e) {

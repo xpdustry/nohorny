@@ -19,7 +19,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
-// The one-off cost of indexing a world entirely covered by pixel art, when a map is loaded
+// Measures indexing an existing world when the game enters the playing state
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 5, time = 3)
 @Fork(
         value = 1,
-        jvmArgsAppend = {"-Xmx6g", "--enable-native-access=ALL-UNNAMED"})
+        jvmArgsAppend = {"-Xmx2g", "--enable-native-access=ALL-UNNAMED"})
 public class WorldLoadBenchmark {
 
     @Param({"100", "250", "500"})

@@ -14,11 +14,7 @@ import mindustry.gen.Player;
 import mindustry.world.blocks.ConstructBlock;
 import org.jspecify.annotations.Nullable;
 
-// Thin layer over the arc events, with removable subscribers that can't break the event loop.
-// It also translates the many ways Mindustry creates, changes or removes buildings into a simple lifecycle.
-// Every game event is handled once, then dispatched to the subscribers of the matching building type,
-// which is cheaper than one set of arc subscribers per type, especially when scanning the world.
-// Closing the bus removes every subscription made through it, the global arc registry is left clean.
+// Turns the Mindustry building events into create/remove callbacks per building type
 final class NoHornyEventBus implements AutoCloseable {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyEventBus.class);
@@ -130,7 +126,6 @@ final class NoHornyEventBus implements AutoCloseable {
         this.buildingDispatches.clear();
     }
 
-    // Scans the whole world, done once when a map is loaded
     private void load() {
         for (final var dispatch : this.buildingDispatches) {
             dispatch.removeAll();
@@ -149,7 +144,6 @@ final class NoHornyEventBus implements AutoCloseable {
         return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
     }
 
-    // Errors are contained, so a failing subscriber does not prevent the others from being notified
     private record BuildingDispatch<B extends Building>(Class<B> type, BuildingSubscriber<B> subscriber) {
 
         private void create(
@@ -223,7 +217,7 @@ final class NoHornyEventBus implements AutoCloseable {
         void unsubscribe();
     }
 
-    // Also the arc listener, so it is removed by identity and not by equality
+    // Registered as the arc listener itself, since Events.remove matches listeners with equals
     private final class ArcSubscription<E> implements Cons<E>, Subscription {
 
         private final Class<E> event;

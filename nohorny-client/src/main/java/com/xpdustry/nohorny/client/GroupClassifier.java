@@ -7,7 +7,6 @@ import com.xpdustry.nohorny.common.VirtualBuilding;
 @FunctionalInterface
 interface GroupClassifier {
 
-    // Called from the main thread, so the actual classification must happen elsewhere.
-    // Returns false when busy, the group will be offered again on the next tick.
+    // Queues the group for classification, returns false if the classifier is busy
     boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group);
 }
