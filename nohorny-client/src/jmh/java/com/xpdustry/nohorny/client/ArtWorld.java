@@ -4,7 +4,8 @@ package com.xpdustry.nohorny.client;
 import arc.struct.Seq;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SplittableRandom;
+import java.util.random.RandomGenerator;
+import java.util.random.RandomGeneratorFactory;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.game.Team;
@@ -33,10 +34,10 @@ final class ArtWorld {
     final List<Sorter.SorterBuild> sorters = new ArrayList<>();
     final List<LightBlock.LightBuild> illuminators = new ArrayList<>();
     private final List<byte[]> displayProcessorConfigs = new ArrayList<>();
-    private final SplittableRandom random;
+    private final RandomGenerator random;
 
     private ArtWorld(final long seed) {
-        this.random = new SplittableRandom(seed);
+        this.random = RandomGeneratorFactory.of("Xoroshiro128PlusPlus").create(seed);
     }
 
     static ArtWorld generate(final int size, final long seed) {
