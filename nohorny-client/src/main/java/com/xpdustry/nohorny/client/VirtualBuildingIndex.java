@@ -186,6 +186,7 @@ final class VirtualBuildingIndex<T> {
         private int maxX;
         private int maxY;
         private VirtualBuilding.@Nullable Group<T> result;
+        private boolean stale;
 
         private IncrementalGrouper(
                 final int initialX,
@@ -256,7 +257,18 @@ final class VirtualBuildingIndex<T> {
             }
         }
 
+        // Rereads the grouped buildings on the next create, instead of grouping again,
+        // so a building changing every tick cannot keep the group from being classified
+        public void refresh() {
+            this.stale = true;
+        }
+
         public VirtualBuilding.@Nullable Group<T> create() {
+            if (this.stale) {
+                this.stale = false;
+                this.result = null;
+                this.reread();
+            }
             if (this.buildings.isEmpty()) {
                 return null;
             }
@@ -269,6 +281,29 @@ final class VirtualBuildingIndex<T> {
                         List.copyOf(this.buildings));
             }
             return this.result;
+        }
+
+        private void reread() {
+            final var previous = List.copyOf(this.buildings);
+            this.buildings.clear();
+            for (final var building : previous) {
+                final var current = VirtualBuildingIndex.this.index.get(building.packed());
+                if (current == null || current.packed() != building.packed()) {
+                    continue;
+                }
+                if (this.buildings.isEmpty()) {
+                    this.minX = current.x();
+                    this.minY = current.y();
+                    this.maxX = current.x() + current.size();
+                    this.maxY = current.y() + current.size();
+                } else {
+                    this.minX = Math.min(this.minX, current.x());
+                    this.minY = Math.min(this.minY, current.y());
+                    this.maxX = Math.max(this.maxX, current.x() + current.size());
+                    this.maxY = Math.max(this.maxY, current.y() + current.size());
+                }
+                this.buildings.add(current);
+            }
         }
 
         @SuppressWarnings("DuplicatedCode")

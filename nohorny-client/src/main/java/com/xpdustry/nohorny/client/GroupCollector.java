@@ -43,12 +43,16 @@ final class GroupCollector<T extends MindustryImage> {
 
     public void enqueue(final int packed) {
         if (this.grouper != null && this.grouper.isVisited(packed)) {
+            this.grouper.refresh();
             return;
         }
         this.queue.addLast(packed);
     }
 
     public void dequeue(final int packed) {
+        if (this.grouper != null && this.grouper.isVisited(packed)) {
+            this.grouper.refresh();
+        }
         this.queue.remove(packed);
     }
 
