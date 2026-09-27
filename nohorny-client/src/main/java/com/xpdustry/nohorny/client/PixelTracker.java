@@ -26,7 +26,8 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     private static final int MAX_GROUP_STEPS = 200;
     private static final int MIN_PIXEL_GROUP_SIZE = 16;
     // Linked processors can change the color without firing any event,
-    // so linked positions are checked round-robin, a few per tick to keep the main loop smooth
+    // so linked positions are checked round-robin, about once per second, but never more than the budget per tick
+    private static final int POLL_PERIOD_TICKS = 60;
     private static final int POLL_BUDGET_PER_TICK = 256;
 
     private final ToIntFunction<B> color;
@@ -142,7 +143,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     }
 
     private void poll() {
-        final var budget = Math.min(POLL_BUDGET_PER_TICK, this.polled.size);
+        final var budget = Math.min(POLL_BUDGET_PER_TICK, Math.ceilDiv(this.polled.size, POLL_PERIOD_TICKS));
         for (int i = 0; i < budget; i++) {
             if (this.cursor >= this.polled.size) {
                 this.cursor = 0;

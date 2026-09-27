@@ -89,7 +89,7 @@ final class GroupCollector<T extends MindustryImage> {
                 return;
             }
             // Visited buildings cannot be enqueued while grouping, so the queue only needs to be cleaned once
-            this.queue.removeIf(grouper::isVisited);
+            grouper.removeVisited(this.queue);
         }
         final var group = grouper.create();
         if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group)) {

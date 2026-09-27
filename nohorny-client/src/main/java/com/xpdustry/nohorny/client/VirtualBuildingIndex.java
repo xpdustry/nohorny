@@ -248,6 +248,15 @@ final class VirtualBuildingIndex<T> {
             return this.visited.contains(packed);
         }
 
+        // Iterates over the smallest of the two, the queue can grow much larger than the group and vice versa
+        public void removeVisited(final Collection<Integer> packed) {
+            if (packed.size() < this.visited.size) {
+                packed.removeIf(this.visited::contains);
+            } else {
+                this.visited.each(packed::remove);
+            }
+        }
+
         public VirtualBuilding.@Nullable Group<T> create() {
             if (this.buildings.isEmpty()) {
                 return null;
