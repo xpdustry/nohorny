@@ -108,6 +108,7 @@ subprojects {
     tasks.withType<JavaCompile> {
         options.errorprone {
             disableWarningsInGeneratedCode = true
+            excludedPaths = ".*/build/generated/.*"
             disable("MissingSummary", "InlineMeSuggester")
             option("NullAway:OnlyNullMarked")
             check("NullAway", CheckSeverity.ERROR)
@@ -206,6 +207,39 @@ project(":nohorny-client") {
         filter.includeTestsMatching("*FuzzTest")
         environment("JAZZER_FUZZ", "1")
         outputs.upToDateWhen { false }
+    }
+
+    val mainSourceSet = the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME]
+    val jmhSourceSet =
+        the<SourceSetContainer>().create("jmh") {
+            compileClasspath += mainSourceSet.output
+            runtimeClasspath += mainSourceSet.output
+        }
+
+    configurations.named(jmhSourceSet.implementationConfigurationName) {
+        extendsFrom(configurations[JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME])
+    }
+
+    dependencies {
+        "jmhImplementation"("org.openjdk.jmh:jmh-core:1.37")
+        "jmhAnnotationProcessor"("org.openjdk.jmh:jmh-generator-annprocess:1.37")
+        "jmhCompileOnly"(toxopid.dependencies.mindustryCore)
+        "jmhCompileOnly"(toxopid.dependencies.arcCore)
+        // The real server jar, which also bundles the assets required by the logic processors
+        "jmhRuntimeOnly"(files(tasks.named("downloadMindustryServer")))
+    }
+
+    tasks.register<JavaExec>("jmh") {
+        description = "Run the JMH benchmarks, use -Pjmh=\"<args>\" to pass arguments to JMH."
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        classpath = jmhSourceSet.runtimeClasspath
+        mainClass = "org.openjdk.jmh.Main"
+        val results = layout.buildDirectory.file("jmh/results.json")
+        outputs.file(results)
+        outputs.upToDateWhen { false }
+        args(findProperty("jmh")?.toString()?.split(' ')?.filter { it.isNotBlank() } ?: emptyList<String>())
+        args("-rf", "json", "-rff", results.get().asFile.absolutePath)
+        doFirst { results.get().asFile.parentFile.mkdirs() }
     }
 
     tasks.withType<MindustryExec> {

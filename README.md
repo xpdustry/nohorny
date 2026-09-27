@@ -181,6 +181,37 @@ java -jar nohorny-server.jar start -- --server.port=9090
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 
+- `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),
+  use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
+
+## Performance
+
+NoHorny does all the heavy work (rendering and classification) off the main thread,
+and bounds how much tracking and grouping it does per tick, so its impact on the main loop stays minimal.
+
+The benchmarks run on the worst possible map: entirely covered by canvases, logic displays with processors
+drawing on them, and sorter and illuminator art linked to processors, with random pieces of art changing each tick.
+The classifier is also answering instantly, so NoHorny never stops grouping.
+
+Mean main loop cost of a tick, with the 16.67ms budget of a 60 TPS server in mind
+(Xeon E5-1650 v4, Java 25):
+
+| Map                         | Changes per tick | Mindustry | Mindustry + NoHorny | NoHorny overhead |
+|-----------------------------|-----------------:|----------:|--------------------:|-----------------:|
+| 100x100 (6k buildings)      |                0 |     ~0 µs |              3.4 µs |          +3.4 µs |
+| 250x250 (38k buildings)     |                0 |     ~0 µs |             27.7 µs |         +27.7 µs |
+| 500x500 (150k buildings)    |                0 |     ~0 µs |             29.8 µs |         +29.8 µs |
+| 100x100                     |               10 |    425 µs |              615 µs |          +190 µs |
+| 250x250                     |               10 |    486 µs |              736 µs |          +250 µs |
+| 500x500                     |               10 |    484 µs |              786 µs |          +302 µs |
+| 100x100                     |              100 |   4.71 ms |             5.25 ms |          +0.54 ms |
+| 250x250                     |              100 |   5.02 ms |             5.68 ms |          +0.66 ms |
+| 500x500                     |              100 |   4.91 ms |             6.01 ms |          +1.10 ms |
+
+Once built, art costs at most 0.2% of the tick budget to watch, regardless of the map size.
+And even when players change 6000 pieces of art per second, NoHorny stays under 7% of the tick budget.
+Indexing the whole map when it loads takes a one-off 6ms, 39ms and 158ms respectively.
+
 ## Support
 
 Need a helping hand? You can talk to the maintainers in [our discord server](https://discord.xpdustry.com)
