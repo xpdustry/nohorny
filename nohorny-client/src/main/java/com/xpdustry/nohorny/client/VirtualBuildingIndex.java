@@ -262,11 +262,7 @@ final class VirtualBuildingIndex<T> {
             }
             if (this.result == null) {
                 this.result = new VirtualBuilding.Group<>(
-                        this.minX,
-                        this.minY,
-                        this.maxX - this.minX,
-                        this.maxY - this.minY,
-                        List.copyOf(this.buildings));
+                        this.minX, this.minY, this.maxX - this.minX, this.maxY - this.minY, this.buildings);
             }
             return this.result;
         }

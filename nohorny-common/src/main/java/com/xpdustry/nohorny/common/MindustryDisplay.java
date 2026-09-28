@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.common;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -16,7 +17,7 @@ public record MindustryDisplay(
 
     public MindustryDisplay {
         NoHornyPreconditions.positive(resolution, "resolution");
-        processors = Map.copyOf(processors);
+        processors = Collections.unmodifiableMap(processors);
     }
 
     public record Tiled(int frameSize) {}
@@ -24,7 +25,7 @@ public record MindustryDisplay(
     public record Processor(
             List<DrawInstruction> instructions, @Nullable MindustryAuthor author) {
         public Processor {
-            instructions = List.copyOf(instructions);
+            instructions = Collections.unmodifiableList(instructions);
         }
     }
 }

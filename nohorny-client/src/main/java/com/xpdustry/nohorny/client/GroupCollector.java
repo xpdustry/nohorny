@@ -13,13 +13,14 @@ import org.jspecify.annotations.Nullable;
 // Groups the queued buildings a few steps per tick and sends each group to the classifier
 final class GroupCollector<T extends MindustryImage> {
 
+    private static final int MAX_GROUP_STEPS = 50;
+
     private final VirtualBuildingIndex<T> index;
     private final GroupClassifier classifier;
     private final Predicate<Block> blocks;
     private final Predicate<VirtualBuilding<T>> isEligibleAnchor;
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
     private final int maxGroupRange;
-    private final int maxGroupSteps;
     private final SequencedSet<Integer> queue = new LinkedHashSet<>();
     private final WaitForTheBuildToFinish waiter = new WaitForTheBuildToFinish();
     private VirtualBuildingIndex<T>.@Nullable IncrementalGrouper grouper = null;
@@ -30,15 +31,13 @@ final class GroupCollector<T extends MindustryImage> {
             final Predicate<Block> blocks,
             final Predicate<VirtualBuilding<T>> isEligibleAnchor,
             final Predicate<VirtualBuilding.Group<T>> isEligibleGroup,
-            final int maxGroupRange,
-            final int maxGroupSteps) {
+            final int maxGroupRange) {
         this.index = index;
         this.classifier = classifier;
         this.blocks = blocks;
         this.isEligibleAnchor = isEligibleAnchor;
         this.isEligibleGroup = isEligibleGroup;
         this.maxGroupRange = maxGroupRange;
-        this.maxGroupSteps = maxGroupSteps;
     }
 
     public void enqueue(final int packed) {
@@ -72,7 +71,7 @@ final class GroupCollector<T extends MindustryImage> {
                 continue;
             }
             this.waiter.estimateWaitTimeFor(this.blocks);
-            this.grouper = this.index.selectGroupWithinRangeIncremental(x, y, this.maxGroupRange, this.maxGroupSteps);
+            this.grouper = this.index.selectGroupWithinRangeIncremental(x, y, this.maxGroupRange, MAX_GROUP_STEPS);
             this.continueGrouping(this.grouper);
             break;
         }

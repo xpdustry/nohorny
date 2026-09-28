@@ -25,7 +25,6 @@ final class DisplayTracker implements LifecycleListener {
     private static final int MIN_DRAW_INSTRUCTION_COUNT = 20;
     private static final int PROCESSOR_SEARCH_RADIUS = 10;
     private static final int MAX_GROUP_RANGE = 10 * 6; // 10 large displays around the anchor
-    private static final int MAX_GROUP_STEPS = 50;
 
     final VirtualBuildingIndex<MindustryDisplay> displays = new VirtualBuildingIndex<>();
     final VirtualBuildingIndex<ProcessorWithLinks> processors = new VirtualBuildingIndex<>();
@@ -42,8 +41,7 @@ final class DisplayTracker implements LifecycleListener {
                 block -> block instanceof LogicBlock || block instanceof LogicDisplay,
                 DisplayTracker::isEligible,
                 _ -> true,
-                MAX_GROUP_RANGE,
-                MAX_GROUP_STEPS);
+                MAX_GROUP_RANGE);
     }
 
     @Override
@@ -238,7 +236,7 @@ final class DisplayTracker implements LifecycleListener {
                     display.size(),
                     new MindustryDisplay(
                             display.data().resolution(),
-                            Collections.unmodifiableMap(processors),
+                            processors,
                             display.data().tiled()));
             if (queue) {
                 this.collector.enqueue(display.packed());

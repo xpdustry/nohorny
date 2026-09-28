@@ -2,7 +2,7 @@
 package com.xpdustry.nohorny.common;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 
 public record VirtualBuilding<T>(int x, int y, int size, T data) {
 
@@ -17,7 +17,7 @@ public record VirtualBuilding<T>(int x, int y, int size, T data) {
     public record Group<T>(int x, int y, int w, int h, Collection<VirtualBuilding<T>> elements) {
         public Group {
             NoHornyPreconditions.notEmpty(elements, "elements");
-            elements = List.copyOf(elements);
+            elements = Collections.unmodifiableCollection(elements);
         }
     }
 }
