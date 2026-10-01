@@ -26,14 +26,11 @@ function(fetch_opencv)
     set(${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE STRING "" FORCE)
   endforeach()
 
-  # The vendored MLAS of OpenCV 5 assumes OpenCV is the top level project
   FetchContent_Declare(OpenCV
     URL "https://github.com/opencv/opencv/archive/refs/tags/${OCV_VERSION}.tar.gz"
     URL_HASH "SHA256=${OCV_SHA256}"
     DOWNLOAD_EXTRACT_TIMESTAMP ON
-    PATCH_COMMAND "${CMAKE_COMMAND}"
-      -D "FILE=3rdparty/mlas/CMakeLists.txt"
-      -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/PatchSourceDir.cmake"
+    PATCH_COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/PatchMLAS.cmake"
     EXCLUDE_FROM_ALL
     SYSTEM
   )

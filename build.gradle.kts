@@ -311,8 +311,10 @@ abstract class CMakeBuild : DefaultTask() {
                 "-DNOHORNY_OUTPUT_DIRECTORY=$output",
             )
         }
+        // Without a job count, the Makefile generator spawns as many jobs as there are sources
+        val jobs = Runtime.getRuntime().availableProcessors()
         exec.exec {
-            commandLine("cmake", "--build", buildDirectory.get().asFile, "--config", buildType.get(), "--parallel")
+            commandLine("cmake", "--build", buildDirectory.get().asFile, "--config", buildType.get(), "--parallel", jobs)
         }
     }
 }
