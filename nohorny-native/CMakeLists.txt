@@ -12,6 +12,11 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # Same static runtime as OpenCV with BUILD_WITH_STATIC_CRT
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+# OpenCV enables ASM when it finds an assembler, on Windows that can be a MinGW GCC from the PATH
+#   which sets MINGW and makes OpenCV link pthread. MSVC builds have no use for it since MLAS is disabled.
+if(MSVC)
+  set(CMAKE_ASM_COMPILER NOTFOUND)
+endif()
 
 set(NOHORNY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output" CACHE PATH "Where to put the nohorny library")
 
