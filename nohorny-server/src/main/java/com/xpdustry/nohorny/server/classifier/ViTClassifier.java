@@ -1,31 +1,26 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.classifier;
 
-import ai.djl.modality.Classifications;
-import ai.djl.modality.cv.Image;
-import ai.djl.modality.cv.ImageFactory;
-import ai.djl.modality.cv.util.NDImageUtils;
-import ai.djl.ndarray.NDList;
-import ai.djl.repository.zoo.Criteria;
-import ai.djl.repository.zoo.ZooModel;
-import ai.djl.translate.Translator;
-import ai.djl.translate.TranslatorContext;
+import com.xpdustry.nohorny.server.natives.NativeClassifier;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.awt.image.BufferedImage;
-import java.util.Objects;
-import org.jspecify.annotations.Nullable;
+import java.util.StringJoiner;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
+/// Runs an ONNX ViT model with the native classifiers. Since a native classifier is not
+/// thread-safe, each one of them handles a single image at a time.
 public final class ViTClassifier implements Classifier {
 
     private final ViTClassifierProperties properties;
     private final ViTModelSource source;
-
-    private @Nullable ZooModel<Image, Classifications> model;
+    private final BlockingQueue<NativeClassifier> classifiers;
 
     public ViTClassifier(final ViTClassifierProperties properties, final ViTModelSource source) {
         this.properties = properties;
         this.source = source;
+        this.classifiers = new ArrayBlockingQueue<>(properties.instances());
     }
 
     @Override
@@ -34,61 +29,37 @@ public final class ViTClassifier implements Classifier {
     }
 
     @Override
-    public Result classify(final BufferedImage image) throws Exception {
-        final var model = Objects.requireNonNull(this.model, "ViTClassifier has not been initialized");
-        final var converted = ImageFactory.getInstance().fromImage(image);
-        try (final var predictor = model.newPredictor()) {
-            final var prediction = predictor.predict(converted);
-            final var score = prediction.get(this.properties.nsfwLabel()).getProbability();
-            return new Result(
-                    this.properties.thresholds().apply(score),
-                    score,
-                    prediction.serialize().toString());
+    public Result classify(final BufferedImage image) throws InterruptedException {
+        final var classifier = this.classifiers.take();
+        final float[] probabilities;
+        try {
+            probabilities = classifier.classify(image);
+        } finally {
+            this.classifiers.add(classifier);
         }
+        final var labels = this.properties.labels();
+        if (probabilities.length != labels.size()) {
+            throw new IllegalStateException(
+                    "The model returned " + probabilities.length + " probabilities for the labels " + labels);
+        }
+        final var metadata = new StringJoiner(",", "{", "}");
+        for (int i = 0; i < probabilities.length; i++) {
+            metadata.add("\"" + labels.get(i) + "\":" + probabilities[i]);
+        }
+        final var score = probabilities[labels.indexOf(this.properties.nsfwLabel())];
+        return new Result(this.properties.thresholds().apply(score), score, metadata.toString());
     }
 
     @PostConstruct
     void onInit() {
         final var file = this.source.retrieve();
-        try {
-            this.model = Criteria.builder()
-                    .setTypes(Image.class, Classifications.class)
-                    .optModelPath(file)
-                    .optEngine(this.properties.engine())
-                    .optTranslator(new ViTImageTranslator())
-                    .build()
-                    .loadModel();
-        } catch (final Exception e) {
-            throw new RuntimeException("Failed to load model from " + file, e);
+        for (int i = 0; i < this.properties.instances(); i++) {
+            this.classifiers.add(NativeClassifier.create(file));
         }
     }
 
     @PreDestroy
     void onExit() {
-        if (this.model != null) {
-            this.model.close();
-        }
-    }
-
-    private final class ViTImageTranslator implements Translator<Image, Classifications> {
-
-        private static final float[] DOT_FIVE = {0.5F, 0.5F, 0.5F};
-
-        @Override
-        public NDList processInput(final TranslatorContext ctx, final Image input) {
-            var array = input.toNDArray(ctx.getNDManager());
-            array = NDImageUtils.resize(array, 224, 224); // Model expects 224 by 244 images
-            array = NDImageUtils.toTensor(array);
-            array = NDImageUtils.normalize(array, DOT_FIVE, DOT_FIVE); // Model expects simple .5 mean and std
-            return new NDList(array);
-        }
-
-        @Override
-        public Classifications processOutput(final TranslatorContext ctx, final NDList list) {
-            var result = list.singletonOrThrow();
-            result = result.squeeze(0); // Remove Batch dimension
-            result = result.softmax(0); // Convert to [0, 1] probabilities
-            return new Classifications(ViTClassifier.this.properties.labels(), result);
-        }
+        this.classifiers.forEach(NativeClassifier::close);
     }
 }

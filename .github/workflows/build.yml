@@ -16,8 +16,73 @@ env:
   ORG_GRADLE_PROJECT_is_release: ${{ github.event_name == 'release' }}
 
 jobs:
+  natives:
+    name: "Natives (${{ matrix.platform }})"
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The manylinux images keep the glibc requirement low (2.28)
+          - platform: linux-x86_64
+            runner: blacksmith-4vcpu-ubuntu-2404
+            container: quay.io/pypa/manylinux_2_28_x86_64
+          - platform: linux-aarch64
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+          - platform: windows-x86_64
+            runner: windows-latest
+          - platform: macos-aarch64
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+
+      - name: "Checkout Repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: "Trust Repository"
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: "Cache Natives"
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: nohorny-native/build/generated/native
+          key: natives-${{ matrix.platform }}-${{ hashFiles('nohorny-native/CMakeLists.txt', 'nohorny-native/cmake/**', 'nohorny-native/src/**') }}
+
+      - name: "Setup Java 25"
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: "25"
+          distribution: "temurin"
+
+      - name: "Setup Gradle"
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6
+
+      - name: "Build Natives"
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: ./gradlew :nohorny-native:cmakeBuild
+
+      - name: "Upload Natives"
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: natives-${{ matrix.platform }}
+          path: nohorny-native/build/generated/native/
+          if-no-files-found: error
+
   action:
     name: "Action"
+    needs: natives
     # Only run on PRs if the source branch is on someone else's repo
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -47,6 +112,13 @@ jobs:
       - name: "Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      - name: "Download Natives"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: natives-*
+          path: prebuilt-natives
+          merge-multiple: true
+
       - name: "Get And Validate Version"
         id: version
         run: |
@@ -55,7 +127,7 @@ jobs:
           echo "version=${version%-SNAPSHOT}" >> "$GITHUB_OUTPUT"
 
       - name: "Build Gradle"
-        run: ./gradlew build
+        run: ./gradlew build -Pprebuilt_natives=prebuilt-natives
         env:
           NOHORNY_TEST_PROXYSCRAPE: "${{ github.event_name != 'release' && 'true' || '' }}"
           NOHORNY_TEST_DISCORD_WEBHOOK: "${{ github.event_name != 'release' && secrets.NOHORNY_TEST_DISCORD_WEBHOOK || '' }}"

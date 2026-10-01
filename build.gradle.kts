@@ -12,6 +12,8 @@ import net.kyori.indra.git.task.RequireClean
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.springframework.boot.gradle.tasks.run.BootRun
+import java.util.Locale
+import javax.inject.Inject
 
 plugins {
     id("com.diffplug.spotless") version "8.10.3" apply false
@@ -30,7 +32,8 @@ allprojects {
     description = "NO HORNY IN MY SERVER!"
 }
 
-subprojects {
+// nohorny-native is a pure CMake project
+configure(subprojects - project(":nohorny-native")) {
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "net.kyori.indra")
     apply(plugin = "net.ltgt.errorprone")
@@ -248,6 +251,97 @@ project(":nohorny-client") {
     }
 }
 
+abstract class CMakeBuild : DefaultTask() {
+    @get:Inject
+    abstract val exec: ExecOperations
+
+    @get:Inject
+    abstract val fs: FileSystemOperations
+
+    @get:Internal
+    abstract val sourceDirectory: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    @get:Input
+    abstract val buildType: Property<String>
+
+    @get:Input
+    abstract val platform: Property<String>
+
+    // Kept between builds, OpenCV takes a while to compile
+    @get:Internal
+    abstract val buildDirectory: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    init {
+        // The native library is optional, the server gracefully fails to load it when missing
+        onlyIf("CMake is available") {
+            val available =
+                try {
+                    ProcessBuilder("cmake", "--version").redirectErrorStream(true).start().run {
+                        inputStream.readAllBytes()
+                        waitFor() == 0
+                    }
+                } catch (_: java.io.IOException) {
+                    false
+                }
+            if (!available) logger.warn("CMake is not available, skipping the nohorny native library")
+            available
+        }
+    }
+
+    @TaskAction
+    fun build() {
+        // CMake relinks the library if it is missing, so it does not leave stale files behind
+        fs.delete { delete(outputDirectory) }
+        val output = outputDirectory.get().dir("natives/${platform.get()}").asFile
+        exec.exec {
+            commandLine(
+                "cmake",
+                "-S",
+                sourceDirectory.get().asFile,
+                "-B",
+                buildDirectory.get().asFile,
+                "-DCMAKE_BUILD_TYPE=${buildType.get()}",
+                "-DNOHORNY_OUTPUT_DIRECTORY=$output",
+            )
+        }
+        exec.exec {
+            commandLine("cmake", "--build", buildDirectory.get().asFile, "--config", buildType.get(), "--parallel")
+        }
+    }
+}
+
+project(":nohorny-native") {
+    apply(plugin = "base")
+
+    // Must match the platform naming of NoHornyNative
+    val os = System.getProperty("os.name").lowercase(Locale.ROOT)
+    val arch = System.getProperty("os.arch").lowercase(Locale.ROOT)
+    val platform =
+        (if ("win" in os) "windows" else if ("mac" in os) "macos" else "linux") + "-" +
+            (if (arch == "amd64" || arch == "x86_64") "x86_64" else arch)
+
+    val cmakeBuild = tasks.register<CMakeBuild>("cmakeBuild") {
+        description = "Compile the native library with CMake."
+        sourceDirectory = layout.projectDirectory
+        sources.from("CMakeLists.txt", "cmake", "src")
+        buildType = "Release"
+        this.platform = platform
+        buildDirectory = layout.buildDirectory.dir("cmake")
+        outputDirectory = layout.buildDirectory.dir("generated/native")
+    }
+
+    configurations.consumable("natives") {
+        outgoing.artifact(cmakeBuild.flatMap { it.outputDirectory })
+    }
+}
+
 project(":nohorny-server") {
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")
@@ -260,11 +354,18 @@ project(":nohorny-server") {
         "implementation"("org.springframework.shell:spring-shell-starter:4.0.3")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
-
-        "implementation"("ai.djl:api:0.38.0")
-        "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.38.0")
-        "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.38.0")
     }
+
+    // CI builds the natives of each platform separately, then bundles them all with -Pprebuilt_natives=<dir>
+    val nativesScope = configurations.dependencyScope("natives")
+    val natives = configurations.resolvable("nativesFiles") { extendsFrom(nativesScope.get()) }
+    dependencies {
+        "natives"(project(path = ":nohorny-native", configuration = "natives"))
+    }
+    val prebuilt = providers.gradleProperty("prebuilt_natives").map { rootProject.file(it) }
+    the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME].resources.srcDir(
+        if (prebuilt.isPresent) prebuilt else natives,
+    )
 
     tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
         archiveClassifier = "plain"

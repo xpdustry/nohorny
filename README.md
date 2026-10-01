@@ -179,6 +179,10 @@ java -jar nohorny-server.jar start -- --server.port=9090
 
 - `./gradlew runMindustryServer` to run the client plugin in a local Mindustry server.
 
+- `./gradlew :nohorny-native:cmakeBuild` to compile the native OpenCV classifier used by the server ViT classifier.
+  It is optional and skipped if CMake is missing, but then the ViT classifier will be unavailable.
+  It requires a C++20 compiler and the first build takes a while since it compiles a stripped down OpenCV.
+
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 
 - `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),

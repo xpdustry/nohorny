@@ -8,11 +8,12 @@ ARG IS_RELEASE=false
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
     GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g" \
-    GRADLE_ARGS="-Pis_release=${IS_RELEASE}"
+    GRADLE_ARGS="-Pis_release=${IS_RELEASE}" \
+    CMAKE_GENERATOR=Ninja
 
 COPY gradle/wrapper/gradle-wrapper.properties .
 
-RUN apt-get update && apt-get install -y --no-install-recommends unzip wget \
+RUN apt-get update && apt-get install -y --no-install-recommends unzip wget cmake ninja-build g++ \
     && GRADLE_VERSION=$(sed -nE 's/^distributionUrl=.*gradle-([0-9.]+)-(bin|all)\.zip/\1/p' gradle-wrapper.properties) \
     && echo "Using Gradle version: $GRADLE_VERSION" \
     && wget -q "https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" \
@@ -28,12 +29,15 @@ WORKDIR /app
 
 COPY settings.gradle.kts ./
 COPY build.gradle.kts ./
-RUN mkdir nohorny-common nohorny-client nohorny-server
+RUN mkdir nohorny-common nohorny-native nohorny-client nohorny-server
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
 
 COPY nohorny-common/src/ nohorny-common/src/
+COPY nohorny-native/CMakeLists.txt nohorny-native/
+COPY nohorny-native/cmake/ nohorny-native/cmake/
+COPY nohorny-native/src/ nohorny-native/src/
 COPY nohorny-server/src/ nohorny-server/src/
 
 RUN --mount=type=cache,target=/cache/.gradle \
@@ -53,6 +57,7 @@ ENV JAVA_OPTS="-server \
     -XX:+UseContainerSupport \
     -XX:MaxRAMPercentage=75.0 \
     -XX:+UseG1GC \
+    --enable-native-access=ALL-UNNAMED \
     -Djava.security.egd=file:/dev/./urandom"
 
 USER appuser
