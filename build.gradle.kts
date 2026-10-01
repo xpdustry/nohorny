@@ -261,7 +261,7 @@ project(":nohorny-server") {
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
 
-        "implementation"("ai.djl:api:0.36.0")
+        "implementation"("ai.djl:api:0.38.0")
         "runtimeOnly"("ai.djl.onnxruntime:onnxruntime-engine:0.36.0")
         "runtimeOnly"("ai.djl.pytorch:pytorch-engine:0.36.0")
     }
