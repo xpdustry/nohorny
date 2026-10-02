@@ -18,14 +18,14 @@ def parse_args():
     )
     parser.add_argument(
         "--output",
-        help="Output .pt file path. Defaults to a sanitized model id.",
+        help="Output .onnx file path. Defaults to a sanitized model id.",
     )
     return parser.parse_args()
 
 
 def default_output_path(model_id):
     model_name = model_id.lower().replace("/", "-").replace("_", "-")
-    return f"{model_name}.pt"
+    return f"{model_name}.onnx"
 
 
 if __name__ == "__main__":
@@ -47,6 +47,8 @@ if __name__ == "__main__":
             args.model,
             token=args.token,
             cache_dir=temp_dir,
+            # The SDPA attention export trips the new OpenCV 5 DNN engine
+            attn_implementation="eager",
         )
         stage_1.eval()
 
@@ -54,6 +56,6 @@ if __name__ == "__main__":
         stage_2.eval()
 
         random = torch.randn(1, 3, 224, 224)
-        result = torch.jit.trace(stage_2, random)
-
-    torch.jit.save(result, output_path)
+        torch.onnx.export(
+            stage_2, (random,), output_path, input_names=["pixel_values"], output_names=["logits"], dynamo=False
+        )

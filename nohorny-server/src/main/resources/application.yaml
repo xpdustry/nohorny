@@ -23,27 +23,29 @@ nohorny:
       source:
         type: hugging-face
         hugging-face:
-          # Hugging Face repository that contains the model file.
-          repository: phinner/nsfw_image_detection
+          # Hugging Face repository that contains the ONNX model file.
+          repository: onnx-community/nsfw_image_detection-ONNX
           # Repository revision to download from. Pinning a commit keeps deployments reproducible.
-          revision: aab8ebd004112c8358a8ff9709c0492c2ba96bdc
-          # Model file loaded from the repository and revision above.
-          file: falconsai_nsfw_image_detection.pt
+          revision: 1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5
+          # ONNX model file loaded from the repository and revision above.
+          # Use onnx/model_fp16.onnx to halve the memory usage at a small speed cost.
+          file: onnx/model.onnx
           # Local directory for downloaded model files.
           download-directory: .cached-models
           # Only needed for private or gated Hugging Face models.
           # token: ${HF_TOKEN}
         local:
-          path: my_model.pt
+          # ONNX model file, see download-and-convert-model.sh to convert a Hugging Face ViT model.
+          path: my_model.onnx
       # Labels returned by the model, in the same order as its output probabilities.
       labels:
         - normal
         - nsfw
       # Which label from the list above is treated as the NSFW score.
       nsfw-label: nsfw
-      # DJL engine used to load the model. The bundled model uses PyTorch.
-      # Switch to OnnxRuntime only if you also point file to a compatible ONNX model.
-      engine: PyTorch
+      # Number of loaded models, each handles a single image at a time.
+      # Every instance keeps its own copy of the model in memory.
+      instances: 1
       thresholds:
         # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.
         warn: 0.6

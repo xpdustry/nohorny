@@ -11,5 +11,5 @@ fi
 
 source "$VENV_DIR/bin/activate"
 uv pip install --index-url https://download.pytorch.org/whl/cpu torch
-uv pip install transformers
+uv pip install transformers onnx
 "$VENV_DIR/bin/python" "$ROOT_DIR/download-and-convert-model.py" "$@"

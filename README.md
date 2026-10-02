@@ -179,10 +179,26 @@ java -jar nohorny-server.jar start -- --server.port=9090
 
 - `./gradlew runMindustryServer` to run the client plugin in a local Mindustry server.
 
+- `./gradlew :nohorny-native:cmakeBuild` to compile the native OpenCV classifier used by the server ViT classifier.
+  It is optional and skipped if CMake is missing, but then the ViT classifier will be unavailable.
+  It requires a C++20 compiler and the first build takes a while since it compiles a stripped down OpenCV.
+
+- `docker build .` to build the server image, it compiles the natives in a dedicated stage.
+  Pass `--build-arg PREBUILT_NATIVES=<dir>` to take them from a directory of the context instead, like CI does.
+
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 
 - `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),
   use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
+
+## Releasing
+
+Releases are immutable, their jars are attached before publishing:
+
+1. Run the [Draft Release](https://github.com/xpdustry/nohorny/actions/workflows/draft-release.yaml) workflow on the commit to release.
+   It creates a draft release pinned to that commit, with the jars attached and the commit list as notes.
+2. Rewrite the notes, then publish the draft.
+3. The published release triggers the Maven and Docker publishing, and bumps the version of `build.gradle.kts`.
 
 ## Performance
 
