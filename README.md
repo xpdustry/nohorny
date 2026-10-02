@@ -183,7 +183,7 @@ java -jar nohorny-server.jar start -- --server.port=9090
   It is optional and skipped if CMake is missing, but then the ViT classifier will be unavailable.
   It requires a C++20 compiler and the first build takes a while since it compiles a stripped down OpenCV.
 
-- `docker build -f Containerfile .` to build the server image, it compiles the natives in a dedicated stage.
+- `docker build .` to build the server image, it compiles the natives in a dedicated stage.
   Pass `--build-arg PREBUILT_NATIVES=<dir>` to take them from a directory of the context instead, like CI does.
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
