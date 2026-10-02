@@ -53,8 +53,17 @@ public final class ViTClassifier implements Classifier {
     @PostConstruct
     void onInit() {
         final var file = this.source.retrieve();
-        for (int i = 0; i < this.properties.instances(); i++) {
-            this.classifiers.add(NativeClassifier.create(file));
+        var initialized = false;
+        try {
+            for (int i = 0; i < this.properties.instances(); i++) {
+                this.classifiers.add(NativeClassifier.create(file));
+            }
+            initialized = true;
+        } finally {
+            // Spring does not call onExit when the initialization fails
+            if (!initialized) {
+                this.onExit();
+            }
         }
     }
 
