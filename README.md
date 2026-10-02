@@ -188,6 +188,15 @@ java -jar nohorny-server.jar start -- --server.port=9090
 - `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),
   use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
 
+## Releasing
+
+Releases are immutable, their jars are attached before publishing:
+
+1. Run the [Draft Release](https://github.com/xpdustry/nohorny/actions/workflows/draft-release.yaml) workflow on the commit to release.
+   It creates a draft release pinned to that commit, with the jars attached and the commit list as notes.
+2. Rewrite the notes, then publish the draft.
+3. The published release triggers the Maven and Docker publishing, and bumps the version of `build.gradle.kts`.
+
 ## Performance
 
 NoHorny renders and classifies the art on other threads, so the main loop only pays for keeping track of it.

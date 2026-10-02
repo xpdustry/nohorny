@@ -1,3 +1,4 @@
+import com.diffplug.gradle.spotless.JavaExtension
 import com.diffplug.gradle.spotless.SpotlessExtension
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.xpdustry.toxopid.ToxopidExtension
@@ -30,6 +31,32 @@ allprojects {
     group = "com.xpdustry"
     version = "4.0.0-beta.11" + if (findProperty("is_release").toString().toBoolean()) "" else "-SNAPSHOT"
     description = "NO HORNY IN MY SERVER!"
+}
+
+val spotlessJava: JavaExtension.() -> Unit = {
+    palantirJavaFormat()
+    formatAnnotations()
+    importOrder("", "\\#")
+    forbidModuleImports()
+    forbidWildcardImports()
+    licenseHeader("// SPDX-License-Identifier: MIT")
+}
+
+// The CI scripts and the build scripts live in the root project
+apply(plugin = "com.diffplug.spotless")
+repositories {
+    mavenCentral()
+}
+configure<SpotlessExtension> {
+    java {
+        target(".github/scripts/*.java")
+        spotlessJava()
+    }
+    // The default ktlint_official style is far more invasive than the IntelliJ one
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint().editorConfigOverride(mapOf("ktlint_code_style" to "intellij_idea", "max_line_length" to "120"))
+    }
 }
 
 // nohorny-native is a pure CMake project
@@ -92,15 +119,7 @@ configure(subprojects - project(":nohorny-native")) {
 
     configure<SpotlessExtension> {
         java {
-            palantirJavaFormat()
-            formatAnnotations()
-            importOrder("", "\\#")
-            forbidModuleImports()
-            forbidWildcardImports()
-            licenseHeader("// SPDX-License-Identifier: MIT")
-        }
-        kotlinGradle {
-            ktlint()
+            spotlessJava()
         }
     }
 
@@ -314,7 +333,15 @@ abstract class CMakeBuild : DefaultTask() {
         // Without a job count, the Makefile generator spawns as many jobs as there are sources
         val jobs = Runtime.getRuntime().availableProcessors()
         exec.exec {
-            commandLine("cmake", "--build", buildDirectory.get().asFile, "--config", buildType.get(), "--parallel", jobs)
+            commandLine(
+                "cmake",
+                "--build",
+                buildDirectory.get().asFile,
+                "--config",
+                buildType.get(),
+                "--parallel",
+                jobs,
+            )
         }
     }
 }
@@ -325,9 +352,14 @@ project(":nohorny-native") {
     // Must match the platform naming of NoHornyNative
     val os = System.getProperty("os.name").lowercase(Locale.ROOT)
     val arch = System.getProperty("os.arch").lowercase(Locale.ROOT)
-    val platform =
-        (if ("win" in os) "windows" else if ("mac" in os) "macos" else "linux") + "-" +
-            (if (arch == "amd64" || arch == "x86_64") "x86_64" else arch)
+    val platformOs =
+        when {
+            "win" in os -> "windows"
+            "mac" in os -> "macos"
+            else -> "linux"
+        }
+    val platformArch = if (arch == "amd64" || arch == "x86_64") "x86_64" else arch
+    val platform = "$platformOs-$platformArch"
 
     val cmakeBuild = tasks.register<CMakeBuild>("cmakeBuild") {
         description = "Compile the native library with CMake."
