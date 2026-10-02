@@ -8,12 +8,11 @@ ARG IS_RELEASE=false
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
     GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g" \
-    GRADLE_ARGS="-Pis_release=${IS_RELEASE}" \
-    CMAKE_GENERATOR=Ninja
+    GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives"
 
 COPY gradle/wrapper/gradle-wrapper.properties .
 
-RUN apt-get update && apt-get install -y --no-install-recommends unzip wget cmake ninja-build g++ \
+RUN apt-get update && apt-get install -y --no-install-recommends unzip wget \
     && GRADLE_VERSION=$(sed -nE 's/^distributionUrl=.*gradle-([0-9.]+)-(bin|all)\.zip/\1/p' gradle-wrapper.properties) \
     && echo "Using Gradle version: $GRADLE_VERSION" \
     && wget -q "https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" \
@@ -35,10 +34,9 @@ RUN --mount=type=cache,target=/cache/.gradle \
     gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
 
 COPY nohorny-common/src/ nohorny-common/src/
-COPY nohorny-native/CMakeLists.txt nohorny-native/
-COPY nohorny-native/cmake/ nohorny-native/cmake/
-COPY nohorny-native/src/ nohorny-native/src/
 COPY nohorny-server/src/ nohorny-server/src/
+# The natives are compiled by the CI natives job, see .github/workflows/build.yaml
+COPY prebuilt-natives/ prebuilt-natives/
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
