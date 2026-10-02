@@ -17,7 +17,7 @@ env:
   ORG_GRADLE_PROJECT_is_release: ${{ github.event_name == 'release' }}
 
 jobs:
-  # The plugin does not need the natives, so it reports as soon as possible
+
   plugin:
     name: "Plugin"
     # Only run on PRs if the source branch is on someone else's repo
@@ -125,6 +125,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The checkout is owned by the runner user but the container steps run as root,
+      # so git refuses to read the repository until the directory is marked as safe
       - name: "Trust Repository"
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
