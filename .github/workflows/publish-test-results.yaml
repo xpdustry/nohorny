@@ -24,7 +24,7 @@ jobs:
         with:
           run_id: ${{ github.event.workflow_run.id }}
           path: artifacts
-          name: test-results|event-file
+          name: test-results-.*|event-file
           name_is_regexp: true
 
       - name: "Publish Test Results"
