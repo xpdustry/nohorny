@@ -39,7 +39,7 @@ COPY nohorny-server/src/ nohorny-server/src/
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
 
-FROM docker.io/eclipse-temurin:26-jre@sha256:92969270a1c1f9fc399ba05aeefed8b7c48bc882db2bdfb33352075a498a3a85 AS runtime
+FROM docker.io/eclipse-temurin:26-jre@sha256:4a9c6bc048bbe4782482fe376bb5f753a3ac6d91381bc133cfd1ae367b33d8a9 AS runtime
 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
