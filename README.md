@@ -184,7 +184,7 @@ java -jar nohorny-server.jar start -- --server.port=9090
   It requires a C++20 compiler and the first build takes a while since it compiles a stripped down OpenCV.
 
 - `docker build -f Containerfile .` to build the server image, it compiles the natives in a dedicated stage.
-  Pass `--build-arg NATIVES=prebuilt` to take them from a `prebuilt-natives` directory instead, like CI does.
+  Pass `--build-arg PREBUILT_NATIVES=<dir>` to take them from a directory of the context instead, like CI does.
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 

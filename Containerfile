@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-# Where the natives come from, "compile" builds them in the natives-compile stage,
-#   "prebuilt" takes them from the prebuilt-natives/ directory of the context (what CI does)
-ARG NATIVES=compile
+# The natives are compiled by the natives-compile stage,
+#   unless a directory of the context holding prebuilt ones is given (what CI does)
+ARG PREBUILT_NATIVES
+ARG NATIVES_STAGE=${PREBUILT_NATIVES:+prebuilt}
 
 FROM docker.io/eclipse-temurin:26-jdk@sha256:72f06e2d7b40aaf9d237ff46611f2c3001e799f8d510c12170f4ceed847676db AS gradle
 
@@ -50,10 +51,11 @@ RUN --mount=type=cache,target=/cache/.gradle \
 
 FROM scratch AS natives-prebuilt
 
-COPY prebuilt-natives/ /natives/
+ARG PREBUILT_NATIVES
+COPY ${PREBUILT_NATIVES}/ /natives/
 
-# Only the selected stage is built, see the NATIVES argument
-FROM natives-${NATIVES} AS natives
+# Only the selected stage is built
+FROM natives-${NATIVES_STAGE:-compile} AS natives
 
 FROM gradle AS build
 

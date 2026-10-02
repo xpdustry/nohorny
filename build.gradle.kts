@@ -372,7 +372,7 @@ project(":nohorny-native") {
         outputDirectory = layout.buildDirectory.dir("generated/native")
     }
 
-    configurations.create("natives") {
+    configurations.register("natives") {
         isCanBeConsumed = true
         isCanBeResolved = false
         outgoing.artifact(cmakeBuild.flatMap { it.outputDirectory })
@@ -395,7 +395,7 @@ project(":nohorny-server") {
 
     // The natives are bundled as resources, either compiled here by nohorny-native
     //   or taken from -Pprebuilt_natives=<dir> which CI fills with the natives of every platform
-    val natives = configurations.create("natives") {
+    val natives = configurations.register("natives") {
         isCanBeConsumed = false
         isCanBeResolved = true
     }
