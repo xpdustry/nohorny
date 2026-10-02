@@ -308,8 +308,11 @@ jobs:
       # The release is pinned to a commit, so the bump goes to the first branch containing it
       - name: "Bump Version"
         id: bump
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          branch="${{ github.event.repository.default_branch }}"
+          branch="$DEFAULT_BRANCH"
           for candidate in master dev; do
             if git merge-base --is-ancestor "$GITHUB_SHA" "origin/$candidate"; then
               branch="$candidate"
@@ -317,9 +320,16 @@ jobs:
             fi
           done
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          echo "version=$(java .github/scripts/Version.java bump)" >> "$GITHUB_OUTPUT"
+          # The branch may have moved since the draft was created, so bump its build file rather than the tagged one
+          git checkout "origin/$branch" -- build.gradle.kts
+          if [ "v$(java .github/scripts/Version.java get)" != "$TAG" ]; then
+            echo "::notice::The version of $branch already moved past $TAG, nothing to bump"
+          else
+            echo "version=$(java .github/scripts/Version.java bump)" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: "Commit Release Changes"
+        if: ${{ steps.bump.outputs.version != '' }}
         uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
