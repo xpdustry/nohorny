@@ -1,14 +1,15 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-FROM docker.io/eclipse-temurin:26-jdk@sha256:84edabdaa446fcae091de3df12b15e2b6b7fd5b7df78c4a9dd58d8c95ed3fcad AS build
+# Where the natives come from, "compile" builds them in the natives-compile stage,
+#   "prebuilt" takes them from the prebuilt-natives/ directory of the context (what CI does)
+ARG NATIVES=compile
 
-ARG IS_RELEASE=false
+FROM docker.io/eclipse-temurin:26-jdk@sha256:72f06e2d7b40aaf9d237ff46611f2c3001e799f8d510c12170f4ceed847676db AS gradle
 
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
-    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g" \
-    GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives"
+    GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g"
 
 COPY gradle/wrapper/gradle-wrapper.properties .
 
@@ -30,13 +31,42 @@ COPY settings.gradle.kts ./
 COPY build.gradle.kts ./
 RUN mkdir nohorny-common nohorny-native nohorny-client nohorny-server
 
+FROM gradle AS natives-compile
+
+RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CMAKE_GENERATOR=Ninja
+
+COPY nohorny-native/CMakeLists.txt nohorny-native/
+COPY nohorny-native/cmake/ nohorny-native/cmake/
+COPY nohorny-native/src/ nohorny-native/src/
+
+# The cmake directory is cached since OpenCV takes a while to compile
+RUN --mount=type=cache,target=/cache/.gradle \
+    --mount=type=cache,target=/app/nohorny-native/build/cmake \
+    gradle :nohorny-native:cmakeBuild --no-daemon --stacktrace \
+    && cp -r nohorny-native/build/generated/native /natives
+
+FROM scratch AS natives-prebuilt
+
+COPY prebuilt-natives/ /natives/
+
+# Only the selected stage is built, see the NATIVES argument
+FROM natives-${NATIVES} AS natives
+
+FROM gradle AS build
+
+ARG IS_RELEASE=false
+
+ENV GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives"
+
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
 
 COPY nohorny-common/src/ nohorny-common/src/
 COPY nohorny-server/src/ nohorny-server/src/
-# The natives are compiled by the CI natives job, see .github/workflows/build.yaml
-COPY prebuilt-natives/ prebuilt-natives/
+COPY --from=natives /natives prebuilt-natives/
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}

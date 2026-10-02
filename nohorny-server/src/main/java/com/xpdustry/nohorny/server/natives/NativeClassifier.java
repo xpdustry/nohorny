@@ -23,17 +23,13 @@ public final class NativeClassifier implements AutoCloseable {
 
     public static NativeClassifier create(final Path model) {
         try (final var arena = Arena.ofConfined()) {
-            final var handle = (MemorySegment) NoHornyNative.bindings()
+            final var handle = NoHornyNative.bindings()
                     .classifierCreate()
-                    .invokeExact(arena.allocateFrom(model.toAbsolutePath().toString()));
+                    .call(arena.allocateFrom(model.toAbsolutePath().toString()));
             if (handle.equals(MemorySegment.NULL)) {
                 throw NoHornyNative.lastError();
             }
             return new NativeClassifier(handle);
-        } catch (final RuntimeException e) {
-            throw e;
-        } catch (final Throwable e) {
-            throw new AssertionError(e);
         }
     }
 
@@ -45,11 +41,11 @@ public final class NativeClassifier implements AutoCloseable {
         final var w = image.getWidth();
         final var h = image.getHeight();
         try (final var arena = Arena.ofConfined()) {
+            // getRGB always returns packed ARGB ints, whatever the color model of the image
             final var pixels = arena.allocateFrom(JAVA_INT, image.getRGB(0, 0, w, h, null, 0, w));
             final var scores = arena.allocate(JAVA_FLOAT, MAX_LABELS);
-            final var count = (int) NoHornyNative.bindings()
-                    .classifierClassify()
-                    .invokeExact(this.handle, pixels, w, h, scores, MAX_LABELS);
+            final var count =
+                    NoHornyNative.bindings().classifierClassify().call(this.handle, pixels, w, h, scores, MAX_LABELS);
             if (count < 0) {
                 throw NoHornyNative.lastError();
             }
@@ -57,10 +53,6 @@ public final class NativeClassifier implements AutoCloseable {
                 throw new NativeException("The model has more than " + MAX_LABELS + " labels: " + count, null);
             }
             return scores.asSlice(0, JAVA_FLOAT.byteSize() * count).toArray(JAVA_FLOAT);
-        } catch (final RuntimeException e) {
-            throw e;
-        } catch (final Throwable e) {
-            throw new AssertionError(e);
         }
     }
 
@@ -70,10 +62,6 @@ public final class NativeClassifier implements AutoCloseable {
             return;
         }
         this.closed = true;
-        try {
-            NoHornyNative.bindings().classifierClose().invokeExact(this.handle);
-        } catch (final Throwable e) {
-            throw new AssertionError(e);
-        }
+        NoHornyNative.bindings().classifierClose().call(this.handle);
     }
 }

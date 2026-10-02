@@ -50,27 +50,33 @@ nh_classifier* nh_classifier_create(const char* model_path) {
 
 int32_t nh_classifier_classify(
         nh_classifier* classifier,
-        const uint32_t* pixels,
+        const uint32_t* argb_pixels,
         int32_t width,
         int32_t height,
         float* scores,
         int32_t capacity) {
     return guard<int32_t>(-1, [&] {
-        // Native-endian ARGB ints are BGRA bytes on little-endian hosts
-        const cv::Mat bgra(height, width, CV_8UC4, const_cast<uint32_t*>(pixels));
+        // Wrap the pixels without copying, a native-endian ARGB int is laid out as BGRA bytes on little-endian hosts
+        const cv::Mat bgra(height, width, CV_8UC4, const_cast<uint32_t*>(argb_pixels));
+        // The model expects RGB, so drop the alpha channel and swap the red and blue ones
         cv::Mat rgb;
         cv::cvtColor(bgra, rgb, cv::COLOR_BGRA2RGB);
 
+        // Resize to the model input size and map the bytes from [0, 255] to [-1, 1]: (pixel - mean) * scale
         const auto blob = cv::dnn::blobFromImage(
                 rgb, INPUT_SCALE, cv::Size(INPUT_SIZE, INPUT_SIZE), cv::Scalar::all(INPUT_MEAN), false, false);
         classifier->net.setInput(blob);
 
+        // The model outputs one raw score (logit) per label, flatten them into a single row of floats
         cv::Mat logits = classifier->net.forward().reshape(1, 1);
         logits.convertTo(logits, CV_32F);
+
+        // Softmax the logits into probabilities, subtracting the max first so exp() can not overflow
         cv::Mat probabilities;
         cv::exp(logits - cv::Scalar(*std::max_element(logits.begin<float>(), logits.end<float>())), probabilities);
         probabilities /= cv::sum(probabilities)[0];
 
+        // Hand back as many probabilities as the caller has room for, it can compare count with capacity
         const auto count = static_cast<int32_t>(probabilities.total());
         std::copy_n(probabilities.ptr<float>(), std::min(count, capacity), scores);
         return count;

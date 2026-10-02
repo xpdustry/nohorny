@@ -282,6 +282,7 @@ jobs:
           labels: "${{ steps.meta.outputs.labels }}"
           build-args: |
             IS_RELEASE=${{ github.event_name == 'release' }}
+            NATIVES=prebuilt
 
   release:
     name: "Release"

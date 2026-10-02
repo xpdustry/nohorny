@@ -318,7 +318,8 @@ abstract class CMakeBuild : DefaultTask() {
     fun build() {
         // CMake relinks the library if it is missing, so it does not leave stale files behind
         fs.delete { delete(outputDirectory) }
-        val output = outputDirectory.get().dir("natives/${platform.get()}").asFile
+        // Bundled as a resource next to the NoHornyNative class of the server
+        val output = outputDirectory.get().dir("com/xpdustry/nohorny/server/natives/${platform.get()}").asFile
         exec.exec {
             commandLine(
                 "cmake",
@@ -371,7 +372,9 @@ project(":nohorny-native") {
         outputDirectory = layout.buildDirectory.dir("generated/native")
     }
 
-    configurations.consumable("natives") {
+    configurations.create("natives") {
+        isCanBeConsumed = true
+        isCanBeResolved = false
         outgoing.artifact(cmakeBuild.flatMap { it.outputDirectory })
     }
 }
@@ -390,9 +393,12 @@ project(":nohorny-server") {
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
     }
 
-    // CI builds the natives of each platform separately, then bundles them all with -Pprebuilt_natives=<dir>
-    val nativesScope = configurations.dependencyScope("natives")
-    val natives = configurations.resolvable("nativesFiles") { extendsFrom(nativesScope.get()) }
+    // The natives are bundled as resources, either compiled here by nohorny-native
+    //   or taken from -Pprebuilt_natives=<dir> which CI fills with the natives of every platform
+    val natives = configurations.create("natives") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+    }
     dependencies {
         "natives"(project(path = ":nohorny-native", configuration = "natives"))
     }

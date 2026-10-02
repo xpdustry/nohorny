@@ -20,12 +20,12 @@ typedef struct nh_classifier nh_classifier;
 /// Loads the ONNX model at the given path. Returns NULL on failure.
 NH_API nh_classifier* nh_classifier_create(const char* model_path);
 
-/// Classifies an image of packed native-endian ARGB pixels (like Java's TYPE_INT_ARGB).
+/// Classifies an image of width * height pixels packed as native-endian ARGB ints (like Java's TYPE_INT_ARGB).
 /// Writes up to capacity softmax probabilities into scores and returns the total number of labels,
 /// or -1 on failure.
 NH_API int32_t nh_classifier_classify(
         nh_classifier* classifier,
-        const uint32_t* pixels,
+        const uint32_t* argb_pixels,
         int32_t width,
         int32_t height,
         float* scores,
