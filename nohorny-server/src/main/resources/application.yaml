@@ -2,17 +2,52 @@ spring:
   application.name: nohorny
   # Disable the default HTML error page.
   web.error.whitelabel.enabled: false
+  jpa:
+    # The schema is managed by the Flyway migrations in db/migration.
+    hibernate.ddl-auto: none
+    open-in-view: false
 
 server:
   # Listen on localhost. Use 0.0.0.0 to expose the API on your network.
   address: 127.0.0.1
   # HTTP port used for the app
   port: 8080
-  # Uncomment to serve the API under a prefix such as /api.
-  # That would change the endpoints to /api/status and /api/classify.
-  # servlet.context-path: /api
+  # Set to framework when running behind a trusted reverse proxy that overwrites the Forwarded/X-Forwarded-* headers.
+  # The client address is used for the rate limits and to recognize the Mindustry servers.
+  forward-headers-strategy: none
+  servlet.session.cookie:
+    # The admin page and the API share the same origin, the session cookie is never needed cross-site.
+    same-site: lax
 
 nohorny:
+  # Public address of the server, such as https://nohorny.example.com.
+  # When set, the classification responses link to the request pages.
+  # public-url: https://nohorny.example.com
+  database:
+    # SQLite database file.
+    path: database.sqlite
+  security:
+    # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user account.
+    api-default-policy: ALLOW_ALL
+    # Administrator account created on startup, the other users are managed from the admin page.
+    # Its password and role are restored on every startup, which makes the configuration the recovery path.
+    # No account is created while the password is blank. Keep the trailing colon of the placeholder,
+    # it resolves to blank when the variable is missing.
+    admin:
+      username: admin
+      # password: ${NOHORNY_ADMIN_PASSWORD:}
+  requests:
+    # How long the images rated WARN or NSFW, or that failed classification, are kept. Safe images are never stored.
+    image-retention: 14d
+    # How long the requests are kept. The all-time statistics are not affected.
+    retention: 90d
+    # Limits of the public request endpoints, per client address. Administrators are not limited.
+    rate-limit:
+      reads-per-minute: 60
+      purges-per-minute: 5
+  mindustry:
+    # How often the public Mindustry server list is refreshed to recognize the request origins.
+    refresh-interval: 10m
   classifier:
     # Use vit, sight-engine, or a list such as [vit, sight-engine].
     # A chain advances only while the latest result is NSFW.

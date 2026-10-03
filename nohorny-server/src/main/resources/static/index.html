@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#140b16" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcf5fa" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/assets/nohorny.svg" type="image/svg+xml">
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/momo-trust-display-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/martian-mono-var.woff2" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/app.js"></script>
+<script defer src="/assets/alpine.min.js"></script>
+<title>NoHorny · Autonomous NSFW moderation for Mindustry servers</title>
+<meta name="description" content="NoHorny detects NSFW logic displays, canvases, sorter and illuminator pixel art on Mindustry servers, deletes it and bans the author.">
+<meta property="og:title" content="NoHorny">
+<meta property="og:description" content="Autonomous NSFW moderation for Mindustry servers.">
+<meta property="og:type" content="website">
+</head>
+<body x-data="landing">
+<a class="skip" href="#main">Skip to content</a>
+<noscript><p class="noscript">The live statistics need JavaScript. Everything else on this page works without it.</p></noscript>
+
+<header class="top" id="top"><div class="wrap top-in">
+<a class="brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span></a>
+<nav aria-label="Main"><a class="nav-link opt" href="#how">How it works</a><a class="nav-link opt" href="#install">Install</a><a class="nav-link opt" href="#privacy">Privacy</a></nav>
+<span class="fill"></span>
+<a class="nav-link gh" href="https://github.com/xpdustry/nohorny"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg><span>GitHub</span></a>
+</div></header>
+
+<main id="main" tabindex="-1">
+<section class="wrap hero" aria-labelledby="hero-t">
+<div class="hero-copy">
+<p class="kicker">Autonomous NSFW moderation for Mindustry</p>
+<h1 id="hero-t">Lewd pixel art, <em>gone</em> before anyone sees it.</h1>
+<p class="lede">NoHorny catches NSFW logic displays, canvases, sorter and illuminator pixel art on Mindustry servers the moment it is built, removes it and bans the author.</p>
+<p class="cta">Enjoy this family friendly factory building game as the <a href="https://github.com/Anuken">cat</a> intended it to be.</p>
+<div class="actions">
+<a class="btn primary" href="#install"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#download"/></svg>Install the plugin</a>
+<a class="btn" href="https://github.com/xpdustry/nohorny"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg>Source code</a>
+<a class="btn quiet" href="https://discord.xpdustry.com"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#discord"/></svg>Discord</a>
+</div>
+</div>
+
+<div class="live-wrap">
+<span class="cloud c1" aria-hidden="true"></span><span class="cloud alt c2" aria-hidden="true"></span>
+<section class="live-card" id="live" aria-labelledby="live-t">
+<div class="live-head"><h2 id="live-t">Images classified</h2><span class="pulse" :data-state="connection" x-cloak><i aria-hidden="true"></i><span x-text="connectionLabel"></span></span></div>
+<div class="big">
+<p class="big-num" aria-hidden="true" x-text="number(display)">–</p>
+<p class="big-cap">since this instance went live</p>
+<p class="sr-only" aria-live="polite" aria-atomic="true" x-text="spoken"></p>
+</div>
+<div class="day" x-cloak>
+<p class="day-head"><span>Last 24 hours</span><b x-text="number(stats?.last24Hours?.total)">–</b></p>
+<div class="stackbar" role="img" :aria-label="stats?.last24Hours?.total ? `Last 24 hours: ${['safe','warn','nsfw','failed'].map((key) => `${ratingLabel(key)} ${number(stats.last24Hours.ratings?.[key] ?? 0)}`).join(', ')}` : 'No classifications in the last 24 hours'">
+<template x-for="key in ['safe', 'warn', 'nsfw', 'failed']" :key="key"><i :data-rating="key" x-show="(stats?.last24Hours?.ratings?.[key] ?? 0) > 0" :style="{ flexGrow: stats?.last24Hours?.ratings?.[key] ?? 0 }"></i></template>
+</div>
+<ul class="legend" aria-hidden="true"><template x-for="key in ['safe', 'warn', 'nsfw', 'failed']" :key="key"><li :data-rating="key"><span x-text="ratingLabel(key)"></span><b x-text="number(stats?.last24Hours?.ratings?.[key])"></b></li></template></ul>
+<p class="flag-line"><b x-text="number(flagged)">–</b><span><span x-text="flagged === 1 ? 'image flagged' : 'images flagged'"></span><span x-show="flaggedShare" x-text="`, ${flaggedShare}`"></span></span></p>
+</div>
+</section>
+</div>
+</section>
+
+<section class="wrap sect" id="how" aria-labelledby="how-t">
+<header class="sect-head"><p class="kicker">From pixel art to ban</p><h2 id="how-t">How it works</h2></header>
+<ol class="bento">
+<li class="tile t-watch"><div class="tile-top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#eye"/></svg><span class="tile-n" aria-hidden="true">01</span></div>
+<h3>Watch</h3><p>The plugin tracks logic displays, canvases, sorters and illuminators, and groups neighbouring builds into a single piece of art.</p>
+<span class="pix" aria-hidden="true"><template x-for="(cell, index) in '.pp..pp.ppppppdppppppddp.ppppdd...ppdd.....dd...'.split('')" :key="index"><i :class="cell === '.' ? '' : cell"></i></template></span></li>
+<li class="tile t-render"><div class="tile-top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#image"/></svg><span class="tile-n" aria-hidden="true">02</span></div>
+<h3>Render</h3><p>When the art changes, the group is rendered to an image off the main thread and sent to this server.</p></li>
+<li class="tile t-classify"><div class="tile-top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#chip"/></svg><span class="tile-n" aria-hidden="true">03</span></div>
+<h3>Classify</h3><p>A ViT model rates the image SAFE, WARN or NSFW. SightEngine can optionally be chained to double check suspicious images.</p>
+<div class="chips" aria-hidden="true"><span class="rating" data-rating="safe">Safe</span><span class="rating" data-rating="warn">Warn</span><span class="rating" data-rating="nsfw">NSFW</span></div></li>
+<li class="tile t-act"><div class="tile-top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#hammer"/></svg><span class="tile-n" aria-hidden="true">04</span></div>
+<h3>Act</h3><p>Depending on your policy, offending builds are deleted and refunded and the author is banned. Moderators get a Discord alert linking to the request page.</p>
+<div class="chips" aria-hidden="true"><span class="chip">delete</span><span class="chip">refund</span><span class="chip">ban</span><span class="chip">alert</span></div></li>
+</ol>
+<div class="facts">
+<p class="fact hot"><strong>0.04 µs</strong><span>main loop cost per tick while the art sits still</span></p>
+<p class="fact"><strong>&lt; 2%</strong><span>of a tick with 600 art changes per second</span></p>
+<p class="fact"><strong>4 policies</strong><span>from hands-off to delete and ban, your call</span></p>
+</div>
+</section>
+
+<section class="wrap sect install" id="install" aria-labelledby="install-t">
+<header class="sect-head"><p class="kicker">Set up in a minute</p><h2 id="install-t">Install</h2><p>Three steps on your Mindustry server, no restart dance.</p>
+<div class="reqs"><span class="chip">Mindustry 159+</span><span class="chip">Java 25</span></div></header>
+<div>
+<ol class="flow">
+<li><div class="flow-body"><h3>Drop the jar</h3>
+<p>Download <a href="https://github.com/xpdustry/nohorny/releases/latest"><code>nohorny-client.jar</code></a> into your <code>config/mods</code> directory and start the server. <a href="https://github.com/xpdustry/slf4md">SLF4MD</a> is optional.</p></div></li>
+<li><div class="flow-body"><h3>Point it at this server</h3>
+<p>The plugin uses <code>https://nohorny.xpdustry.com/api</code> by default. To use this instance, run:</p>
+<div class="cmd"><pre><code><span class="prompt" aria-hidden="true">&gt; </span><span x-text="installCommand">config nohorny-api-endpoint https://nohorny.xpdustry.com/api</span></code></pre>
+<button class="btn sm" type="button" :class="{ copied: isCopied(installCommand) }" @click="copy(installCommand)" x-cloak><svg class="ic" aria-hidden="true"><use :href="isCopied(installCommand) ? '/assets/icons.svg#check' : '/assets/icons.svg#copy'"/></svg><span x-text="isCopied(installCommand) ? 'Copied' : 'Copy'">Copy</span></button></div>
+<p class="copy-note" aria-live="polite" x-text="copyFailed === installCommand ? 'Copy failed, select the command manually.' : (isCopied(installCommand) ? 'Command copied to the clipboard.' : '')"></p></div></li>
+<li><div class="flow-body"><h3>Get alerts <span class="chip">optional</span></h3>
+<p>Add a Discord webhook to be notified when something gets flagged:</p>
+<div class="cmd"><pre><code><span class="prompt" aria-hidden="true">&gt; </span><span x-text="webhookCommand">config nohorny-discord-webhook https://discord.com/api/webhooks/...</span></code></pre>
+<button class="btn sm" type="button" :class="{ copied: isCopied(webhookCommand) }" @click="copy(webhookCommand)" x-cloak><svg class="ic" aria-hidden="true"><use :href="isCopied(webhookCommand) ? '/assets/icons.svg#check' : '/assets/icons.svg#copy'"/></svg><span x-text="isCopied(webhookCommand) ? 'Copied' : 'Copy'">Copy</span></button></div>
+<p class="copy-note" aria-live="polite" x-text="copyFailed === webhookCommand ? 'Copy failed, select the command manually.' : (isCopied(webhookCommand) ? 'Command copied to the clipboard.' : '')"></p></div></li>
+</ol>
+<p class="install-note">Every setting goes through the built-in <code>config</code> command of your server console. See the <a href="https://github.com/xpdustry/nohorny#configuration">configuration reference</a> for auto-mod policies and the rest.</p>
+</div>
+</section>
+
+<div class="wrap">
+<aside class="privacy" id="privacy" aria-labelledby="privacy-t">
+<div class="privacy-intro"><h2 id="privacy-t"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>Privacy</h2>
+<p>Images are only needed long enough for moderators to review an incident.</p></div>
+<ul>
+<li><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#cloud"/></svg><span><strong>Safe images are never stored.</strong> Only flagged or unclassifiable images are kept, and only for a limited time.</span></li>
+<li><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#flag"/></svg><span><strong>Anyone with a link can purge an image.</strong> If a request page shows illegal content, report it and the image is deleted immediately.</span></li>
+<li><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#user"/></svg><span><strong>No player identifiers.</strong> The plugin only sends the rendered image, never player names, UUIDs or player addresses.</span></li>
+</ul>
+</aside>
+</div>
+</main>
+
+<footer class="foot"><div class="wrap foot-in">
+<a class="brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span></a>
+<span class="foot-links">© Xpdustry <a href="https://github.com/xpdustry/nohorny/releases">Releases</a><a href="https://xpdustry.com">xpdustry.com</a></span>
+<div class="foot-actions">
+<a class="btn icon" href="https://github.com/xpdustry/nohorny" aria-label="NoHorny on GitHub"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg></a>
+<a class="btn icon" href="https://discord.xpdustry.com" aria-label="Xpdustry Discord"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#discord"/></svg></a>
+<a class="btn icon" href="#top" aria-label="Back to top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#up"/></svg></a>
+</div>
+</div></footer>
+</body>
+</html>

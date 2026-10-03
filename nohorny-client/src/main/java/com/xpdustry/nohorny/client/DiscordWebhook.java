@@ -26,10 +26,13 @@ final class DiscordWebhook implements LifecycleListener {
 
     private static final MiniLogger log = MiniLogger.forClass(DiscordWebhook.class);
 
+    private static final int COMPONENT_TYPE_ACTION_ROW = 1;
+    private static final int COMPONENT_TYPE_BUTTON = 2;
     private static final int COMPONENT_TYPE_TEXT_DISPLAY = 10;
     private static final int COMPONENT_TYPE_MEDIA_GALLERY = 12;
     private static final int COMPONENT_TYPE_SEPARATOR = 14;
     private static final int COMPONENT_TYPE_CONTAINER = 17;
+    private static final int BUTTON_STYLE_LINK = 5;
     private static final int MESSAGE_FLAG_IS_COMPONENTS_V2 = 1 << 15;
 
     private final ExecutorService executor = Executors.newThreadPerTaskExecutor(
@@ -54,7 +57,8 @@ final class DiscordWebhook implements LifecycleListener {
         this.events.subscribe(SettingChangeEvent.class, event -> {
             if (!(event.key().equals(NoHornySetting.DISCORD_WEBHOOK)
                     || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_NAME)
-                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY))) {
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_PROXY)
+                    || event.key().equals(NoHornySetting.DISCORD_WEBHOOK_IMAGE))) {
                 return;
             }
             this.executor.execute(() -> {
@@ -75,6 +79,16 @@ final class DiscordWebhook implements LifecycleListener {
                     this.onWebhookConfigure(
                             webhook,
                             "The webhook username has been set to " + NoHornySetting.DISCORD_WEBHOOK_NAME.get() + ".");
+                } else if (event.key().equals(NoHornySetting.DISCORD_WEBHOOK_IMAGE)) {
+                    this.onWebhookConfigure(
+                            webhook,
+                            switch (getImagePolicy()) {
+                                case AUTO ->
+                                    "Alerts will link to the request page on the NoHorny server, "
+                                            + "the image will only be uploaded when no link is available.";
+                                case ALWAYS -> "Alerts will always upload the image.";
+                                case NEVER -> "Alerts will never upload the image.";
+                            });
                 }
             });
         });
@@ -110,10 +124,18 @@ final class DiscordWebhook implements LifecycleListener {
         if (webhook == null) {
             return;
         }
+        final var attachImage =
+                switch (getImagePolicy()) {
+                    case AUTO -> event.response().url() == null;
+                    case ALWAYS -> true;
+                    case NEVER -> false;
+                };
         this.executor.execute(() -> {
-            this.imageBuffer.lock();
+            if (attachImage) {
+                this.imageBuffer.lock();
+            }
             try {
-                this.send(webhook, this.createClassificationFormPayload(event));
+                this.send(webhook, this.createClassificationFormPayload(event, attachImage));
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (final IOException | URISyntaxException e) {
@@ -123,9 +145,16 @@ final class DiscordWebhook implements LifecycleListener {
                         event.group().y(),
                         e);
             } finally {
-                this.imageBuffer.release();
+                if (attachImage) {
+                    this.imageBuffer.release();
+                }
             }
         });
+    }
+
+    private static DiscordWebhookImagePolicy getImagePolicy() {
+        final var policy = NoHornySetting.DISCORD_WEBHOOK_IMAGE.get();
+        return policy == null ? DiscordWebhookImagePolicy.AUTO : policy;
     }
 
     private void send(final URI webhook, final MultipartFormBodyPublisher form)
@@ -162,16 +191,22 @@ final class DiscordWebhook implements LifecycleListener {
         return new MultipartFormBodyPublisher.Builder()
                 .textPart(
                         "payload_json",
-                        this.createComponentsJsonPayload("NoHorny has been re-configured", message, null, null)
+                        this.createComponentsJsonPayload("NoHorny has been re-configured", message, null, null, null)
                                 .toString())
                 .build();
     }
 
-    private MultipartFormBodyPublisher createClassificationFormPayload(final ClassificationEvent event)
-            throws IOException {
+    private MultipartFormBodyPublisher createClassificationFormPayload(
+            final ClassificationEvent event, final boolean attachImage) throws IOException {
+        final var builder = new MultipartFormBodyPublisher.Builder();
+        if (!attachImage) {
+            return builder.textPart(
+                            "payload_json",
+                            this.createClassificationJsonPayload(event, null).toString())
+                    .build();
+        }
         final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png";
-        return new MultipartFormBodyPublisher.Builder()
-                .textPart(
+        return builder.textPart(
                         "payload_json",
                         this.createClassificationJsonPayload(event, "attachment://" + imageName)
                                 .toString())
@@ -183,7 +218,7 @@ final class DiscordWebhook implements LifecycleListener {
                 .build();
     }
 
-    private Jval createClassificationJsonPayload(final ClassificationEvent event, final String image) {
+    private Jval createClassificationJsonPayload(final ClassificationEvent event, final @Nullable String image) {
         final var message = new StringBuilder();
         final var author = event.author();
         if (author == null) {
@@ -215,11 +250,16 @@ final class DiscordWebhook implements LifecycleListener {
                 "NoHorny has detected unsafe buildings",
                 message.toString(),
                 image,
-                "Request ID: `" + event.response().identifier() + "`");
+                "Request ID: `" + event.response().identifier() + "`",
+                event.response().url());
     }
 
     private Jval createComponentsJsonPayload(
-            final String title, final String content, final @Nullable String image, final @Nullable String footer) {
+            final String title,
+            final String content,
+            final @Nullable String image,
+            final @Nullable String footer,
+            final @Nullable String link) {
         final var components = Jval.newArray()
                 .add(Jval.newObject().put("type", COMPONENT_TYPE_TEXT_DISPLAY).put("content", "## " + title))
                 .add(Jval.newObject()
@@ -248,6 +288,18 @@ final class DiscordWebhook implements LifecycleListener {
                     .put("spacing", 1));
             components.add(
                     Jval.newObject().put("type", COMPONENT_TYPE_TEXT_DISPLAY).put("content", footer));
+        }
+        if (link != null) {
+            components.add(Jval.newObject()
+                    .put("type", COMPONENT_TYPE_ACTION_ROW)
+                    .put(
+                            "components",
+                            Jval.newArray()
+                                    .add(Jval.newObject()
+                                            .put("type", COMPONENT_TYPE_BUTTON)
+                                            .put("style", BUTTON_STYLE_LINK)
+                                            .put("label", "View request")
+                                            .put("url", link))));
         }
         final var payload = Jval.newObject()
                 .put("flags", MESSAGE_FLAG_IS_COMPONENTS_V2)

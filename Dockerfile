@@ -90,8 +90,12 @@ ENV JAVA_OPTS="-server \
     --enable-native-access=ALL-UNNAMED \
     -Djava.security.egd=file:/dev/./urandom"
 
+ENV NOHORNY_DATABASE_PATH=/data/database.sqlite
+
+VOLUME ["/data"]
+
 USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar start"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar"]

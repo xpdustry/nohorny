@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1a0f1d" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7ebf3" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/assets/nohorny.svg" type="image/svg+xml">
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/momo-trust-display-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/martian-mono-var.woff2" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/app.js"></script>
+<script defer src="/assets/alpine.min.js"></script>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>NoHorny admin</title>
+</head>
+<body x-data="admin" :class="phase === 'ready' ? 'app' : 'gate'">
+<a class="skip" href="#main">Skip to content</a>
+<noscript><p class="noscript">The admin panel needs JavaScript.</p></noscript>
+
+<div class="admin-shell" id="top">
+<header class="appbar" x-show="phase === 'ready'" x-cloak>
+<a class="brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span><span class="brand-tag">Admin</span></a>
+<nav class="tabs" aria-label="Admin sections">
+<a class="tab" href="#" :aria-current="view === 'requests' ? 'page' : null" @click.prevent="setView('requests')"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#list"/></svg>Requests<span class="count" x-text="number(stats?.total)"></span></a>
+<a class="tab" href="#users" :aria-current="view === 'users' ? 'page' : null" @click.prevent="setView('users')"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#users"/></svg>Users<span class="count" x-show="usersLoaded" x-text="number(users.length)"></span></a>
+</nav>
+<div class="side-live"><span class="pulse" :data-state="connection"><i aria-hidden="true"></i><span x-text="connectionLabel"></span></span>
+<span class="num" x-text="number(stats?.last24Hours?.total)">–</span><small>classified in the last 24 hours</small></div>
+<template x-if="session"><div class="who"><span class="avatar" aria-hidden="true" x-text="session.username.slice(0, 1)"></span>
+<span class="who-text"><b x-text="session.username"></b><small>Administrator</small></span>
+<button class="btn icon sm quiet" type="button" @click="logout()" aria-label="Sign out" title="Sign out"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#logout"/></svg></button></div></template>
+</header>
+
+<div class="workspace">
+<main id="main" tabindex="-1">
+
+<section class="state" x-show="phase === 'loading'" role="status" aria-busy="true"><span class="spinner lg" aria-hidden="true"></span><p>Checking your session…</p></section>
+
+<section class="state card" x-show="phase === 'error'" x-cloak><span class="badge-ic bad"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#alert"/></svg></span>
+<h1>Admin panel unavailable</h1><p role="alert" x-text="fatal"></p>
+<button class="btn primary" type="button" @click="checkSession()">Retry</button></section>
+
+<section class="state card" x-show="phase === 'forbidden'" x-cloak><span class="badge-ic bad"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg></span>
+<h1>Administrators only</h1><p>Your account is signed in but does not have access to the admin panel.</p>
+<button class="btn" type="button" @click="logout()">Sign in with another account</button></section>
+
+<div class="login-wrap" x-show="phase === 'login'" x-cloak>
+<span class="cloud c1" aria-hidden="true"></span><span class="cloud alt c2" aria-hidden="true"></span>
+<form class="card login-card" @submit.prevent="login()" novalidate aria-labelledby="login-t">
+<a class="login-logo brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span><span class="brand-tag">Admin</span></a>
+<div><h1 id="login-t">Sign in</h1><p class="muted">Use the credentials configured on this server.</p></div>
+<div class="notice" data-tone="info" x-show="loginNotice" role="status" aria-live="polite"><p x-text="loginNotice"></p></div>
+<div class="field"><label for="username">Username</label><input class="input" id="username" name="username" x-ref="username" autocomplete="username" autocapitalize="none" spellcheck="false" required x-model="credentials.username"></div>
+<div class="field"><label for="password">Password</label><input class="input" id="password" name="password" type="password" x-ref="password" autocomplete="current-password" required x-model="credentials.password" :aria-invalid="loginError ? 'true' : null" aria-describedby="login-error"></div>
+<p class="notice" data-tone="error" id="login-error" role="alert" x-show="loginError" x-text="loginError"></p>
+<button class="btn primary" type="submit" :disabled="loginBusy || !credentials.username || !credentials.password"><span class="spinner" aria-hidden="true" x-show="loginBusy"></span><span x-text="loginBusy ? 'Signing in…' : 'Sign in'">Sign in</span></button>
+</form>
+</div>
+
+<p class="sr-only" role="status" aria-live="polite" x-text="status"></p>
+
+<!-- Requests -->
+<section class="view" aria-labelledby="r-t" x-show="phase === 'ready' && view === 'requests'" x-cloak>
+<div class="view-head"><div><p class="kicker">Moderation queue</p><h1 id="r-t">Requests</h1></div>
+<div class="view-tools"><button class="btn sm" type="button" :aria-pressed="revealAll ? 'true' : 'false'" @click="revealAll = !revealAll"><svg class="ic" aria-hidden="true"><use :href="revealAll ? '/assets/icons.svg#eye-off' : '/assets/icons.svg#eye'"/></svg><span x-text="revealAll ? 'Blur flagged images' : 'Reveal all images'">Reveal all images</span></button>
+<button class="btn sm" type="button" @click="refresh()" :disabled="loading && !items.length"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#refresh"/></svg>Refresh</button></div></div>
+
+<h2 class="sr-only">Statistics</h2>
+<dl class="statline">
+<div class="stat hero-stat"><dt>All time</dt><dd x-text="number(stats?.total)">–</dd></div>
+<div class="stat"><dt>Last 24 hours</dt><dd x-text="number(stats?.last24Hours?.total)">–</dd></div>
+<template x-for="tile in ratingTiles" :key="tile.key"><div class="stat" :data-rating="tile.key"><dt><span class="dot" aria-hidden="true"></span><span x-text="tile.label"></span></dt><dd x-text="number(tile.value)"></dd><dd><small x-text="tile.share ? `${tile.share} of 24 h` : '24 h'"></small></dd></div></template>
+</dl>
+
+<div class="versions" x-show="items.length"><span class="kicker">Plugin versions</span>
+<ul><template x-for="version in versions" :key="version.name"><li><code :title="version.name" x-text="version.name === 'unknown' ? 'unknown' : `v${version.name}`"></code><span class="meter" aria-hidden="true"><i :style="`width:${(version.value * 100).toFixed(1)}%`"></i></span><span class="cnt" x-text="`${number(version.count)} · ${version.share}`"></span></li></template></ul>
+<span class="sr-only" x-text="`across ${number(items.length)} loaded requests`"></span></div>
+
+<h2 class="sr-only">Request list</h2>
+<div class="toolbar"><div class="segmented" role="group" aria-label="Filter by rating"><template x-for="option in filters" :key="option.value"><button type="button" :aria-pressed="filter === option.value ? 'true' : 'false'" @click="setFilter(option.value)"><span class="dot" :data-rating="option.value" aria-hidden="true" x-show="option.value"></span><span x-text="option.label"></span></button></template></div></div>
+
+<div class="notice" x-show="status" x-cloak><p x-text="status"></p><button class="btn sm quiet" type="button" @click="status = ''" aria-label="Dismiss message">Dismiss</button></div>
+<div class="notice" data-tone="error" role="alert" x-show="listError" x-cloak><p x-text="listError"></p><button class="btn sm" type="button" @click="retry()">Retry</button></div>
+
+<div class="table-card">
+<table class="table" x-show="items.length">
+<thead><tr><th scope="col">Image</th><th scope="col">Verdict</th><th scope="col">Request</th><th scope="col" class="c-model">Classifier</th><th scope="col">When</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+<tbody><template x-for="item in items" :key="item.id"><tr>
+<td class="c-thumb">
+<template x-if="hasImage(item)"><div class="thumb" :data-rating="bucket(item)" :class="{ 'is-blurred': blurred(item) }"><img :src="item.image.url" loading="lazy" :alt="`Image of request ${shortId(item.id)}, rated ${verdict(item)}`" @error="broken[item.id] = true"><template x-if="sensitive(item) && !revealAll"><button class="veil" type="button" :class="{ clear: !blurred(item) }" @click="toggle(item)" :aria-label="blurred(item) ? `Reveal image of request ${shortId(item.id)}` : `Blur image of request ${shortId(item.id)}`"><template x-if="blurred(item)"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#eye"/></svg></template></button></template></div></template>
+<template x-if="!hasImage(item)"><span class="thumb empty" :title="placeholder(item)"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#image-off"/></svg><span class="sr-only" x-text="placeholder(item)"></span></span></template>
+</td>
+<td class="c-verdict"><div class="verdict-cell"><span class="rating" :data-rating="bucket(item)" x-text="verdict(item)"></span>
+<span class="score" x-show="item.confidence !== null && item.confidence !== undefined"><span class="meter" :data-rating="bucket(item)" role="img" :aria-label="nsfwScore(item.confidence)"><i :style="`width:${((item.confidence ?? 0) * 100).toFixed(1)}%`"></i></span><span x-text="percent(item.confidence)"></span></span>
+<code class="meta error-text" x-show="item.error" x-text="item.error"></code></div></td>
+<td class="c-req"><div class="req-cell"><span class="line"><a class="id" :href="`/requests/${item.id}`" :title="item.id" x-text="shortId(item.id)"></a><span class="meta" x-text="item.version ? `v${item.version}` : 'unknown version'"></span></span>
+<span class="line"><span class="chip srv" x-show="isServer(item.client)">Server</span><span class="break" :title="item.client?.name" x-text="clientLabel(item.client)"></span><code class="meta" x-show="item.remoteAddress || item.username" x-text="[item.remoteAddress, item.username].filter(Boolean).join(' · ')"></code></span></div></td>
+<td class="c-model"><code class="meta" :title="item.classifier" x-text="item.classifier ?? '–'"></code></td>
+<td class="c-time"><div class="time-cell"><time :datetime="item.createdAt" :title="formatTime(item.createdAt)" x-text="relativeTime(item.createdAt)"></time><span class="meta" x-text="duration(item.durationMillis)"></span></div></td>
+<td class="c-act"><div class="row-actions"><button class="btn sm" type="button" x-show="item.image?.state === 'stored'" @click="purge(item)" :disabled="busy[item.id] === true" :aria-label="`Purge image of request ${shortId(item.id)}`" title="Purge the image"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#image-off"/></svg><span class="label-text">Purge</span></button><button class="btn sm danger" type="button" @click="remove(item)" :disabled="busy[item.id] === true" :aria-label="`Delete request ${shortId(item.id)}`" title="Delete the request"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#trash"/></svg><span class="label-text">Delete</span></button></div></td>
+</tr></template></tbody></table>
+
+<div class="state small" x-show="!items.length && exhausted && !loading"><span class="badge-ic"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#inbox"/></svg></span><h3>No requests</h3><p x-text="filter ? 'Nothing matches this filter among the retained requests.' : 'Classified requests show up here.'"></p></div>
+
+<div class="list-foot" x-show="loading || (!exhausted && !listError) || (exhausted && items.length)">
+<span x-show="loading" role="status" style="display:inline-flex;gap:.6rem;align-items:center"><span class="spinner" aria-hidden="true"></span><span>Loading requests…</span></span>
+<button class="btn sm" type="button" x-show="!loading && !exhausted && !listError" @click="loadMore()">Load more</button>
+<span x-show="exhausted && items.length" x-text="`End of the list · ${number(items.length)} requests`"></span>
+</div>
+</div>
+<div class="sentinel" x-ref="sentinel" aria-hidden="true"></div>
+</section>
+
+<!-- Users -->
+<section class="view" id="users" aria-labelledby="u-t" x-show="phase === 'ready' && view === 'users'" x-cloak>
+<div class="view-head"><div><p class="kicker" x-text="usersLoaded ? `${number(users.length)} ${users.length === 1 ? 'account' : 'accounts'} · ${number(adminCount)} ${adminCount === 1 ? 'admin' : 'admins'}` : 'Accounts'">Accounts</p><h1 id="u-t">Users</h1></div></div>
+
+<div class="notice" x-show="status" x-cloak><p x-text="status"></p><button class="btn sm quiet" type="button" @click="status = ''" aria-label="Dismiss message">Dismiss</button></div>
+<div class="notice" data-tone="error" role="alert" x-show="usersError" x-cloak><p x-text="usersError"></p><button class="btn sm" type="button" @click="loadUsers()">Retry</button></div>
+
+<div class="users-grid">
+<div class="table-card">
+<table class="table users" x-show="users.length">
+<thead><tr><th scope="col">Username</th><th scope="col">Access</th><th scope="col">Created</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+<tbody><template x-for="account in users" :key="account.username"><tr>
+<td><div class="ucell"><span class="uname"><span class="avatar" :class="{ muted: !account.admin }" aria-hidden="true" x-text="account.username.slice(0, 1)"></span><span x-text="account.username"></span></span><span class="chip" x-show="account.bootstrap" title="Configured on the server, its password is restored on every startup">bootstrap</span><span class="chip" x-show="isSelf(account)">you</span></div></td>
+<td><span class="rating" :data-rating="account.admin ? 'safe' : 'failed'" x-text="account.admin ? 'Admin panel' : 'API only'"></span></td>
+<td><time class="meta" :datetime="account.createdAt" :title="formatTime(account.createdAt)" x-text="account.createdAt ? new Date(account.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '–'"></time></td>
+<td class="c-act"><div class="row-actions">
+<button class="btn sm" type="button" @click="openPassword(account)" :disabled="userBusy[account.username] === true" :aria-label="`Set the password of ${account.username}`"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#key"/></svg>Password</button>
+<button class="btn sm" type="button" @click="toggleAdmin(account)" :disabled="userBusy[account.username] === true || (account.admin && demoteBlocked(account) !== null)" :title="account.admin ? (demoteBlocked(account) ?? '') : ''" :aria-label="account.admin ? `Revoke admin access of ${account.username}` : `Make ${account.username} an administrator`"><span x-text="account.admin ? 'Revoke admin' : 'Make admin'"></span></button>
+<button class="btn sm danger" type="button" @click="removeUser(account)" :disabled="userBusy[account.username] === true || deleteBlocked(account) !== null" :title="deleteBlocked(account) ?? ''" :aria-label="`Delete user ${account.username}`"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#trash"/></svg>Delete</button>
+</div></td>
+</tr></template></tbody></table>
+<div class="list-foot" x-show="usersLoading" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading users…</span></div>
+<p class="table-note">The bootstrap account comes from <code>nohorny.security.admin</code>: it cannot be demoted or deleted, and its password is restored on restart. You cannot demote or delete yourself, and the last administrator cannot be demoted.</p>
+</div>
+
+<form class="card create" aria-labelledby="cu-t" @submit.prevent="createUser()" novalidate>
+<h2 id="cu-t"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#plus"/></svg>Create a user</h2>
+<div class="field"><label for="new-username">Username</label><input class="input" id="new-username" x-ref="newUsername" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" x-model="newUser.username" :aria-invalid="newUserProblems.username ? 'true' : null" aria-describedby="new-username-rule"><small class="rule" id="new-username-rule" :class="{ bad: newUserProblems.username }" x-text="newUserProblems.username ?? '3 to 32 characters: a-z, 0-9, _ . -'">3 to 32 characters: a-z, 0-9, _ . -</small></div>
+<div class="field"><label for="new-password">Password</label><input class="input" id="new-password" type="password" autocomplete="new-password" x-model="newUser.password" :aria-invalid="newUserProblems.password ? 'true' : null" aria-describedby="new-password-rule"><small class="rule" id="new-password-rule" :class="{ bad: newUserProblems.password }" x-text="newUserProblems.password ?? 'At least 8 characters'">At least 8 characters</small></div>
+<label class="check"><input type="checkbox" x-model="newUser.admin"> <span>Grant access to the admin panel</span></label>
+<p class="hint">Without it, the account can only call the classification API with HTTP Basic.</p>
+<p class="notice" data-tone="error" role="alert" x-show="createError" x-text="createError"></p>
+<button class="btn primary" type="submit" :disabled="createBusy || !newUser.username || !newUser.password || newUserProblems.username !== null || newUserProblems.password !== null"><span class="spinner" aria-hidden="true" x-show="createBusy"></span><span x-text="createBusy ? 'Creating…' : 'Create user'">Create user</span></button>
+</form>
+</div>
+</section>
+</main>
+
+<footer class="foot"><div class="foot-in">
+<span class="foot-links">© Xpdustry <a href="/">Home</a><a href="https://github.com/xpdustry/nohorny/releases">Releases</a><a href="https://xpdustry.com">xpdustry.com</a></span>
+<div class="foot-actions">
+<a class="btn icon" href="https://github.com/xpdustry/nohorny" aria-label="NoHorny on GitHub"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg></a>
+<a class="btn icon" href="https://discord.xpdustry.com" aria-label="Xpdustry Discord"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#discord"/></svg></a>
+</div>
+</div></footer>
+</div>
+</div>
+
+<dialog class="dialog" x-ref="passwordDialog" @close="passwordTarget && closePassword()" aria-labelledby="pw-t">
+<form class="dialog-body" @submit.prevent="savePassword()" novalidate>
+<h2 id="pw-t" x-text="`Set the password of ${passwordTarget?.username ?? ''}`"></h2>
+<p x-show="passwordTarget?.bootstrap">This is the bootstrap administrator, the next restart resets its password to the configured one.</p>
+<p x-show="passwordTarget && !passwordTarget.bootstrap && !isSelf(passwordTarget)">Their current sessions end, they sign in again with the new password.</p>
+<p x-show="passwordTarget && isSelf(passwordTarget)">Your session ends, you sign in again with the new password.</p>
+<div class="field"><label for="pw-new">New password</label><input class="input" id="pw-new" type="password" autocomplete="new-password" x-ref="passwordInput" x-model="passwordValue" :aria-invalid="passwordValue && passwordValue.length < 8 ? 'true' : null" aria-describedby="pw-rule"><small class="rule" id="pw-rule" :class="{ bad: passwordValue && passwordValue.length < 8 }" x-text="passwordValue && passwordValue.length < 8 ? 'Use at least 8 characters' : 'At least 8 characters'">At least 8 characters</small></div>
+<p class="notice" data-tone="error" role="alert" x-show="passwordError" x-text="passwordError"></p>
+<div class="dialog-actions"><button class="btn" type="button" @click="closePassword()">Cancel</button><button class="btn primary" type="submit" :disabled="passwordBusy || passwordValue.length < 8"><span class="spinner" aria-hidden="true" x-show="passwordBusy"></span>Save password</button></div>
+</form>
+</dialog>
+<dialog class="dialog" x-ref="dialog" @close="closed()" aria-labelledby="dialog-t" aria-describedby="dialog-b">
+<form method="dialog" class="dialog-body">
+<h2 id="dialog-t" x-text="dialog.title"></h2>
+<p id="dialog-b" x-text="dialog.body"></p>
+<div class="dialog-actions"><button class="btn" type="submit" value="cancel" autofocus>Cancel</button><button class="btn danger solid" type="submit" value="confirm" x-text="dialog.action"></button></div>
+</form>
+</dialog>
+</body>
+</html>

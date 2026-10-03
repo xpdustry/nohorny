@@ -49,6 +49,7 @@ You can configure NoHorny using the Mindustry built-in `config` command in your 
 | `nohorny-discord-webhook`       | Discord webhook used to send alerts when unsafe buildings are detected.                                                                                                   | empty                              |
 | `nohorny-discord-webhook-name`  | Username used for messages sent through the Discord webhook.                                                                                                              | `NoHorny`                          |
 | `nohorny-discord-webhook-proxy` | Whether discord requests should be proxied. Useful if discord is banned in the host country of your servers. Uses [ProxyScrape](https://proxyscrape.com/free-proxy-list). | `false`                            |
+| `nohorny-discord-webhook-image` | Whether discord alerts should upload the image of the unsafe buildings. Valid values: `AUTO`, `ALWAYS`, `NEVER`.                                                          | `AUTO`                             |
 | `nohorny-debug-tap`             | Enables admin double-tap debugging for tracked displays, canvases, sorters and illuminators.                                                                              | `false`                            |
 
 #### Auto-Mod Policies
@@ -69,6 +70,15 @@ Just configure the webhook url using `config nohorny-discord-webhook https://dis
 ![discord example](.github/discord-example.png)
 
 Checkout [MAD](https://github.com/phinner/mad) if you want to automatically delete the alerts.
+
+When the NoHorny server exposes a web page for each request, the alert includes a "View request" button linking to it.
+You can choose whether the image is also uploaded to discord with `config nohorny-discord-webhook-image <policy>`:
+
+| Policy   | Behavior                                                                                                   |
+|----------|------------------------------------------------------------------------------------------------------------|
+| `AUTO`   | Link to the request page on the server instead of uploading the image, upload it only when no link exists. |
+| `ALWAYS` | Always upload the image to discord, alongside the link when there is one.                                  |
+| `NEVER`  | Never upload the image to discord.                                                                         |
 
 > [!Note]
 > 
@@ -145,7 +155,7 @@ This is a standalone Java application requiring:
 
 - Java 25
 
-Then, you can simply run `java -jar nohorny-server.jar start`.
+Then, you can simply run `java -jar nohorny-server.jar`.
 
 ### Configuration
 
@@ -164,14 +174,74 @@ server:
 - Env variables
 
 ```text
-SERVER_PORT=9090 java -jar nohorny-server.jar start
+SERVER_PORT=9090 java -jar nohorny-server.jar
 ```
 
 - Or jvm properties
 
 ```text
-java -jar nohorny-server.jar start -- --server.port=9090
+java -Dserver.port=9090 -jar nohorny-server.jar
 ```
+
+The SQLite database is stored at `nohorny.database.path`, which defaults to `database.sqlite`.
+The Docker image stores it at `/data/database.sqlite`, mount the `/data` volume to keep it.
+
+Set `nohorny.public-url` to the public address of the server, such as `https://nohorny.example.com`,
+so the classification responses link to their request page.
+
+### Pages
+
+- `/` shows the live classification counters.
+- `/requests/{id}` shows a single request, its image blurred until revealed, and lets anyone holding the link purge the image.
+- `/admin` lists the requests with filters and manages the users, for the administrators.
+
+The JSON API used by the plugin and the pages lives under `/api`, see [`nohorny-server/API.md`](nohorny-server/API.md).
+
+### Retention
+
+Every classification is recorded. The image is only stored when it is rated `WARN` or `NSFW`, or when the classification failed.
+Images are deleted after `nohorny.requests.image-retention` (14 days), requests after `nohorny.requests.retention` (90 days).
+The all-time counters are kept.
+
+### Users and security
+
+The classification API is public by default. Set `nohorny.security.api-default-policy` to `DENY_ALL` to require HTTP
+Basic authentication with a user account. The other endpoints keep their own rules, described in the API docs.
+
+The first administrator comes from the configuration, set its password to create it on startup:
+
+```yaml
+nohorny:
+  security:
+    admin:
+      username: admin # the default
+      password: ${NOHORNY_ADMIN_PASSWORD:}
+```
+
+Or set the `NOHORNY_SECURITY_ADMIN_PASSWORD` env variable, which needs no configuration file, such as with Docker.
+
+On every startup, the bootstrap administrator is created if missing, and its password and role are restored
+to the configured ones, so the configuration is always the way back in.
+It can change its password from the admin page, but the next restart resets it to the configured one.
+Without a password, no bootstrap administrator is configured and a warning is logged.
+
+Then sign in to `/admin` and open the "Users" view to create the other users, change their password or role, or delete them.
+The admin role grants access to the admin page, the others can only authenticate to the classification API.
+The bootstrap administrator and your own account cannot be demoted nor deleted.
+The same operations are available from the JSON API, see the "Users" section of the API docs.
+
+### Reverse proxy
+
+Forward the whole host to the server, the pages and the API are served from the root.
+Then enable the forwarded headers, so the rate limits and the Mindustry server detection see the original client address:
+
+```yaml
+server:
+  forward-headers-strategy: framework
+```
+
+The proxy must overwrite, rather than append to, the `Forwarded` and `X-Forwarded-*` headers.
+Leave this option set to `none` when the server is directly exposed.
 
 ## Building
 

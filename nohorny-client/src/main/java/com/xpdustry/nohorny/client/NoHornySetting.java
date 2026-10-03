@@ -68,6 +68,17 @@ public interface NoHornySetting<T> {
             eg: "true", "false".
             """, false, Boolean.class, SettingCodec.OfBoolean);
 
+    NoHornySetting<DiscordWebhookImagePolicy> DISCORD_WEBHOOK_IMAGE = new AdminConfigNoHornySetting<>(
+            "discord-webhook-image",
+            """
+            Whether discord alerts should upload the image of the unsafe buildings.
+            "auto" only uploads it when the NoHorny server does not provide a link to the request.
+            eg: "auto", "always", "never".
+            """,
+            DiscordWebhookImagePolicy.AUTO,
+            DiscordWebhookImagePolicy.class,
+            new SettingCodec.OfEnum<>(DiscordWebhookImagePolicy.class));
+
     NoHornySetting<Boolean> DEBUG_TAP =
             new AdminConfigNoHornySetting<>("debug-tap", """
             Toggle nohorny debug tap for admins.
@@ -85,6 +96,7 @@ public interface NoHornySetting<T> {
             DISCORD_WEBHOOK,
             DISCORD_WEBHOOK_NAME,
             DISCORD_WEBHOOK_PROXY,
+            DISCORD_WEBHOOK_IMAGE,
             DEBUG_TAP);
 
     String name();
