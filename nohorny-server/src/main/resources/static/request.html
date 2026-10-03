@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#140b16" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcf5fa" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/assets/nohorny.svg" type="image/svg+xml">
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/momo-trust-display-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/martian-mono-var.woff2" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/app.js"></script>
+<script defer src="/assets/alpine.min.js"></script>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>NoHorny request</title>
+</head>
+<body x-data="request">
+<a class="skip" href="#main">Skip to content</a>
+<noscript><p class="noscript">This page needs JavaScript to load the request.</p></noscript>
+
+<header class="top" id="top"><div class="wrap top-in">
+<a class="brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span></a>
+<nav aria-label="Main"><a class="nav-link opt" href="/">What is NoHorny?</a><a class="nav-link" href="/admin" x-show="admin" x-cloak>Admin panel</a></nav>
+<span class="fill"></span>
+<a class="nav-link gh" href="https://github.com/xpdustry/nohorny"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg><span>GitHub</span></a>
+</div></header>
+
+<main class="wrap req" id="main" tabindex="-1">
+<p class="sr-only" role="status" aria-live="polite" x-text="state === 'loading' ? 'Loading request' : ''"></p>
+
+<template x-if="state === 'loading'">
+<section class="state" aria-busy="true"><span class="spinner lg" aria-hidden="true"></span><p>Loading request…</p></section>
+</template>
+
+<template x-if="state === 'missing'">
+<section class="state card"><span class="badge-ic"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#search-x"/></svg></span>
+<h1>Request not found</h1><p>This request does not exist or was deleted.</p>
+<a class="btn primary" href="/">Go to the home page</a></section>
+</template>
+
+<template x-if="state === 'deleted'">
+<section class="state card"><span class="badge-ic"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#trash"/></svg></span>
+<h1>Request deleted</h1><p>The request and its image are gone. This link no longer works.</p>
+<a class="btn primary" href="/admin">Back to the admin panel</a></section>
+</template>
+
+<template x-if="state === 'error'">
+<section class="state card"><span class="badge-ic bad"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#alert"/></svg></span>
+<h1>Something went wrong</h1><p role="alert" x-text="error"></p>
+<button class="btn primary" type="button" @click="load()">Retry</button></section>
+</template>
+
+<template x-if="state === 'ready' && request">
+<div>
+<a class="crumb" :href="admin ? '/admin' : '/'"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#back"/></svg><span x-text="admin ? 'All requests' : 'Home'"></span></a>
+<div class="req-head">
+<div><h1>Request <span class="mono" x-text="shortId(request.id)"></span></h1>
+<p class="req-sub">Classified <time :datetime="request.createdAt" :title="formatTime(request.createdAt)" x-text="relativeTime(request.createdAt)"></time><template x-if="isServer(request.client)"><span>, submitted by <strong x-text="clientLabel(request.client)"></strong></span></template>.</p></div>
+<div class="req-tags"><span class="chip" x-text="request.version ? `v${request.version}` : 'unknown version'"></span><span class="chip" x-text="duration(request.durationMillis)"></span><span class="chip" x-text="{ none: 'no image kept', stored: 'image kept for review', expired: 'image expired', purged: 'image purged' }[imageState] ?? 'no image'"></span></div>
+</div>
+
+<div class="notice" :data-tone="message?.tone" x-show="message" x-cloak role="status" aria-live="polite"><p x-text="message?.text"></p><button class="btn sm quiet" type="button" @click="message = null">Dismiss</button></div>
+
+<div class="req-grid">
+<section class="stage" aria-labelledby="img-t">
+<h2 class="sr-only" id="img-t">Image</h2>
+<div class="frame" :data-rating="bucketKey" :class="{ 'is-blurred': hasImage && blurred, empty: !hasImage }">
+<template x-if="hasImage"><img :src="request.image.url" :alt="`Rendered build submitted for classification, rated ${verdict(request)}`" @error="imageBroken = true"></template>
+<template x-if="hasImage && blurred"><button class="veil" type="button" @click="reveal()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#eye-off"/></svg><b x-text="flagLabel"></b><small>Click to reveal</small></button></template>
+<template x-if="hasImage && sensitive && !blurred"><button class="btn sm hide-btn" type="button" @click="hide()"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#eye-off"/></svg>Hide image</button></template>
+<template x-if="!hasImage"><div class="placeholder"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#image-off"/></svg><span x-text="placeholder"></span></div></template>
+</div>
+<p class="stage-cap" x-show="imageState === 'none'"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>Safe images are never stored, only the verdict is kept.</p>
+<p class="stage-cap" x-show="imageState === 'expired'"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>The image was deleted when its retention period ended. The verdict stays on record.</p>
+<p class="stage-cap" x-show="imageState === 'purged'"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#lock"/></svg>The image was deleted by hand. The verdict stays on record.</p>
+<section class="card report" aria-labelledby="p-t" x-show="imageState === 'stored'">
+<h2 id="p-t"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#flag"/></svg>Illegal content?</h2>
+<p>Flagged images are kept for a limited time so moderators can review them. If this one shows illegal content, report it to delete it now. This cannot be undone.</p>
+<button class="btn danger" type="button" @click="purge()" :disabled="busy"><span class="spinner" aria-hidden="true" x-show="busy"></span><svg class="ic" aria-hidden="true" x-show="!busy"><use href="/assets/icons.svg#flag"/></svg>Report and delete the image</button>
+</section>
+</section>
+
+<div class="side">
+<section class="card verdict" :data-rating="bucketKey" aria-labelledby="v-t">
+<h2 class="card-title" id="v-t">Verdict</h2>
+<p class="verdict-word" x-text="verdict(request)"></p>
+<div class="score-row" x-show="request.confidence !== null && request.confidence !== undefined"><span class="meter" role="img" :aria-label="nsfwScore(request.confidence)"><i :style="`width:${((request.confidence ?? 0) * 100).toFixed(1)}%`"></i></span><span>NSFW score <b x-text="percent(request.confidence)"></b></span></div>
+<p class="verdict-by" x-show="request.classifier">Decided by <code x-text="request.classifier"></code></p>
+<p class="error-text" x-show="request.error" x-text="`Classification failed: ${request.error}`"></p>
+</section>
+
+<section class="card" aria-labelledby="c-t" x-show="request.steps?.length">
+<h2 class="card-title" id="c-t">Classifier chain <span x-text="`· ${request.steps?.length ?? 0} ${request.steps?.length === 1 ? 'step' : 'steps'}`"></span></h2>
+<ol class="timeline"><template x-for="(step, index) in request.steps ?? []" :key="index"><li :data-rating="stepBucket(step)"><div class="tl-body">
+<span class="tl-name" x-text="step.classifier"></span>
+<span class="tl-meta"><span class="rating" :data-rating="stepBucket(step)" x-text="step.rating ?? 'ERROR'"></span>
+<template x-if="step.confidence !== null && step.confidence !== undefined"><span class="meter" :data-rating="stepBucket(step)" role="img" :aria-label="nsfwScore(step.confidence)"><i :style="`width:${((step.confidence ?? 0) * 100).toFixed(1)}%`"></i></span></template>
+<b x-show="step.confidence !== null && step.confidence !== undefined" x-text="percent(step.confidence)"></b><span x-text="duration(step.durationMillis)"></span></span>
+<span class="error-text" x-show="step.error" x-text="step.error"></span>
+</div></li></template></ol>
+</section>
+
+<section class="card" aria-labelledby="d-t">
+<h2 class="card-title" id="d-t">Details</h2>
+<dl class="kv">
+<div><dt>Created</dt><dd><time :datetime="request.createdAt" :title="request.createdAt" x-text="formatTime(request.createdAt)"></time></dd></div>
+<div><dt>Duration</dt><dd x-text="duration(request.durationMillis)"></dd></div>
+<div><dt>Client</dt><dd><span class="chip" x-show="isServer(request.client)">Server</span><span class="break" :title="request.client?.name" x-text="clientLabel(request.client)"></span></dd></div>
+<div><dt>Plugin</dt><dd><code x-text="request.version ? `v${request.version}` : 'unknown'"></code></dd></div>
+<div><dt>Request ID</dt><dd><code class="break" x-text="request.id"></code></dd></div>
+</dl>
+</section>
+
+
+<section class="card mod" aria-labelledby="m-t" x-show="admin" x-cloak>
+<h2 class="card-title" id="m-t"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#shield"/></svg>Moderation · admins only</h2>
+<dl class="kv">
+<div><dt>Remote address</dt><dd><code class="break" x-text="request.remoteAddress ?? '–'"></code></dd></div>
+<div><dt>API user</dt><dd x-text="request.username ?? 'anonymous'"></dd></div>
+</dl>
+<div class="actions"><button class="btn danger" type="button" @click="remove()" :disabled="busy"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#trash"/></svg>Delete request</button>
+<a class="btn" href="/admin"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#list"/></svg>All requests</a></div>
+</section>
+</div>
+</div>
+</div>
+</template>
+</main>
+
+<dialog class="dialog" x-ref="dialog" @close="closed()" aria-labelledby="dialog-t" aria-describedby="dialog-b">
+<form method="dialog" class="dialog-body">
+<h2 id="dialog-t" x-text="dialog.title"></h2>
+<p id="dialog-b" x-text="dialog.body"></p>
+<div class="dialog-actions"><button class="btn" type="submit" value="cancel" autofocus>Cancel</button><button class="btn danger solid" type="submit" value="confirm" x-text="dialog.action"></button></div>
+</form>
+</dialog>
+
+<footer class="foot"><div class="wrap foot-in">
+<a class="brand" href="/"><img src="/assets/nohorny.svg" alt="" width="34" height="21"><span>NoHorny</span></a>
+<span class="foot-links">© Xpdustry <a href="https://github.com/xpdustry/nohorny/releases">Releases</a><a href="https://xpdustry.com">xpdustry.com</a></span>
+<div class="foot-actions">
+<a class="btn icon" href="https://github.com/xpdustry/nohorny" aria-label="NoHorny on GitHub"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#github"/></svg></a>
+<a class="btn icon" href="https://discord.xpdustry.com" aria-label="Xpdustry Discord"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#discord"/></svg></a>
+<a class="btn icon" href="#top" aria-label="Back to top"><svg class="ic" aria-hidden="true"><use href="/assets/icons.svg#up"/></svg></a>
+</div>
+</div></footer>
+</body>
+</html>

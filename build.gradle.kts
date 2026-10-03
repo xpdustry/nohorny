@@ -388,7 +388,14 @@ project(":nohorny-server") {
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
-        "implementation"("org.springframework.shell:spring-shell-starter:4.0.3")
+        "implementation"("org.springframework.boot:spring-boot-starter-security")
+        "implementation"("org.springframework.boot:spring-boot-starter-data-jpa")
+        "implementation"("org.springframework.boot:spring-boot-starter-flyway")
+        "implementation"("org.xerial:sqlite-jdbc:3.53.4.0")
+        // Provides the SQLite dialect
+        "implementation"("org.hibernate.orm:hibernate-community-dialects")
+        // Required by the Argon2 password encoder
+        "implementation"("org.bouncycastle:bcprov-jdk18on:1.86")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
     }
@@ -414,12 +421,13 @@ project(":nohorny-server") {
     tasks.named<Jar>("bootJar") {
         archiveClassifier = "boot"
         archiveFileName = "${project.name}.jar"
+        // The classifier natives and SQLite need native access, which the launcher reads from the manifest
+        manifest.attributes("Enable-Native-Access" to "ALL-UNNAMED")
     }
 
     tasks.named<BootRun>("bootRun") {
         workingDir = temporaryDir
         jvmArgs("--enable-native-access=ALL-UNNAMED")
-        args("start")
     }
 }
 
