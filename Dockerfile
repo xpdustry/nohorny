@@ -31,7 +31,7 @@ WORKDIR /app
 
 COPY settings.gradle.kts ./
 COPY build.gradle.kts ./
-RUN mkdir nohorny-common nohorny-native nohorny-client nohorny-frontend nohorny-server
+RUN mkdir nohorny-common nohorny-native nohorny-plugin nohorny-frontend nohorny-server
 
 
 FROM gradle AS natives-compile

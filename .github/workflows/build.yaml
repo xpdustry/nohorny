@@ -70,7 +70,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: "Build Plugin"
-        run: ./gradlew :nohorny-common:build :nohorny-client:build
+        run: ./gradlew :nohorny-common:build :nohorny-plugin:build
         env:
           NOHORNY_TEST_PROXYSCRAPE: "${{ github.event_name != 'release' && 'true' || '' }}"
           NOHORNY_TEST_DISCORD_WEBHOOK: "${{ github.event_name != 'release' && secrets.NOHORNY_TEST_DISCORD_WEBHOOK || '' }}"
@@ -78,8 +78,8 @@ jobs:
       - name: "Upload Plugin Jar"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: nohorny-client
-          path: "nohorny-client/build/libs/nohorny-client.jar"
+          name: nohorny-plugin
+          path: "nohorny-plugin/build/libs/nohorny-plugin.jar"
           archive: false
           if-no-files-found: error
 
@@ -91,13 +91,13 @@ jobs:
           path: |
             nohorny-common/build/test-results/test/TEST-*.xml
             nohorny-common/build/reports/
-            nohorny-client/build/test-results/test/TEST-*.xml
-            nohorny-client/build/reports/
+            nohorny-plugin/build/test-results/test/TEST-*.xml
+            nohorny-plugin/build/reports/
 
       # Only the common and client modules are published to Maven
       - name: "Publish to Maven"
         if: ${{ github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
-        run: ./gradlew :nohorny-common:publish :nohorny-client:publish
+        run: ./gradlew :nohorny-common:publish :nohorny-plugin:publish
         env:
           ORG_GRADLE_PROJECT_xpdustryUsername: "${{ secrets.XPDUSTRY_MAVEN_USERNAME }}"
           ORG_GRADLE_PROJECT_xpdustryPassword: "${{ secrets.XPDUSTRY_MAVEN_PASSWORD }}"

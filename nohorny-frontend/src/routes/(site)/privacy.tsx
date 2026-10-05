@@ -5,7 +5,7 @@ import type { JSX } from '@solidjs/web';
 import { createSignal, For, onSettled } from 'solid-js';
 import { api, type Retention } from '../../lib/api';
 import { period } from '../../lib/format';
-import { DISCORD, GITHUB } from '../../lib/links';
+import { DISCORD, EXTERNAL, GITHUB } from '../../lib/links';
 
 export default function Privacy() {
   // Each server sets its own periods, so the browser fetches them rather than the build.
@@ -58,11 +58,11 @@ export default function Privacy() {
       </dl>
       <p class="mt-8 text-sm text-ink-3">
         These are the settings of this instance. NoHorny is{' '}
-        <a class="link" href={GITHUB}>
+        <a class="link" href={GITHUB} {...EXTERNAL}>
           open source
         </a>{' '}
         and can be self-hosted. Questions? Ask in our{' '}
-        <a class="link" href={DISCORD}>
+        <a class="link" href={DISCORD} {...EXTERNAL}>
           Discord
         </a>
         .

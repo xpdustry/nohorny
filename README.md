@@ -4,7 +4,7 @@
   <img src=".github/nohorny.svg" alt="NoHorny logo" width="388">
 </p>
 
-[![Maven](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny-client?color=008080&name=nohorny&prefix=v)](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny-client)
+[![Maven](https://maven.xpdustry.com/api/badge/latest/releases/com/xpdustry/nohorny-plugin?color=008080&name=nohorny&prefix=v)](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny-plugin)
 [![Downloads](https://img.shields.io/github/downloads/xpdustry/nohorny/total?color=008080)](https://github.com/xpdustry/nohorny/releases)
 [![Mindustry 8.0](https://img.shields.io/badge/Mindustry-8.0-008080)](https://github.com/Anuken/Mindustry/releases)
 [![Discord](https://img.shields.io/discord/519293558599974912?color=008080&label=Discord)](https://discord.xpdustry.com)
@@ -29,7 +29,7 @@ This plugin requires at least:
 - Java 25
 - [SLF4MD](https://github.com/xpdustry/slf4md) latest (optional)
 
-Put [`nohorny-client.jar`](https://github.com/xpdustry/nohorny/releases/latest) in your `config/mods` directory and start your mindustry server.
+Put [`nohorny-plugin.jar`](https://github.com/xpdustry/nohorny/releases/latest) in your `config/mods` directory and start your mindustry server.
 
 Now, players placing unsafe buildings will be automatically banned.
 Then the buildings will be deleted and refunded to the player's team.
@@ -102,13 +102,13 @@ repositories {
 
 dependencies {
     compileOnly("com.xpdustry:nohorny-common:VERSION")
-    compileOnly("com.xpdustry:nohorny-client:VERSION")
+    compileOnly("com.xpdustry:nohorny-plugin:VERSION")
 }
 ```
 
 You will then be able to:
 
-- Subscribe to [classifications events](nohorny-client/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) to handle unsafe buildings with your own logic:
+- Subscribe to [classifications events](nohorny-plugin/src/main/java/com/xpdustry/nohorny/plugin/ClassificationEvent.java) to handle unsafe buildings with your own logic:
 
 ```java
 import arc.Events;
@@ -126,12 +126,12 @@ public final class MyPlugin extends Plugin {
 }
 ```
 
-- Programmatically configure NoHorny using its [setting system](nohorny-client/src/main/java/com/xpdustry/nohorny/client/NoHornySetting.java):
+- Programmatically configure NoHorny using its [setting system](nohorny-plugin/src/main/java/com/xpdustry/nohorny/plugin/NoHornySetting.java):
 
 ```java
-import com.xpdustry.nohorny.client.AutoModeratorPolicy;
-import com.xpdustry.nohorny.client.NoHornyClientAuthType;
-import com.xpdustry.nohorny.client.NoHornySetting;
+import com.xpdustry.nohorny.plugin.AutoModeratorPolicy;
+import com.xpdustry.nohorny.plugin.NoHornyClientAuthType;
+import com.xpdustry.nohorny.plugin.NoHornySetting;
 import java.net.URI;
 import mindustry.mod.Plugin;
 
@@ -258,7 +258,7 @@ Leave this option set to `none` when the server is directly exposed.
 
 ## Building
 
-- `./gradlew shadowJar` to compile all modules into jars at `nohorny-client/build/libs/nohorny-client.jar` and `nohorny-server/build/libs/nohorny-server.jar`.
+- `./gradlew shadowJar` to compile all modules into jars at `nohorny-plugin/build/libs/nohorny-plugin.jar` and `nohorny-server/build/libs/nohorny-server.jar`.
 
 - `./gradlew runMindustryServer` to run the client plugin in a local Mindustry server.
 
@@ -277,7 +277,7 @@ Leave this option set to `none` when the server is directly exposed.
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 
-- `./gradlew :nohorny-client:jmh` to run the [benchmarks](nohorny-client/src/jmh/java/com/xpdustry/nohorny/client),
+- `./gradlew :nohorny-plugin:jmh` to run the [benchmarks](nohorny-plugin/src/jmh/java/com/xpdustry/nohorny/plugin),
   use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
 
 ## Releasing

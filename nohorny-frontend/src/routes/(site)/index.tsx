@@ -11,9 +11,9 @@ import {
   ImageIcon,
   ScanSearchIcon,
 } from '../../components/icon';
-import { buttonClass, Chip, LiveIndicator, RATING_FILL, RATING_TEXT } from '../../components/ui';
+import { buttonClass, LiveIndicator, RATING_FILL, RATING_TEXT } from '../../components/ui';
 import { number } from '../../lib/format';
-import { GITHUB } from '../../lib/links';
+import { DOWNLOAD, EXTERNAL, GITHUB, MINDUSTRY } from '../../lib/links';
 import { createLiveStats } from '../../lib/stats';
 
 /** The 8 by 6 heart drawn in the steps, in the colours of the logo: `p` for pink, `d` for deep pink, `.` for empty. */
@@ -81,24 +81,27 @@ export default function Landing() {
             Lewd pixel art, <em class="text-accent-ink not-italic">gone</em> before anyone sees it.
           </h1>
           <p class="max-w-xl text-lg text-ink-2">
-            NoHorny <strong class="font-normal text-ink">detects</strong> NSFW logic displays, canvases, sorters and
-            illuminators on your Mindustry server the moment they are built,{' '}
-            <strong class="font-normal text-ink">removes</strong> them and{' '}
-            <strong class="font-normal text-ink">bans</strong> their author.
+            NoHorny <strong class="font-normal text-accent-ink">detects</strong> NSFW logic displays, canvases, sorters
+            and illuminators on your{' '}
+            <a class="link" href={MINDUSTRY} {...EXTERNAL}>
+              Mindustry
+            </a>{' '}
+            server the moment they are built, <strong class="font-normal text-accent-ink">deletes</strong> them and{' '}
+            <strong class="font-normal text-accent-ink">bans</strong> their author.
           </p>
           <p class="text-ink-2">
             Enjoy this family friendly factory building game as the{' '}
-            <a class="link" href="https://github.com/Anuken">
+            <a class="link" href="https://github.com/Anuken" {...EXTERNAL}>
               cat
             </a>{' '}
             intended it to be.
           </p>
           <div class="flex flex-wrap gap-3">
-            <a class={buttonClass('primary')} href="#install">
+            <a class={buttonClass('primary')} href={DOWNLOAD}>
               <DownloadIcon />
-              Install the plugin
+              Download the plugin
             </a>
-            <a class={buttonClass()} href={GITHUB}>
+            <a class={buttonClass()} href={GITHUB} {...EXTERNAL}>
               <GitHubIcon />
               Source code
             </a>
@@ -175,14 +178,21 @@ export default function Landing() {
               <TickRing />
               <p class="text-ink-2">
                 <strong class="block font-normal text-2xl text-ink">That sliver is NoHorny.</strong>
-                The rest of the tick is all yours, even at 600 block changes a second.
+                The rest of the tick is all yours, even at{' '}
+                <strong class="font-normal text-accent-ink">600 block changes</strong> a second.
               </p>
             </div>
           </article>
           <article class="card flex flex-col gap-6 p-8">
             <div>
               <h3 class="text-3xl">Zero config needed</h3>
-              <p class="mt-2 text-ink-2">Just put the jar in, and no more porn.</p>
+              <p class="mt-2 text-ink-2">
+                Just put the jar in{' '}
+                <code class="rounded-md border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[0.85em] text-ink">
+                  config/mods
+                </code>
+                , and no more porn.
+              </p>
             </div>
             <ul
               class="tree m-auto rounded-xl border border-line bg-bg-2 px-6 py-5 font-mono text-sm"
@@ -195,7 +205,7 @@ export default function Landing() {
                     <ul>
                       <li class="jar flex items-center gap-2">
                         <span class="jar-drop whitespace-nowrap rounded-md border border-line-strong bg-surface-2 px-2 py-0.5 text-ink max-sm:text-xs">
-                          nohorny-client.jar
+                          nohorny-plugin.jar
                         </span>
                         <CheckIcon class="jar-tick size-4 text-safe" />
                       </li>
@@ -215,23 +225,17 @@ export default function Landing() {
               Get the plugin
             </h2>
             <p class="mt-3 text-ink-2">
-              Want to change something? Everything is configurable from your server console, see the{' '}
-              <a class="link" href={`${GITHUB}#configuration`}>
-                configuration reference
-              </a>
-              .
+              You only need{' '}
+              <a class="link" href={`${MINDUSTRY}/releases`} {...EXTERNAL}>
+                Mindustry v159+
+              </a>{' '}
+              and <strong class="font-normal text-accent-ink">Java 25</strong> or above.
             </p>
           </div>
-          <div class="flex flex-col items-start gap-3 md:items-center">
-            <a class={buttonClass('primary')} href={`${GITHUB}/releases/latest/download/nohorny-client.jar`}>
-              <DownloadIcon />
-              Download the plugin
-            </a>
-            <p class="flex gap-2">
-              <Chip>Mindustry 159+</Chip>
-              <Chip>Java 25</Chip>
-            </p>
-          </div>
+          <a class={['self-start md:self-center', ...buttonClass('primary')]} href={DOWNLOAD}>
+            <DownloadIcon />
+            Download the plugin
+          </a>
         </div>
       </section>
     </>

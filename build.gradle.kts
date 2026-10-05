@@ -138,7 +138,7 @@ configure(subprojects - project(":nohorny-native") - project(":nohorny-frontend"
     }
 }
 
-project(":nohorny-client") {
+project(":nohorny-plugin") {
     apply(plugin = "net.kyori.indra.publishing")
     apply(plugin = "com.gradleup.shadow")
     apply(plugin = "com.xpdustry.toxopid")
@@ -150,7 +150,7 @@ project(":nohorny-client") {
             description = description!!,
             author = "Xpdustry",
             version = version.toString(),
-            mainClass = "com.xpdustry.nohorny.client.NoHornyPlugin",
+            mainClass = "com.xpdustry.nohorny.plugin.NoHornyPlugin",
             repository = "xpdustry/nohorny",
             java = true,
             hidden = true,
@@ -537,7 +537,7 @@ project(":nohorny-server") {
     }
 }
 
-configure(listOf(project(":nohorny-common"), project(":nohorny-client"))) {
+configure(listOf(project(":nohorny-common"), project(":nohorny-plugin"))) {
     apply(plugin = "net.kyori.indra.publishing")
     configure<SigningExtension> {
         useInMemoryPgpKeys(findProperty("signingKey")?.toString(), findProperty("signingPassword")?.toString())

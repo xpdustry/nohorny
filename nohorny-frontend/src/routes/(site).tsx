@@ -4,7 +4,7 @@ import type { RouteSectionProps } from '@solidjs/router';
 import { Show } from 'solid-js';
 import { ArrowUpIcon, DiscordIcon, GitHubIcon } from '../components/icon';
 import { Brand, buttonClass } from '../components/ui';
-import { DISCORD, GITHUB } from '../lib/links';
+import { DISCORD, EXTERNAL, GITHUB } from '../lib/links';
 import { isAdmin } from '../lib/session';
 
 const NAV_LINK =
@@ -35,11 +35,11 @@ export default function SiteLayout(props: RouteSectionProps) {
             </Show>
           </nav>
           <span class="flex-1" />
-          <a href={DISCORD} class={NAV_LINK}>
+          <a href={DISCORD} {...EXTERNAL} class={NAV_LINK}>
             <DiscordIcon />
             <span class="max-sm:sr-only">Discord</span>
           </a>
-          <a href={GITHUB} class={NAV_LINK}>
+          <a href={GITHUB} {...EXTERNAL} class={NAV_LINK}>
             <GitHubIcon />
             <span class="max-sm:sr-only">GitHub</span>
           </a>
@@ -55,16 +55,20 @@ export default function SiteLayout(props: RouteSectionProps) {
           <Brand />
           <span class="text-ink-3">© Xpdustry</span>
           <nav aria-label="Footer" class="flex flex-wrap gap-4 text-ink-2 [&_a:hover]:text-ink">
-            <a href={`${GITHUB}/releases`}>Releases</a>
+            <a href={`${GITHUB}/releases`} {...EXTERNAL}>
+              Releases
+            </a>
             <a href="/privacy">Privacy</a>
-            <a href="https://xpdustry.com">xpdustry.com</a>
+            <a href="https://xpdustry.com" {...EXTERNAL}>
+              xpdustry.com
+            </a>
           </nav>
           <span class="flex-1" />
           <div class="flex gap-2 [&_svg]:size-4">
-            <a class={buttonClass('default', 'icon')} href={GITHUB} aria-label="NoHorny on GitHub">
+            <a class={buttonClass('default', 'icon')} href={GITHUB} {...EXTERNAL} aria-label="NoHorny on GitHub">
               <GitHubIcon />
             </a>
-            <a class={buttonClass('default', 'icon')} href={DISCORD} aria-label="Xpdustry Discord">
+            <a class={buttonClass('default', 'icon')} href={DISCORD} {...EXTERNAL} aria-label="Xpdustry Discord">
               <DiscordIcon />
             </a>
             <button
