@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 1 1">
+  <title>Xpdustry cog</title>
+  <defs>
+    <rect id="diagonal-bar" x="0.17" y="0.35" width="0.66" height="0.3" rx="0.05"/>
+    <rect id="x-bar" x="0.08" y="0.44" width="0.84" height="0.12" rx="0.02"/>
+    <rect id="gap-bar" x="0.04" y="0.4" width="0.92" height="0.2" rx="0.06"/>
+    <clipPath id="axis-limit"><circle cx="0.5" cy="0.5" r="0.36"/></clipPath>
+    <clipPath id="diagonal-limit"><circle cx="0.5" cy="0.5" r="0.33"/></clipPath>
+    <clipPath id="x-limit"><circle cx="0.5" cy="0.5" r="0.42"/></clipPath>
+    <clipPath id="gap-limit"><circle cx="0.5" cy="0.5" r="0.46"/></clipPath>
+    <path id="axis-tooth" d="M 0.793939 0.44 L 0.851497 0.448713 A 0.01 0.01 0 0 1 0.86 0.4586 L 0.86 0.5414 A 0.01 0.01 0 0 1 0.851497 0.551287 L 0.793939 0.56 Z"/>
+    <g id="axis-teeth" clip-path="url(#axis-limit)"><use href="#axis-tooth"/><use href="#axis-tooth" transform="rotate(90 .5 .5)"/><use href="#axis-tooth" transform="rotate(180 .5 .5)"/><use href="#axis-tooth" transform="rotate(270 .5 .5)"/></g>
+    <g id="diagonal-teeth" clip-path="url(#diagonal-limit)"><use href="#diagonal-bar" transform="rotate(45 .5 .5)"/><use href="#diagonal-bar" transform="rotate(-45 .5 .5)"/></g>
+    <g id="x-shape" clip-path="url(#x-limit)"><use href="#x-bar" transform="rotate(45 .5 .5)"/><use href="#x-bar" transform="rotate(-45 .5 .5)"/></g>
+    <g id="gap-shape" clip-path="url(#gap-limit)"><use href="#gap-bar" transform="rotate(45 .5 .5)"/><use href="#gap-bar" transform="rotate(-45 .5 .5)"/></g>
+    <mask id="cog-cutouts" x="0" y="0" width="1" height="1" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance"><rect width="1" height="1" fill="white"/><circle cx=".5" cy=".5" r="0.24" fill="black"/><use href="#gap-shape" fill="black"/></mask>
+    <g id="cog-shape" mask="url(#cog-cutouts)"><circle cx=".5" cy=".5" r="0.3"/><use href="#axis-teeth"/><use href="#diagonal-teeth"/></g>
+    <g id="complete-logo"><use href="#cog-shape" fill="#000000"/><use href="#x-shape" fill="#000000"/></g>
+  </defs>
+  <use href="#complete-logo"/>
+</svg>

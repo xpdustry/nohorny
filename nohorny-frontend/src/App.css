@@ -1,0 +1,637 @@
+/* Warm charcoal neutrals with a trace of the logo's aubergine, and one accent, the pink of the logo, for the actions
+   and the selected states. The ratings keep their own colours. The tokens below switch with prefers-color-scheme,
+   and the Tailwind colours read them. */
+@import "tailwindcss";
+@import "@fontsource/momo-trust-display/400.css";
+@import "@fontsource-variable/martian-mono/wght.css";
+
+/* Matches the metrics of Momo Trust Display, so the text does not move when the font loads */
+@font-face {
+  font-family: "Momo Trust Fallback";
+  src: local(Arial), local(Helvetica), local("Liberation Sans");
+  size-adjust: 112.7%;
+  ascent-override: 91%;
+  descent-override: 24.4%;
+  line-gap-override: 0%;
+}
+
+:root {
+  color-scheme: dark;
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The colours of the logo, for the pixel art of the landing page */
+  --brand: #ff7ad9;
+  --brand-deep: #c24e9b;
+  /* The page, the wells and inputs sunk into it, then the cards and what sits on them */
+  --bg: oklch(0.18 0.012 340);
+  --bg-2: oklch(0.16 0.011 340);
+  --surface: oklch(0.215 0.013 340);
+  --surface-2: oklch(0.255 0.014 340);
+  --surface-3: oklch(0.3 0.015 340);
+  --line: oklch(0.3 0.015 340);
+  --line-strong: oklch(0.48 0.016 340);
+  --ink: oklch(0.96 0.006 340);
+  --ink-2: oklch(0.83 0.012 340);
+  --ink-3: oklch(0.69 0.014 340);
+  --accent: oklch(0.76 0.15 350);
+  --accent-hover: oklch(0.81 0.13 350);
+  --accent-ink: oklch(0.8 0.13 350);
+  --on-accent: oklch(0.2 0.04 350);
+  /* The selected tabs and segments. Their edge shows in the light theme, where the fill alone is too faint */
+  --accent-soft: oklch(0.4 0.1 350);
+  --on-accent-soft: oklch(0.97 0.01 350);
+  --accent-edge: var(--accent-soft);
+  --focus: oklch(0.96 0.006 340);
+  --safe: oklch(0.8 0.12 155);
+  --warn: oklch(0.84 0.13 82);
+  --nsfw: oklch(0.72 0.16 25);
+  --failed: var(--ink-3);
+  /* The ratings in the charts, at least 3:1 against the card and validated for colour blindness side by side */
+  --fill-safe: oklch(0.64 0.13 155);
+  --fill-warn: oklch(0.82 0.15 80);
+  --fill-nsfw: oklch(0.62 0.2 28);
+  --fill-failed: oklch(0.6 0.014 340);
+  --danger: var(--nsfw);
+  --danger-hover: oklch(0.77 0.14 25);
+  --danger-soft: oklch(0.28 0.06 25);
+  --on-danger: oklch(0.2 0.05 25);
+  /* Categorical, for the networks. Clear of the rating and accent hues, at least 3:1 against the card, and validated
+     for colour blindness, all pairs compared */
+  --network-1: #0068ad;
+  --network-2: #00a99c;
+  --network-3: #9a7de3;
+  /* The elevation of what floats over the page: the toasts, the tooltips and the dialogs */
+  --float: 0 16px 40px -12px oklch(0 0 0 / 0.6), 0 2px 6px oklch(0 0 0 / 0.3);
+  --backdrop: oklch(0.1 0.01 340 / 0.7);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: oklch(0.985 0.003 340);
+    --bg-2: oklch(0.965 0.004 340);
+    --surface: #fff;
+    --surface-2: oklch(0.965 0.004 340);
+    --surface-3: oklch(0.925 0.006 340);
+    --line: oklch(0.915 0.006 340);
+    --line-strong: oklch(0.72 0.012 340);
+    --ink: oklch(0.21 0.015 340);
+    --ink-2: oklch(0.4 0.018 340);
+    --ink-3: oklch(0.5 0.018 340);
+    --accent: oklch(0.53 0.18 352);
+    --accent-hover: oklch(0.47 0.17 352);
+    --accent-ink: oklch(0.5 0.17 352);
+    --on-accent: #fff;
+    --accent-soft: oklch(0.86 0.08 352);
+    --on-accent-soft: oklch(0.34 0.13 352);
+    --accent-edge: var(--accent);
+    --focus: oklch(0.21 0.015 340);
+    --safe: oklch(0.47 0.11 155);
+    --warn: oklch(0.52 0.11 65);
+    --nsfw: oklch(0.52 0.18 27);
+    --fill-safe: oklch(0.64 0.13 165);
+    --fill-warn: oklch(0.66 0.15 80);
+    --fill-nsfw: oklch(0.56 0.2 24);
+    --fill-failed: oklch(0.62 0.014 340);
+    --danger-hover: oklch(0.46 0.18 27);
+    --danger-soft: oklch(0.96 0.025 27);
+    --on-danger: #fff;
+    --network-1: #2b4c9f;
+    --network-2: #00978a;
+    --network-3: #a780e6;
+    --float: 0 16px 40px -16px oklch(0.2 0.02 340 / 0.25), 0 2px 6px oklch(0.2 0.02 340 / 0.08);
+    --backdrop: oklch(0.2 0.015 340 / 0.45);
+  }
+}
+
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent-soft: var(--on-accent-soft);
+  --color-accent-edge: var(--accent-edge);
+  --color-focus: var(--focus);
+  --color-safe: var(--safe);
+  --color-warn: var(--warn);
+  --color-nsfw: var(--nsfw);
+  --color-failed: var(--failed);
+  --color-fill-safe: var(--fill-safe);
+  --color-fill-warn: var(--fill-warn);
+  --color-fill-nsfw: var(--fill-nsfw);
+  --color-fill-failed: var(--fill-failed);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger: var(--on-danger);
+  --shadow-float: var(--float);
+  --font-sans: "Momo Trust Display", "Momo Trust Fallback", system-ui, sans-serif;
+  --font-mono: "Martian Mono Variable", ui-monospace, monospace;
+}
+
+@layer base {
+  /* The page scrollbar is drawn over the content by OverlayScrollbar, so it never takes width from the layout.
+     Scrollable boxes inside the page keep a thin native one. */
+  html {
+    scroll-padding-top: 5rem;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  body {
+    @apply min-h-dvh bg-bg font-sans text-ink antialiased;
+    letter-spacing: 0.01em;
+    font-synthesis-weight: none;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply leading-tight text-balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  code {
+    @apply font-mono text-[0.84em] tracking-normal;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+  ::selection {
+    @apply bg-accent text-on-accent;
+  }
+  input {
+    caret-color: var(--accent);
+    accent-color: var(--accent);
+  }
+  /* Dialogs rise into place as they open and close at once, so dismissing never waits on an animation */
+  dialog[open] {
+    transition:
+      opacity 200ms var(--ease-snap),
+      translate 200ms var(--ease-snap),
+      scale 200ms var(--ease-snap);
+    @starting-style {
+      opacity: 0;
+      translate: 0 0.5rem;
+      scale: 0.97;
+    }
+  }
+  dialog::backdrop {
+    background: var(--backdrop);
+  }
+  dialog[open]::backdrop {
+    transition: opacity 200ms ease-out;
+    @starting-style {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    dialog[open] {
+      transition: opacity 150ms ease-out;
+      @starting-style {
+        translate: none;
+        scale: none;
+      }
+    }
+  }
+}
+
+@utility wrap {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-8;
+}
+
+@utility link {
+  @apply text-accent-ink underline decoration-1 underline-offset-[0.2em] hover:decoration-current;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* A link among other data, like the id of a request in a list, where the accent would repeat on every row */
+@utility link-quiet {
+  @apply text-ink underline decoration-1 underline-offset-[0.2em] hover:text-accent-ink hover:decoration-current;
+  text-decoration-color: var(--line-strong);
+}
+
+@utility card {
+  @apply rounded-2xl border border-line bg-surface;
+}
+
+@utility label {
+  @apply font-mono text-[0.68rem] tracking-[0.14em] text-ink-3 uppercase;
+}
+
+/* The text inputs of the forms */
+@utility field {
+  @apply h-10 w-full rounded-xl border border-line-strong bg-bg-2 px-3 text-ink transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-11;
+}
+
+/* Slides a notice in when it appears */
+@utility pop-in {
+  transition:
+    opacity 200ms var(--ease-snap),
+    translate 200ms var(--ease-snap);
+  @starting-style {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    @starting-style {
+      translate: none;
+    }
+  }
+}
+
+@utility blur-veil {
+  filter: blur(18px) saturate(1.2);
+  transform: scale(1.1);
+}
+
+/* Fades a flagged image in and out of its blur */
+@utility veil {
+  transition:
+    filter 0.6s var(--ease-snap),
+    transform 0.6s var(--ease-snap);
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* The landing steps share one loop and play in turn, from detection to ban.
+   Without motion, every step shows its outcome. */
+.steps {
+  --loop: 8s;
+}
+[data-step="render"] {
+  --d: calc(var(--loop) * 0.25);
+}
+[data-step="classify"] {
+  --d: calc(var(--loop) * 0.5);
+}
+[data-step="act"] {
+  --d: calc(var(--loop) * 0.75);
+}
+/* Watch: a scanner sweeps the art and leaves it detected, in colour */
+.scan {
+  position: absolute;
+  inset: 0 0 0 100%;
+  backdrop-filter: saturate(0);
+}
+.scan::before {
+  content: "";
+  position: absolute;
+  inset: -0.4rem auto -0.4rem -1px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .steps > li {
+    animation: relay var(--loop) var(--d, 0s) var(--ease-snap) infinite;
+  }
+  [data-step="watch"] .scan {
+    animation: scan var(--loop) linear infinite;
+  }
+  [data-step="watch"] .scan::before {
+    animation: scan-line var(--loop) infinite;
+  }
+  [data-step="watch"] .lit {
+    animation: spot var(--loop) calc(0.09s + var(--x) * 0.18s) ease-out infinite;
+  }
+  [data-step="render"] .pixels {
+    animation: develop var(--loop) var(--d) infinite;
+  }
+  [data-step="render"] .progress {
+    animation: progress var(--loop) var(--d) infinite;
+  }
+  [data-step="classify"] .gauge {
+    animation: sweep var(--loop) var(--d) var(--ease-snap) infinite;
+  }
+  [data-verdict="safe"] {
+    animation: lit-safe var(--loop) var(--d) infinite;
+  }
+  [data-verdict="warn"] {
+    animation: lit-warn var(--loop) var(--d) infinite;
+  }
+  [data-verdict="nsfw"] {
+    animation: lit-nsfw var(--loop) var(--d) var(--ease-snap) infinite;
+  }
+  [data-step="act"] .pixels {
+    animation: thud var(--loop) var(--d) infinite;
+  }
+  [data-step="act"] .pixels i {
+    animation: wipe var(--loop) calc(var(--d) + (var(--x) + var(--y)) * 0.04s) infinite;
+  }
+  [data-step="act"] .stamp {
+    animation: stamp var(--loop) var(--d) var(--ease-snap) infinite;
+  }
+}
+@keyframes relay {
+  0%,
+  27%,
+  100% {
+    border-color: var(--line);
+  }
+  3%,
+  22% {
+    border-color: var(--line-strong);
+  }
+}
+@keyframes scan {
+  0% {
+    left: 0;
+  }
+  18%,
+  100% {
+    left: 100%;
+  }
+}
+@keyframes scan-line {
+  0%,
+  20%,
+  100% {
+    opacity: 0;
+  }
+  2%,
+  17% {
+    opacity: 1;
+  }
+}
+@keyframes spot {
+  0%,
+  8%,
+  100% {
+    transform: none;
+  }
+  2% {
+    transform: scale(1.15);
+  }
+}
+@keyframes develop {
+  0% {
+    clip-path: inset(0 0 100% 0);
+    animation-timing-function: steps(6, jump-start);
+  }
+  16%,
+  100% {
+    clip-path: inset(0);
+  }
+}
+@keyframes progress {
+  0% {
+    transform: scaleX(0);
+    animation-timing-function: steps(6, jump-start);
+  }
+  16%,
+  100% {
+    transform: none;
+  }
+}
+@keyframes sweep {
+  0% {
+    left: 6%;
+  }
+  5% {
+    left: 30%;
+  }
+  9% {
+    left: 58%;
+  }
+  15%,
+  100% {
+    left: 88%;
+  }
+}
+@keyframes lit-safe {
+  0%,
+  6% {
+    opacity: 1;
+  }
+  8%,
+  100% {
+    opacity: 0.35;
+  }
+}
+@keyframes lit-warn {
+  0%,
+  6%,
+  13%,
+  100% {
+    opacity: 0.35;
+  }
+  8%,
+  11% {
+    opacity: 1;
+  }
+}
+@keyframes lit-nsfw {
+  0%,
+  12% {
+    opacity: 0.35;
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  20%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes thud {
+  0%,
+  13%,
+  18%,
+  100% {
+    transform: none;
+  }
+  14% {
+    transform: translateY(3px);
+  }
+  16% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes wipe {
+  0%,
+  94%,
+  100% {
+    transform: none;
+    background: var(--c);
+  }
+  5% {
+    transform: scale(0);
+    background: var(--c);
+  }
+  6% {
+    transform: scale(0);
+    background: var(--surface-3);
+  }
+  10%,
+  88% {
+    transform: none;
+    background: var(--surface-3);
+  }
+}
+/* The stamp keeps its tilt from the rotate property, so only its scale moves */
+@keyframes stamp {
+  0%,
+  11% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  17%,
+  84% {
+    opacity: 1;
+    transform: none;
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+/* A tick passing: the sweep goes around and NoHorny pulses as it is passed */
+@media (prefers-reduced-motion: no-preference) {
+  .tick-sweep {
+    animation: tick-sweep 2.4s linear infinite;
+  }
+  .tick-nh {
+    animation: tick-pulse 2.4s var(--ease-snap) infinite;
+  }
+}
+@keyframes tick-sweep {
+  0% {
+    stroke-dasharray: 0 100;
+  }
+  90%,
+  100% {
+    stroke-dasharray: 100 0;
+  }
+}
+@keyframes tick-pulse {
+  0%,
+  12%,
+  100% {
+    stroke-width: 16;
+  }
+  4% {
+    stroke-width: 22;
+  }
+}
+
+/* The jar dropping into config/mods, each folder linked to its parent by an elbow */
+.tree ul {
+  margin-left: 0.6em;
+  padding-left: 1.35em;
+}
+.tree ul > li {
+  position: relative;
+  padding-top: 0.75em;
+}
+.tree ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1.35em;
+  top: 0;
+  width: 0.9em;
+  height: 1.55em;
+  border-left: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  border-bottom-left-radius: 4px;
+}
+/* The chip is taller than a line, so its elbow reaches further down */
+.tree .jar::before {
+  height: 1.95em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .jar-drop {
+    animation: jar-drop 6s var(--ease-snap) infinite;
+  }
+  .jar-tick {
+    animation: jar-tick 6s var(--ease-snap) infinite;
+  }
+}
+@keyframes jar-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-3em) rotate(-6deg);
+  }
+  6% {
+    opacity: 1;
+  }
+  14% {
+    transform: none;
+  }
+  18% {
+    transform: translateY(-0.3rem);
+  }
+  22%,
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+  96%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes jar-tick {
+  0%,
+  24%,
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  34%,
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The changing word of the landing headline, see RotatingWord */
+@media (prefers-reduced-motion: no-preference) {
+  .word-in {
+    animation: word-in 0.45s var(--ease-snap) both;
+  }
+}
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.3em);
+  }
+}

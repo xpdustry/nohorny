@@ -70,7 +70,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: "Build Plugin"
-        run: ./gradlew :nohorny-common:build :nohorny-client:build
+        run: ./gradlew :nohorny-common:build :nohorny-plugin:build
         env:
           NOHORNY_TEST_PROXYSCRAPE: "${{ github.event_name != 'release' && 'true' || '' }}"
           NOHORNY_TEST_DISCORD_WEBHOOK: "${{ github.event_name != 'release' && secrets.NOHORNY_TEST_DISCORD_WEBHOOK || '' }}"
@@ -78,8 +78,8 @@ jobs:
       - name: "Upload Plugin Jar"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: nohorny-client
-          path: "nohorny-client/build/libs/nohorny-client.jar"
+          name: nohorny-plugin
+          path: "nohorny-plugin/build/libs/nohorny-plugin.jar"
           archive: false
           if-no-files-found: error
 
@@ -91,13 +91,13 @@ jobs:
           path: |
             nohorny-common/build/test-results/test/TEST-*.xml
             nohorny-common/build/reports/
-            nohorny-client/build/test-results/test/TEST-*.xml
-            nohorny-client/build/reports/
+            nohorny-plugin/build/test-results/test/TEST-*.xml
+            nohorny-plugin/build/reports/
 
       # Only the common and client modules are published to Maven
       - name: "Publish to Maven"
         if: ${{ github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
-        run: ./gradlew :nohorny-common:publish :nohorny-client:publish
+        run: ./gradlew :nohorny-common:publish :nohorny-plugin:publish
         env:
           ORG_GRADLE_PROJECT_xpdustryUsername: "${{ secrets.XPDUSTRY_MAVEN_USERNAME }}"
           ORG_GRADLE_PROJECT_xpdustryPassword: "${{ secrets.XPDUSTRY_MAVEN_PASSWORD }}"
@@ -196,6 +196,19 @@ jobs:
       - name: "Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      # Gradle builds the pages with pnpm. The action reads the pnpm version from nohorny-frontend/package.json
+      - name: "Setup pnpm"
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6
+        with:
+          package_json_file: "nohorny-frontend/package.json"
+
+      - name: "Setup Node.js 24"
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          cache-dependency-path: "nohorny-frontend/pnpm-lock.yaml"
+
       # The natives of every platform are bundled in the server jar
       - name: "Download Natives"
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -205,7 +218,7 @@ jobs:
           merge-multiple: true
 
       - name: "Build Server"
-        run: ./gradlew :nohorny-server:build -Pprebuilt_natives=prebuilt-natives
+        run: ./gradlew :nohorny-frontend:check :nohorny-server:build -Pprebuilt_natives=prebuilt-natives
 
       - name: "Upload Server Jar"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
