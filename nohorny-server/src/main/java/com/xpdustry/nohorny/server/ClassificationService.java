@@ -11,7 +11,6 @@ import com.xpdustry.nohorny.server.persistence.Failure;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.ImageStore;
 import com.xpdustry.nohorny.server.persistence.Outcome;
-import com.xpdustry.nohorny.server.persistence.RatingBucket;
 import com.xpdustry.nohorny.server.persistence.Requester;
 import com.xpdustry.nohorny.server.persistence.UuidV7;
 import com.xpdustry.nohorny.server.persistence.Verdict;
@@ -70,8 +69,6 @@ public final class ClassificationService {
 
         final var steps = new ArrayList<ClassificationStep>();
         final var outcome = this.run(id, image, steps);
-        // Safe images are never kept
-        final var store = outcome.outcome().bucket() != RatingBucket.SAFE;
         final var request = new ClassificationRequest(
                 id,
                 createdAt,
@@ -81,11 +78,11 @@ public final class ClassificationService {
                 truncate(submission.version()),
                 submission.requester(),
                 submission.remoteAddress(),
-                store ? ImageState.STORED : ImageState.NONE,
-                store ? ImageStore.hash(bytes) : null,
+                ImageState.STORED,
+                ImageStore.hash(bytes),
                 steps);
 
-        final var recorded = this.record(request, store ? bytes : null);
+        final var recorded = this.record(request, bytes);
 
         return switch (outcome.outcome()) {
             case Verdict verdict ->

@@ -203,7 +203,7 @@ The JSON API used by the plugin and the pages lives under `/api`.
 ### Retention
 
 Every classification is recorded on a best-effort basis: if recording fails, the verdict is still returned, without a
-request page. The image is only stored when it is rated `WARN` or `NSFW`, or when the classification failed.
+request page. The image is stored for every classification, including `SAFE`, for debugging.
 Images are deleted after `nohorny.requests.image-retention` (14 days), requests after `nohorny.requests.retention` (90 days).
 The all-time counters are kept.
 

@@ -39,7 +39,7 @@ nohorny:
       username: admin
       # password: ${NOHORNY_ADMIN_PASSWORD:}
   requests:
-    # How long the images rated WARN or NSFW, or that failed classification, are kept. Safe images are never stored.
+    # How long all submitted images are kept, regardless of their classification.
     image-retention: 14d
     # How long the requests are kept. The all-time statistics are not affected.
     retention: 90d
