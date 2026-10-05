@@ -108,7 +108,7 @@ dependencies {
 
 You will then be able to:
 
-- Subscribe to [classifications events](nohorny-plugin/src/main/java/com/xpdustry/nohorny/plugin/ClassificationEvent.java) to handle unsafe buildings with your own logic:
+- Subscribe to [classifications events](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) to handle unsafe buildings with your own logic:
 
 ```java
 import arc.Events;
@@ -126,24 +126,24 @@ public final class MyPlugin extends Plugin {
 }
 ```
 
-- Programmatically configure NoHorny using its [setting system](nohorny-plugin/src/main/java/com/xpdustry/nohorny/plugin/NoHornySetting.java):
+- Programmatically configure NoHorny using its [setting system](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/NoHornySetting.java):
 
 ```java
-import com.xpdustry.nohorny.plugin.AutoModeratorPolicy;
-import com.xpdustry.nohorny.plugin.NoHornyClientAuthType;
-import com.xpdustry.nohorny.plugin.NoHornySetting;
+import com.xpdustry.nohorny.client.AutoModeratorPolicy;
+import com.xpdustry.nohorny.client.NoHornyClientAuthType;
+import com.xpdustry.nohorny.client.NoHornySetting;
 import java.net.URI;
 import mindustry.mod.Plugin;
 
 public final class MyPlugin extends Plugin {
 
-    @Override
-    public void init() {
-        NoHornySetting.API_ENDPOINT.set(URI.create("https://localhost:8080"));
-        NoHornySetting.API_AUTH_TYPE.set(NoHornyClientAuthType.BEARER);
-        NoHornySetting.API_AUTH_VALUE.set("my-token");
-        NoHornySetting.AUTOMOD_POLICY.set(AutoModeratorPolicy.DELETE_WARN);
-    }
+  @Override
+  public void init() {
+    NoHornySetting.API_ENDPOINT.set(URI.create("https://localhost:8080"));
+    NoHornySetting.API_AUTH_TYPE.set(NoHornyClientAuthType.BEARER);
+    NoHornySetting.API_AUTH_VALUE.set("my-token");
+    NoHornySetting.AUTOMOD_POLICY.set(AutoModeratorPolicy.DELETE_WARN);
+  }
 }
 ```
 
@@ -277,7 +277,7 @@ Leave this option set to `none` when the server is directly exposed.
 
 - `./gradlew spotlessApply` to apply the code formatting and the license header.
 
-- `./gradlew :nohorny-plugin:jmh` to run the [benchmarks](nohorny-plugin/src/jmh/java/com/xpdustry/nohorny/plugin),
+- `./gradlew :nohorny-plugin:jmh` to run the [benchmarks](nohorny-plugin/src/jmh/java/com/xpdustry/nohorny/client),
   use `-Pjmh="<args>"` to pass arguments to JMH, such as `-Pjmh="-p size=100 Tick"`.
 
 ## Releasing
