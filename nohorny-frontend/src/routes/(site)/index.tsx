@@ -22,6 +22,37 @@ const ART_COLORS: Record<string, string> = { '.': 'var(--surface-3)', p: 'var(--
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** The words the headline cycles through, the first one is the prerendered and spoken one. */
+const HERO_WORDS = ['horny', 'porn', 'NSFW', 'hentai'] as const;
+const WORD_MILLIS = 2200;
+
+/**
+ * Cycles through the words with a short slide in, in a slot as wide as the widest word. Screen readers only hear the
+ * first word, so the heading is not announced again on every change. The first word stays when the user prefers
+ * reduced motion.
+ */
+function RotatingWord(props: { words: readonly string[] }) {
+  const [index, setIndex] = createSignal(0);
+  onSettled(() => {
+    if (reducedMotion()) return;
+    const timer = setInterval(() => setIndex((current) => (current + 1) % props.words.length), WORD_MILLIS);
+    return () => clearInterval(timer);
+  });
+  return (
+    <>
+      <span class="sr-only">{props.words[0]}</span>
+      {/* Every word sits in the same cell, the hidden ones reserve the width of the widest so nothing shifts */}
+      <span aria-hidden="true" class="inline-grid">
+        <For each={props.words}>{(word) => <span class="invisible [grid-area:1/1]">{word}</span>}</For>
+        {/* A new element per word, so the slide in plays on every change */}
+        <For each={[props.words[index()]]}>
+          {(word) => <em class="word-in text-accent-ink not-italic [grid-area:1/1]">{word}</em>}
+        </For>
+      </span>
+    </>
+  );
+}
+
 /** Animates the shown value to `target()`, or jumps to it when the user prefers reduced motion. */
 function createCountUp(target: () => number | undefined) {
   const [value, setValue] = createSignal<number | null>(null);
@@ -78,7 +109,7 @@ export default function Landing() {
         aria-labelledby="hero">
         <div class="flex flex-col gap-6">
           <h1 id="hero" class="text-5xl leading-[1.02] sm:text-6xl">
-            Lewd pixel art, <em class="text-accent-ink not-italic">gone</em> before anyone sees it.
+            No more <RotatingWord words={HERO_WORDS} /> in your Mindustry server.
           </h1>
           <p class="max-w-xl text-lg text-ink-2">
             NoHorny <strong class="font-normal text-accent-ink">detects</strong> NSFW logic displays, canvases, sorters
@@ -156,7 +187,7 @@ export default function Landing() {
             Turns it into an image, off the main thread.
           </Step>
           <Step step="classify" icon={<EyeIcon />} title="Classify" art={<Verdicts />}>
-            Rates it safe, warn or NSFW.
+            The NoHorny server rates it safe, warn or NSFW.
           </Step>
           <Step step="act" icon={<GavelIcon />} title="Act" art={<PixelArt banned />}>
             Deletes the build and bans its author.
@@ -222,7 +253,7 @@ export default function Landing() {
         <div class="card flex flex-col justify-between gap-8 p-8 sm:p-12 md:flex-row md:items-center">
           <div class="max-w-xl">
             <h2 id="install-title" class="text-4xl">
-              Get the plugin
+              What are you waiting for?
             </h2>
             <p class="mt-3 text-ink-2">
               You only need{' '}

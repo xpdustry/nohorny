@@ -622,3 +622,16 @@
     transform: none;
   }
 }
+
+/* The changing word of the landing headline, see RotatingWord */
+@media (prefers-reduced-motion: no-preference) {
+  .word-in {
+    animation: word-in 0.45s var(--ease-snap) both;
+  }
+}
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.3em);
+  }
+}
