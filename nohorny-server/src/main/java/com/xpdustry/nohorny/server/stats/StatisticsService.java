@@ -84,11 +84,7 @@ public class StatisticsService {
     public Optional<History> history(final String range) {
         if (range.equals("24h")) {
             final var first = firstHour();
-            final var counts = new HashMap<String, Map<RatingBucket, Long>>();
-            for (final var count : this.requests.countByHourSince(first)) {
-                counts.computeIfAbsent(count.getSlot(), ignored -> new EnumMap<>(RatingBucket.class))
-                        .merge(count.getBucket(), count.getTotal(), Long::sum);
-            }
+            final var counts = bySlot(this.requests.countByHourSince(first));
             final var slots = new ArrayList<History.Slot>(24);
             for (int i = 0; i < 24; i++) {
                 final var start = first.plus(Duration.ofHours(i));
@@ -103,11 +99,7 @@ public class StatisticsService {
             return Optional.empty();
         }
         final var first = firstDay(days);
-        final var counts = new HashMap<String, Map<RatingBucket, Long>>();
-        for (final var count : this.dailyStats.countByDaySince(first.toString())) {
-            counts.computeIfAbsent(count.getSlot(), ignored -> new EnumMap<>(RatingBucket.class))
-                    .merge(count.getBucket(), count.getTotal(), Long::sum);
-        }
+        final var counts = bySlot(this.dailyStats.countByDaySince(first.toString()));
         final var slots = new ArrayList<History.Slot>(days);
         for (int i = 0; i < days; i++) {
             final var day = first.plusDays(i);
@@ -140,6 +132,16 @@ public class StatisticsService {
 
     private static long sum(final List<Long> totals) {
         return totals.stream().mapToLong(Long::longValue).sum();
+    }
+
+    /// @return the counts per slot then per bucket
+    private static Map<String, Map<RatingBucket, Long>> bySlot(final List<SlotCount> counts) {
+        final var slots = new HashMap<String, Map<RatingBucket, Long>>();
+        for (final var count : counts) {
+            slots.computeIfAbsent(count.getSlot(), ignored -> new EnumMap<>(RatingBucket.class))
+                    .merge(count.getBucket(), count.getTotal(), Long::sum);
+        }
+        return slots;
     }
 
     private static Map<RatingBucket, Long> toMap(final List<BucketCount> counts) {

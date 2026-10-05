@@ -80,11 +80,23 @@ export async function login(username: string, password: string): Promise<void> {
   await checkSession(true);
 }
 
+/** Signs out. Rejects with the message to show when the server did not end the session, which stays signed in. */
 export async function logout(): Promise<void> {
+  const post = () => api('/logout', { method: 'POST' });
   try {
-    await api('/logout', { method: 'POST' });
-  } catch {
-    // The local sign out happens anyway.
+    try {
+      await post();
+    } catch (error) {
+      if (statusOf(error) !== 403) throw error;
+      // The CSRF token is stale. Fetch a fresh one and retry once.
+      await probeSession();
+      await post();
+    }
+  } catch (error) {
+    // A 401 means there is no session left to end.
+    if (statusOf(error) !== 401) {
+      throw new Error(describe(error, 'Sign out failed', 'Could not reach the server, you are still signed in.'));
+    }
   }
   signedOut('You are signed out.');
   // Fetches a fresh CSRF cookie for the next sign in.

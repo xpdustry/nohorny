@@ -70,5 +70,7 @@ CREATE TABLE user_account
     admin         INTEGER NOT NULL CHECK (admin IN (0, 1)),
     -- Classifications per minute, shared by all the addresses of the account
     rate_limit    INTEGER NOT NULL CHECK (rate_limit > 0),
+    -- Bumped when the password or the role changes, which ends the sessions signed in before
+    session_version INTEGER NOT NULL,
     created_at    INTEGER NOT NULL
 );

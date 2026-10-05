@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,10 +48,26 @@ public final class StatisticsBroadcaster implements SmartLifecycle {
         emitter.onCompletion(() -> this.emitters.remove(emitter));
         emitter.onTimeout(() -> this.emitters.remove(emitter));
         emitter.onError(error -> this.emitters.remove(emitter));
-        emitter.send(this.event());
-        if (this.running) {
-            this.emitters.add(emitter);
-        } else {
+        if (!this.running) {
+            emitter.send(this.event());
+            emitter.complete();
+            return emitter;
+        }
+        try {
+            // Registered then greeted on the push thread: a classification recorded before the registration is in the
+            // first snapshot, one recorded after schedules a push that runs behind it
+            this.executor.execute(() -> {
+                this.emitters.add(emitter);
+                try {
+                    this.send(emitter, this.event());
+                } catch (final RuntimeException exception) {
+                    log.error("Failed to send the first statistics", exception);
+                    this.emitters.remove(emitter);
+                    emitter.completeWithError(exception);
+                }
+            });
+        } catch (final RejectedExecutionException exception) {
+            // Stopping, the stream ends right away
             emitter.complete();
         }
         return emitter;

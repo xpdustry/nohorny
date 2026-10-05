@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -20,21 +21,19 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
@@ -61,28 +60,17 @@ public class SecurityConfiguration {
         return username -> {
             final var account = users.findById(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Unknown user: " + username));
-            return User.withUsername(account.getUsername())
-                    .password(account.getPasswordHash())
-                    .roles(account.isAdmin() ? new String[] {"USER", ADMIN_ROLE} : new String[] {"USER"})
-                    .build();
+            final var authorities = account.isAdmin()
+                    ? List.of(new SimpleGrantedAuthority("ROLE_USER"), new SimpleGrantedAuthority(ADMIN_AUTHORITY))
+                    : List.of(new SimpleGrantedAuthority("ROLE_USER"));
+            return new AccountDetails(
+                    account.getUsername(), account.getPasswordHash(), authorities, account.getSessionVersion());
         };
-    }
-
-    /// Tracks the sessions per user, so they can be expired when the user changes.
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
-
-    /// Removes the destroyed sessions from the registry.
-    @Bean
-    public HttpSessionEventPublisher httpSessionEventPublisher() {
-        return new HttpSessionEventPublisher();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            final HttpSecurity http, final JsonMapper mapper, final SessionRegistry sessions) {
+            final HttpSecurity http, final JsonMapper mapper, final UserAccountRepository users) {
         final var unauthorized = new JsonStatusWriter(mapper, HttpStatus.UNAUTHORIZED, "unauthorized");
         final var forbidden = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "forbidden");
         final var invalidCsrf = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "invalid csrf token");
@@ -121,10 +109,8 @@ public class SecurityConfiguration {
                         .failureHandler((request, response, exception) -> unauthorized.write(response)))
                 .logout(logout -> logout.logoutUrl("/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
-                // Unlimited sessions per user, registered so they can be expired, see UserService
-                .sessionManagement(session -> session.maximumSessions(-1)
-                        .sessionRegistry(sessions)
-                        .expiredSessionStrategy(event -> unauthorized.write(event.getResponse())))
+                // Ends the sessions signed in before their account changed, see UserAccount
+                .addFilterAfter(new SessionRevalidationFilter(users), SecurityContextHolderFilter.class)
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(unauthorized)
                         .accessDeniedHandler((request, response, exception) -> {

@@ -52,11 +52,8 @@ public final class UserController {
 
     @PutMapping(path = "/{username}/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void onSetPassword(
-            final @PathVariable String username,
-            final @Valid @RequestBody SetPassword body,
-            final Authentication authentication) {
-        this.users.setPassword(username, body.password(), authentication.getName());
+    public void onSetPassword(final @PathVariable String username, final @Valid @RequestBody SetPassword body) {
+        this.users.setPassword(username, body.password());
     }
 
     @PutMapping(path = "/{username}/admin", consumes = MediaType.APPLICATION_JSON_VALUE)

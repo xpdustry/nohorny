@@ -410,7 +410,18 @@ project(":nohorny-frontend") {
         outputs.dir("node_modules")
     }
 
-    val sources = files("src", "public", "package.json", "tsconfig.json", "vite.config.ts", "biome.json")
+    // The lockfile too, a dependency change alone must rebuild the bundle
+    val sources = files(
+        "src",
+        "public",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "file-routes.d.ts",
+        "tsconfig.json",
+        "vite.config.ts",
+        "biome.json",
+    )
 
     val build = tasks.register<Pnpm>("pnpmBuild") {
         description = "Build the frontend with Vite."

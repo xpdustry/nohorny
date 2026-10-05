@@ -13,9 +13,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.session.SessionInformation;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 /// Manages the user accounts and the bootstrap administrator.
 ///
-/// The sessions of a user are expired when its password or role changes, or when it is deleted, so they sign in again
-/// with their current permissions.
+/// The sessions of a user end when its password or role changes, or when it is deleted, so they sign in again with
+/// their current permissions, see `SessionRevalidationFilter`.
 @Service
 public class UserService {
 
@@ -32,19 +29,16 @@ public class UserService {
 
     private final UserAccountRepository users;
     private final PasswordEncoder passwordEncoder;
-    private final SessionRegistry sessions;
     private final ApiSecurityProperties.Admin bootstrap;
     private final int defaultRateLimit;
 
     public UserService(
             final UserAccountRepository users,
             final PasswordEncoder passwordEncoder,
-            final SessionRegistry sessions,
             final ApiSecurityProperties properties,
             final RateLimitProperties limits) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
-        this.sessions = sessions;
         this.bootstrap = properties.admin();
         this.defaultRateLimit = limits.user();
     }
@@ -111,18 +105,15 @@ public class UserService {
         log.info("Set the rate limit of user {} to {} per minute", username, rateLimit);
     }
 
-    /// @param caller the user doing the change, keeps its own sessions
+    /// Ends the sessions of the user, the caller included when it changes its own password.
     @Transactional
-    public void setPassword(final String username, final String password, final String caller) {
+    public void setPassword(final String username, final String password) {
         final var account = this.find(username);
         if (this.isBootstrap(username)) {
             throw conflict("cannot change the password of the bootstrap administrator");
         }
         account.setPasswordHash(this.encode(password));
         log.info("Changed the password of user {}", username);
-        if (!username.equals(caller)) {
-            this.expireSessions(username);
-        }
     }
 
     /// @param caller the user doing the change, cannot demote itself
@@ -145,7 +136,6 @@ public class UserService {
         }
         account.setAdmin(admin);
         log.info("Set admin={} for user {}", admin, username);
-        this.expireSessions(username);
     }
 
     /// @param caller the user doing the deletion, cannot delete itself
@@ -160,22 +150,12 @@ public class UserService {
         }
         this.users.delete(account);
         log.info("Deleted user {}", username);
-        this.expireSessions(username);
     }
 
     private UserAccount find(final String username) {
         return this.users
                 .findById(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found"));
-    }
-
-    private void expireSessions(final String username) {
-        for (final var principal : this.sessions.getAllPrincipals()) {
-            if (principal instanceof UserDetails details
-                    && details.getUsername().equals(username)) {
-                this.sessions.getAllSessions(principal, false).forEach(SessionInformation::expireNow);
-            }
-        }
     }
 
     private UserView toView(final UserAccount account) {

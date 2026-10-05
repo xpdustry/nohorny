@@ -20,6 +20,8 @@ public class UserAccount extends AssignedIdEntity<String> {
 
     private int rateLimit;
 
+    private long sessionVersion;
+
     @Convert(converter = EpochMillisConverter.class)
     private Instant createdAt;
 
@@ -53,16 +55,27 @@ public class UserAccount extends AssignedIdEntity<String> {
         return this.passwordHash;
     }
 
+    /// Ends the sessions of the account.
     public void setPasswordHash(final String passwordHash) {
         this.passwordHash = passwordHash;
+        this.sessionVersion++;
     }
 
     public boolean isAdmin() {
         return this.admin;
     }
 
+    /// Ends the sessions of the account if the role changes.
     public void setAdmin(final boolean admin) {
-        this.admin = admin;
+        if (this.admin != admin) {
+            this.admin = admin;
+            this.sessionVersion++;
+        }
+    }
+
+    /// @return the version the sessions must carry, see `SessionRevalidationFilter`
+    public long getSessionVersion() {
+        return this.sessionVersion;
     }
 
     public int getRateLimit() {

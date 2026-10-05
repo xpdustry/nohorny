@@ -11,6 +11,15 @@ import { checkSession, login, logout, session } from '../lib/session';
 
 export default function AdminLayout(props: RouteSectionProps) {
   onSettled(() => void checkSession());
+  const [signOutFailure, setSignOutFailure] = createSignal<string | null>(null);
+  async function signOut() {
+    setSignOutFailure(null);
+    try {
+      await logout();
+    } catch (error) {
+      setSignOutFailure((error as Error).message);
+    }
+  }
   return (
     <>
       <Title>NoHorny admin</Title>
@@ -26,10 +35,15 @@ export default function AdminLayout(props: RouteSectionProps) {
                 You are signed in as <b class="font-normal text-ink">{session.session?.username}</b>, which is not an
                 administrator.
               </p>
-              <Button onClick={() => void logout()}>
+              <Button onClick={() => void signOut()}>
                 <LogOutIcon />
                 Sign out
               </Button>
+              <Show when={signOutFailure()}>
+                <p role="alert" class="text-danger text-sm">
+                  {signOutFailure()}
+                </p>
+              </Show>
             </State>
           </Gate>
         </Match>
@@ -162,7 +176,7 @@ function AdminShell(props: { children: JSX.Element }) {
               class={buttonClass('default', 'icon')}
               aria-label="Sign out"
               title="Sign out"
-              onClick={() => void logout()}>
+              onClick={() => logout().catch((error: Error) => admin.notify(error.message, 'error'))}>
               <LogOutIcon />
             </button>
           </div>
