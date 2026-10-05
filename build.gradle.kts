@@ -59,8 +59,8 @@ configure<SpotlessExtension> {
     }
 }
 
-// nohorny-native is a pure CMake project
-configure(subprojects - project(":nohorny-native")) {
+// nohorny-native is a CMake project and nohorny-frontend is a pnpm project
+configure(subprojects - project(":nohorny-native") - project(":nohorny-frontend")) {
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "net.kyori.indra")
     apply(plugin = "net.ltgt.errorprone")
@@ -379,6 +379,87 @@ project(":nohorny-native") {
     }
 }
 
+abstract class Pnpm : DefaultTask() {
+    @get:Inject
+    abstract val exec: ExecOperations
+
+    @get:Internal
+    abstract val workingDirectory: DirectoryProperty
+
+    @get:Input
+    abstract val arguments: ListProperty<String>
+
+    @TaskAction
+    fun run() {
+        exec.exec {
+            workingDir(this@Pnpm.workingDirectory)
+            // pnpm 12 is a native executable. It switches to the version in the packageManager field of package.json
+            commandLine(listOf("pnpm") + arguments.get())
+        }
+    }
+}
+
+project(":nohorny-frontend") {
+    apply(plugin = "base")
+
+    val install = tasks.register<Pnpm>("pnpmInstall") {
+        description = "Install the dependencies of the frontend with pnpm."
+        workingDirectory = layout.projectDirectory
+        arguments = listOf("install", "--frozen-lockfile")
+        inputs.files("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml")
+        outputs.dir("node_modules")
+    }
+
+    val sources = files("src", "public", "package.json", "tsconfig.json", "vite.config.ts", "biome.json")
+
+    val build = tasks.register<Pnpm>("pnpmBuild") {
+        description = "Build the frontend with Vite."
+        dependsOn(install)
+        workingDirectory = layout.projectDirectory
+        arguments = listOf("run", "build")
+        inputs.files(sources)
+        outputs.dir("dist")
+    }
+
+    val lint = tasks.register<Pnpm>("pnpmLint") {
+        description = "Lint and format check the frontend with Biome."
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        dependsOn(install)
+        workingDirectory = layout.projectDirectory
+        arguments = listOf("run", "lint")
+        inputs.files(sources)
+    }
+
+    val typecheck = tasks.register<Pnpm>("pnpmCheck") {
+        description = "Type check the frontend."
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        dependsOn(install)
+        workingDirectory = layout.projectDirectory
+        arguments = listOf("run", "check")
+        inputs.files(sources, "file-routes.d.ts")
+    }
+
+    tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME) { dependsOn(lint, typecheck) }
+
+    // Puts the build under static/, the directory the server serves its pages from
+    val bundle = tasks.register<Sync>("bundleFrontend") {
+        description = "Lay out the frontend build as the static resources of the server."
+        from(build.map { layout.projectDirectory.dir("dist/client") }) {
+            into("static")
+            exclude(".vite/**")
+        }
+        into(layout.buildDirectory.dir("generated/frontend"))
+    }
+
+    tasks.named(LifecycleBasePlugin.ASSEMBLE_TASK_NAME) { dependsOn(bundle) }
+
+    configurations.register("frontend") {
+        isCanBeConsumed = true
+        isCanBeResolved = false
+        outgoing.artifact(layout.buildDirectory.dir("generated/frontend")) { builtBy(bundle) }
+    }
+}
+
 project(":nohorny-server") {
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")
@@ -388,7 +469,14 @@ project(":nohorny-server") {
 
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
-        "implementation"("org.springframework.shell:spring-shell-starter:4.0.3")
+        "implementation"("org.springframework.boot:spring-boot-starter-security")
+        "implementation"("org.springframework.boot:spring-boot-starter-data-jpa")
+        "implementation"("org.springframework.boot:spring-boot-starter-flyway")
+        "implementation"("org.xerial:sqlite-jdbc:3.53.4.0")
+        // Provides the SQLite dialect
+        "implementation"("org.hibernate.orm:hibernate-community-dialects")
+        // Required by the Argon2 password encoder
+        "implementation"("org.bouncycastle:bcprov-jdk18on:1.86")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
     }
@@ -403,9 +491,20 @@ project(":nohorny-server") {
         "natives"(project(path = ":nohorny-native", configuration = "natives"))
     }
     val prebuilt = providers.gradleProperty("prebuilt_natives").map { rootProject.file(it) }
-    the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME].resources.srcDir(
-        if (prebuilt.isPresent) prebuilt else natives,
-    )
+    val main = the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME]
+    main.resources.srcDir(if (prebuilt.isPresent) prebuilt else natives)
+
+    // The pages are bundled as resources, either built here by nohorny-frontend
+    //   or taken from -Pprebuilt_frontend=<dir> with a static/ directory. The Docker build passes the latter
+    val frontend = configurations.register("frontend") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+    }
+    dependencies {
+        "frontend"(project(path = ":nohorny-frontend", configuration = "frontend"))
+    }
+    val prebuiltFrontend = providers.gradleProperty("prebuilt_frontend").map { rootProject.file(it) }
+    main.resources.srcDir(if (prebuiltFrontend.isPresent) prebuiltFrontend else frontend)
 
     tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
         archiveClassifier = "plain"
@@ -414,12 +513,13 @@ project(":nohorny-server") {
     tasks.named<Jar>("bootJar") {
         archiveClassifier = "boot"
         archiveFileName = "${project.name}.jar"
+        // The classifier natives and SQLite need native access, which the launcher reads from the manifest
+        manifest.attributes("Enable-Native-Access" to "ALL-UNNAMED")
     }
 
     tasks.named<BootRun>("bootRun") {
         workingDir = temporaryDir
         jvmArgs("--enable-native-access=ALL-UNNAMED")
-        args("start")
     }
 }
 

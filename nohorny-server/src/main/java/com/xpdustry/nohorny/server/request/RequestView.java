@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: MIT
+package com.xpdustry.nohorny.server.request;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.xpdustry.nohorny.common.Rating;
+import java.time.Instant;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
+
+/// The JSON representation of a classification request.
+///
+/// @param restricted the administrator only fields, omitted entirely for the other callers
+public record RequestView(
+        String id,
+        Instant createdAt,
+        long durationMillis,
+        boolean successful,
+        @Nullable Rating rating,
+        @Nullable Double confidence,
+        String classifier,
+        @Nullable String error,
+        @Nullable String version,
+        Client client,
+        Image image,
+        List<Step> steps,
+        @JsonUnwrapped @Nullable Restricted restricted) {
+
+    /// @param type `mindustry-server`, `localhost` or `unknown`
+    /// @param network the normalized network name of a listed Mindustry server
+    public record Client(String type, @Nullable String network) {}
+
+    /// @param url only present when the image is stored
+    public record Image(
+            String state,
+            @Nullable String mediaType,
+
+            @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
+
+    public record Step(
+            String classifier,
+            @Nullable Rating rating,
+            @Nullable Double confidence,
+            long durationMillis,
+            @Nullable String error) {}
+
+    public record Restricted(String remoteAddress, @Nullable String username) {}
+}

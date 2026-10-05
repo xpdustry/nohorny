@@ -6,6 +6,7 @@
 ARG PREBUILT_NATIVES
 ARG NATIVES_STAGE=${PREBUILT_NATIVES:+prebuilt}
 
+
 FROM docker.io/eclipse-temurin:26-jdk@sha256:84edabdaa446fcae091de3df12b15e2b6b7fd5b7df78c4a9dd58d8c95ed3fcad AS gradle
 
 ENV GRADLE_HOME=/opt/gradle \
@@ -30,7 +31,8 @@ WORKDIR /app
 
 COPY settings.gradle.kts ./
 COPY build.gradle.kts ./
-RUN mkdir nohorny-common nohorny-native nohorny-client nohorny-server
+RUN mkdir nohorny-common nohorny-native nohorny-client nohorny-frontend nohorny-server
+
 
 FROM gradle AS natives-compile
 
@@ -49,19 +51,43 @@ RUN --mount=type=cache,target=/cache/.gradle \
     gradle :nohorny-native:cmakeBuild --no-daemon --stacktrace \
     && cp -r nohorny-native/build/generated/native /natives
 
+
 FROM scratch AS natives-prebuilt
 
 ARG PREBUILT_NATIVES
 COPY ${PREBUILT_NATIVES}/ /natives/
 
+
 # Only the selected stage is built
 FROM natives-${NATIVES_STAGE:-compile} AS natives
+
+
+FROM ghcr.io/pnpm/pnpm:12.9.1@sha256:77123fd40a39db0eb8be6bddfcf0cea15e000122b9221ccce2e4415be29050f2 AS frontend
+
+RUN pnpm runtime set node 24 -g
+
+WORKDIR /app
+
+COPY nohorny-frontend/package.json nohorny-frontend/pnpm-lock.yaml nohorny-frontend/pnpm-workspace.yaml ./
+
+# The store cache lives outside /pnpm. A mount over /pnpm/store would hide the Node.js that pnpm installed
+RUN --mount=type=cache,id=pnpm,target=/var/cache/pnpm \
+    pnpm install --store-dir /var/cache/pnpm --frozen-lockfile
+
+COPY nohorny-frontend/ ./
+
+# The same layout as the bundleFrontend task, the static/ resources of the server
+RUN pnpm run build \
+    && mkdir /frontend \
+    && cp -r dist/client /frontend/static \
+    && rm -rf /frontend/static/.vite
+
 
 FROM gradle AS build
 
 ARG IS_RELEASE=false
 
-ENV GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives"
+ENV GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives -Pprebuilt_frontend=prebuilt-frontend"
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
@@ -69,9 +95,11 @@ RUN --mount=type=cache,target=/cache/.gradle \
 COPY nohorny-common/src/ nohorny-common/src/
 COPY nohorny-server/src/ nohorny-server/src/
 COPY --from=natives /natives prebuilt-natives/
+COPY --from=frontend /frontend prebuilt-frontend/
 
 RUN --mount=type=cache,target=/cache/.gradle \
-    gradle build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
+    gradle :nohorny-server:build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
+
 
 FROM docker.io/eclipse-temurin:26-jre@sha256:4a9c6bc048bbe4782482fe376bb5f753a3ac6d91381bc133cfd1ae367b33d8a9 AS runtime
 
@@ -90,8 +118,12 @@ ENV JAVA_OPTS="-server \
     --enable-native-access=ALL-UNNAMED \
     -Djava.security.egd=file:/dev/./urandom"
 
+ENV NOHORNY_DATABASE_PATH=/data/database.sqlite
+
+VOLUME ["/data"]
+
 USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar start"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar nohorny-server.jar"]
