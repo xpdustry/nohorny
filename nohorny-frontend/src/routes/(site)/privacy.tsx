@@ -31,9 +31,9 @@ export default function Privacy() {
       'What is kept?',
       () => (
         <>
-          The image up to <strong class="font-normal text-ink">{image()}</strong>, the verdict and the IP address of the
-          sender up to <strong class="font-normal text-ink">{request()}</strong>. Aggregated stats are kept as long as
-          necessary.
+          Every submitted image up to <strong class="font-normal text-ink">{image()}</strong>, the verdict and the IP
+          address of the sender up to <strong class="font-normal text-ink">{request()}</strong>. Aggregated stats are
+          kept as long as necessary.
         </>
       ),
     ],
