@@ -15,7 +15,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-/// The image files, named by the SHA-256 hash of their content.
+/// The JPEG image files, named by the SHA-256 hash of their content.
 ///
 /// Identical images share one file, `request.image_hash` references it. The file lives at `ab/abcdef...` under the
 /// directory, the first two hex characters of the hash shard the files over 256 directories.

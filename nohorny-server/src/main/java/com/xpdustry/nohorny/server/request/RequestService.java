@@ -8,10 +8,12 @@ import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.ImageStore;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.RequesterType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +40,8 @@ public class RequestService {
         this.images = images;
     }
 
-    /// Records a request with its steps and counts it in the all-time statistics, those of its network included.
+    /// Records a request with its steps and counts it in the all-time statistics, those of its Mindustry network
+    /// included.
     ///
     /// @param image the image to store, given if and only if the image state of the request is [ImageState#STORED]
     @Transactional
@@ -51,8 +54,9 @@ public class RequestService {
         }
         this.requests.save(request);
         this.dailyStats.increment(request.getCreatedAt(), request.bucket());
-        final var network = request.getNetwork();
-        if (network != null) {
+        final var requester = request.getRequester();
+        final var network = requester.name();
+        if (requester.type() == RequesterType.MINDUSTRY_NETWORK && network != null) {
             this.networkStats.increment(request.getCreatedAt(), network);
         }
     }
@@ -69,15 +73,10 @@ public class RequestService {
         return this.requests.findPage(bucket, before, limit);
     }
 
-    /// @return the image of the request, empty if the request does not exist
-    public Optional<RequestImage> findImage(final String id) {
-        return this.requests.findById(id).map(request -> {
-            final var hash = request.getImageHash();
-            final var content = request.getImageState() == ImageState.STORED && hash != null
-                    ? this.images.find(hash).orElse(null)
-                    : null;
-            return new RequestImage(request.getImageMediaType(), content);
-        });
+    /// @return the JPEG image file of the request, empty if it is not stored or its file is missing
+    public Optional<Resource> findImage(final ClassificationRequest request) {
+        final var hash = request.getImageHash();
+        return request.getImageState() == ImageState.STORED && hash != null ? this.images.find(hash) : Optional.empty();
     }
 
     /// Deletes the image and marks it as purged, whatever its state.

@@ -21,7 +21,7 @@ export interface History {
   slots: { start: string; ratings: Ratings }[];
 }
 
-/** The requests per listed Mindustry network. The rest of `total` comes from the other clients. */
+/** The requests per listed Mindustry network without an account. The rest of `total` comes from users and anonymous clients. */
 export interface Networks {
   range: HistoryRange;
   total: number;
@@ -47,6 +47,12 @@ export interface Client {
   network: string | null;
 }
 
+export interface Requester {
+  type: 'user' | 'mindustry-network' | 'anonymous';
+  /** The username of a user, the network of a listed Mindustry server if it has one. */
+  name: string | null;
+}
+
 export interface Request {
   id: string;
   createdAt: string;
@@ -58,10 +64,11 @@ export interface Request {
   error: string | null;
   version: string | null;
   client: Client;
-  image: { state: 'none' | 'stored' | 'expired' | 'purged'; mediaType: string | null; url?: string };
+  image: { state: 'none' | 'stored' | 'expired' | 'purged'; url?: string };
   steps: Step[];
+  /** Only sent to the administrators, with `remoteAddress`. */
   remoteAddress?: string;
-  username?: string | null;
+  requester?: Requester;
 }
 
 export interface Page<T> {
@@ -78,6 +85,8 @@ export interface Session {
 export interface User {
   username: string;
   admin: boolean;
+  /** Classifications per minute, shared by all the addresses of the account. */
+  rateLimit: number;
   createdAt: string;
   bootstrap: boolean;
 }

@@ -7,6 +7,7 @@ import com.xpdustry.nohorny.server.persistence.ClassificationStep;
 import com.xpdustry.nohorny.server.persistence.Failure;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.RequesterType;
 import com.xpdustry.nohorny.server.persistence.Verdict;
 import com.xpdustry.nohorny.server.security.SecurityConfiguration;
 import java.util.UUID;
@@ -56,14 +57,12 @@ public final class RequestController {
 
     @GetMapping("/{id}/image")
     public ResponseEntity<Resource> onGetImage(final @PathVariable String id) {
-        final var image = this.requests.findImage(id).orElseThrow(RequestController::notFound);
-        final var mediaType = image.mediaType();
-        final var content = image.content();
-        if (mediaType == null || content == null) {
-            throw new ResponseStatusException(HttpStatus.GONE, "image not available");
-        }
+        final var request = this.requests.find(id).orElseThrow(RequestController::notFound);
+        final var content = this.requests
+                .findImage(request)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.GONE, "image not available"));
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(mediaType))
+                .contentType(MediaType.IMAGE_JPEG)
                 .cacheControl(CacheControl.noStore())
                 .body(content);
     }
@@ -103,10 +102,11 @@ public final class RequestController {
     }
 
     private RequestView toView(final ClassificationRequest request, final boolean admin) {
-        // The network recorded with the request, older requests and the other clients are looked up
-        final var network = request.getNetwork();
-        final var client = network != null
-                ? new MindustryClientDirectory.ClientInfo(MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER, network)
+        // A Mindustry network requester was listed when it sent the request, the other clients are looked up
+        final var requester = request.getRequester();
+        final var client = requester.type() == RequesterType.MINDUSTRY_NETWORK
+                ? new MindustryClientDirectory.ClientInfo(
+                        MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER, requester.name())
                 : this.clients.whois(request.getRemoteAddress());
         final var verdict = request.getOutcome() instanceof Verdict value ? value : null;
         final var failure = request.getOutcome() instanceof Failure value ? value : null;
@@ -123,12 +123,18 @@ public final class RequestController {
                 new RequestView.Client(client.type(), client.network()),
                 new RequestView.Image(
                         request.getImageState().key(),
-                        request.getImageMediaType(),
                         request.getImageState() == ImageState.STORED
                                 ? "/api/requests/" + request.getId() + "/image"
                                 : null),
                 request.getSteps().stream().map(RequestController::toView).toList(),
-                admin ? new RequestView.Restricted(request.getRemoteAddress(), request.getUsername()) : null);
+                admin ? restricted(request) : null);
+    }
+
+    private static RequestView.Restricted restricted(final ClassificationRequest request) {
+        final var requester = request.getRequester();
+        return new RequestView.Restricted(
+                request.getRemoteAddress(),
+                new RequestView.Requester(requester.type().key(), requester.name()));
     }
 
     private static RequestView.Step toView(final ClassificationStep step) {

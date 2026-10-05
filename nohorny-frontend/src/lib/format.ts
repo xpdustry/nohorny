@@ -1,6 +1,6 @@
 // Formatting of numbers, dates and requests for display.
 
-import type { Bucket, Client, Request, Step } from './api';
+import type { Bucket, Client, Request, Requester, Step } from './api';
 
 const numberFormat = new Intl.NumberFormat();
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
@@ -103,6 +103,19 @@ export function clientLabel(client: Client): string {
   if (client.type === 'localhost') return 'Localhost';
   if (!isServer(client)) return 'Unknown client';
   return client.network ?? 'Mindustry server';
+}
+
+/** 'User bob', 'Mindustry network Foo', or 'Anonymous'. */
+export function requesterLabel(requester: Requester | undefined): string {
+  if (!requester) return '–';
+  switch (requester.type) {
+    case 'user':
+      return `User ${requester.name}`;
+    case 'mindustry-network':
+      return requester.name ? `Mindustry network ${requester.name}` : 'Unnamed Mindustry server';
+    case 'anonymous':
+      return 'Anonymous';
+  }
 }
 
 /** 'vit' for 'vit/onnx-community/nsfw_image_detection-ONNX:1ceb3c7', the model details go in a tooltip. */

@@ -89,7 +89,7 @@ You can choose whether the image is also uploaded to discord with `config nohorn
 #### Debugging
 
 Set `nohorny-debug-tap` to `true` to enable admin-only debugging. When enabled, double-tapping a tracked display,
-canvas, sorter or illuminator group labels the detected group in-game, then creates a PNG render and binary dump in `config/mods/nohorny/debug/`.
+canvas, sorter or illuminator group labels the detected group in-game, then creates a JPEG render and binary dump in `config/mods/nohorny/debug/`.
 
 ### Developing
 
@@ -208,8 +208,17 @@ The all-time counters are kept.
 
 ### Users and security
 
-The classification API is public by default. Set `nohorny.security.api-default-policy` to `DENY_ALL` to require HTTP
-Basic authentication with a user account. The other endpoints keep their own rules, described in the API docs.
+The classification API is rate limited under `nohorny.rate-limit`:
+
+| Caller                                 | Default    | Shared by                | Setting                  |
+|----------------------------------------|------------|--------------------------|--------------------------|
+| Anonymous client                       | 5 / min    | its address              | `anonymous`              |
+| Listed Mindustry server, no account    | 60 / min   | the servers of a network | `mindustry`              |
+| User account, with HTTP Basic          | 120 / min  | all its addresses        | `user`, then per account |
+
+Set `anonymous` or `mindustry` to `0` to require an account from those callers.
+The limit of each account is changed from the admin panel, `user` is the one of the new accounts.
+A limited request is answered `429 Too Many Requests` with a `Retry-After` header, which the plugin waits out.
 
 The first administrator comes from the configuration, set its password to create it on startup:
 

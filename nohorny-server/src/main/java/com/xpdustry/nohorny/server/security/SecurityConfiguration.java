@@ -82,10 +82,7 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            final HttpSecurity http,
-            final ApiSecurityProperties properties,
-            final JsonMapper mapper,
-            final SessionRegistry sessions) {
+            final HttpSecurity http, final JsonMapper mapper, final SessionRegistry sessions) {
         final var unauthorized = new JsonStatusWriter(mapper, HttpStatus.UNAUTHORIZED, "unauthorized");
         final var forbidden = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "forbidden");
         final var invalidCsrf = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "invalid csrf token");
@@ -98,6 +95,7 @@ public class SecurityConfiguration {
                 path.matcher(HttpMethod.POST, "/api/requests/*/purge"));
 
         return http.authorizeHttpRequests(authorize -> {
+                    // The classifications are restricted by the RateLimitFilter, which can require an account
                     authorize
                             .requestMatchers(HttpMethod.GET, "/api/requests", "/api/stats/networks")
                             .hasRole(ADMIN_ROLE)
@@ -106,11 +104,9 @@ public class SecurityConfiguration {
                             .requestMatchers("/api/users", "/api/users/**")
                             .hasRole(ADMIN_ROLE)
                             .requestMatchers("/api/session")
-                            .authenticated();
-                    if (properties.apiDefaultPolicy() == ApiSecurityProperties.ApiDefaultPolicy.DENY_ALL) {
-                        authorize.requestMatchers("/api/classify").authenticated();
-                    }
-                    authorize.anyRequest().permitAll();
+                            .authenticated()
+                            .anyRequest()
+                            .permitAll();
                 })
                 .httpBasic(basic -> basic.authenticationEntryPoint(unauthorized))
                 .formLogin(form -> form

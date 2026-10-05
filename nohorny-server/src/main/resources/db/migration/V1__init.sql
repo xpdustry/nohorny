@@ -14,13 +14,16 @@ CREATE TABLE request
     confidence       REAL CHECK ((outcome = 'FAILED') = (confidence IS NULL)),
     error            TEXT CHECK ((outcome = 'FAILED') = (error IS NOT NULL)),
     version          TEXT,
-    username         TEXT,
+    -- Who sent it: the username of a USER, the network of a MINDUSTRY_NETWORK if listed with one, nothing otherwise.
+    -- Kept as text, the requests outlive the accounts
+    requester_type   TEXT    NOT NULL CHECK (requester_type IN ('USER', 'MINDUSTRY_NETWORK', 'ANONYMOUS')),
+    requester_name   TEXT CHECK (CASE requester_type
+                                     WHEN 'USER' THEN requester_name IS NOT NULL
+                                     WHEN 'ANONYMOUS' THEN requester_name IS NULL
+                                     ELSE 1 END),
     remote_address   TEXT    NOT NULL,
-    -- The normalized network name of the public Mindustry server that sent the request, if listed
-    network          TEXT,
-    image_media_type TEXT,
     image_state      TEXT    NOT NULL CHECK (image_state IN ('NONE', 'STORED', 'EXPIRED', 'PURGED')),
-    -- The lowercase hex SHA-256 of the image, the name of its file in the image directory. Identical images share one
+    -- The lowercase hex SHA-256 of the JPEG image, the name of its file in the image directory. Identical images share one
     image_hash       TEXT
 );
 
@@ -51,7 +54,7 @@ CREATE TABLE daily_stat
     PRIMARY KEY (day, bucket)
 ) WITHOUT ROWID;
 
--- The requests of each listed network per day. The other requests are the difference with daily_stat
+-- The requests per day of the MINDUSTRY_NETWORK requesters with a name. The others are the difference with daily_stat
 CREATE TABLE daily_network_stat
 (
     day     TEXT    NOT NULL,
@@ -65,5 +68,7 @@ CREATE TABLE user_account
     username      TEXT    NOT NULL PRIMARY KEY,
     password_hash TEXT    NOT NULL,
     admin         INTEGER NOT NULL CHECK (admin IN (0, 1)),
+    -- Classifications per minute, shared by all the addresses of the account
+    rate_limit    INTEGER NOT NULL CHECK (rate_limit > 0),
     created_at    INTEGER NOT NULL
 );

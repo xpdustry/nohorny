@@ -205,7 +205,7 @@ final class DiscordWebhook implements LifecycleListener {
                             this.createClassificationJsonPayload(event, null).toString())
                     .build();
         }
-        final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".png";
+        final var imageName = "SPOILER_nohorny_image_" + System.currentTimeMillis() + ".jpg";
         return builder.textPart(
                         "payload_json",
                         this.createClassificationJsonPayload(event, "attachment://" + imageName)
@@ -213,8 +213,8 @@ final class DiscordWebhook implements LifecycleListener {
                 .formPart(
                         "files[0]",
                         imageName,
-                        "image/png",
-                        this.imageBuffer.encode(MindustryImageRenderer.render(event.group()), "png"))
+                        "image/jpeg",
+                        this.imageBuffer.encodeJpeg(MindustryImageRenderer.render(event.group())))
                 .build();
     }
 

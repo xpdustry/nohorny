@@ -129,6 +129,16 @@ export function GavelIcon(props: IconProps) {
   );
 }
 
+// Source: https://lucide.dev/icons/gauge
+export function GaugeIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <path d="m12 14 4-4" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </svg>
+  );
+}
+
 // Source: https://lucide.dev/icons/image
 export function ImageIcon(props: IconProps) {
   return (

@@ -12,6 +12,7 @@ import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.ImageStore;
 import com.xpdustry.nohorny.server.persistence.Outcome;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.Requester;
 import com.xpdustry.nohorny.server.persistence.UuidV7;
 import com.xpdustry.nohorny.server.persistence.Verdict;
 import com.xpdustry.nohorny.server.request.RequestService;
@@ -43,31 +44,23 @@ public final class ClassificationService {
     private final RequestService requests;
     private final NoHornyProperties properties;
     private final ApplicationEventPublisher events;
-    private final MindustryClientDirectory clients;
 
     public ClassificationService(
             final ClassifierChain classifiers,
             final RequestService requests,
             final NoHornyProperties properties,
-            final ApplicationEventPublisher events,
-            final MindustryClientDirectory clients) {
+            final ApplicationEventPublisher events) {
         this.classifiers = classifiers;
         this.requests = requests;
         this.properties = properties;
         this.events = events;
-        this.clients = clients;
     }
 
-    /// @param bytes the image as received
+    /// @param bytes the JPEG image as received, stored as is when kept
     public ResponseEntity<?> classify(final byte[] bytes, final Submission submission) {
         final var createdAt = Instant.now();
         final var start = System.nanoTime();
-        final BufferedImage image;
-        try {
-            image = ImageIO.read(new ByteArrayInputStream(bytes));
-        } catch (final IOException exception) {
-            return invalidImage();
-        }
+        final var image = readJpeg(bytes);
         if (image == null) {
             return invalidImage();
         }
@@ -86,11 +79,8 @@ public final class ClassificationService {
                 outcome.classifier(),
                 outcome.outcome(),
                 truncate(submission.version()),
-                submission.username(),
+                submission.requester(),
                 submission.remoteAddress(),
-                // Recorded now, the server list changes over time
-                this.clients.whois(submission.remoteAddress()).network(),
-                store ? submission.mediaType() : null,
                 store ? ImageState.STORED : ImageState.NONE,
                 store ? ImageStore.hash(bytes) : null,
                 steps);
@@ -163,6 +153,25 @@ public final class ClassificationService {
                         .toUriString();
     }
 
+    /// Decodes with the JPEG reader rather than probing the format, so the images stored are always JPEGs.
+    ///
+    /// @return `null` if the bytes are not a JPEG image
+    private static @Nullable BufferedImage readJpeg(final byte[] bytes) {
+        final var readers = ImageIO.getImageReadersByFormatName("jpeg");
+        if (!readers.hasNext()) {
+            throw new IllegalStateException("No JPEG image reader is available");
+        }
+        final var reader = readers.next();
+        try (final var input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            reader.setInput(input, true, true);
+            return reader.read(0);
+        } catch (final IOException | RuntimeException exception) {
+            return null;
+        } finally {
+            reader.dispose();
+        }
+    }
+
     private static ResponseEntity<?> invalidImage() {
         return ResponseEntity.badRequest().body(new SimpleServerMessage("invalid image"));
     }
@@ -180,12 +189,7 @@ public final class ClassificationService {
     /// The outcome of the chain, see [#run].
     private record Final(String classifier, Outcome outcome) {}
 
-    /// @param mediaType the media type of the image, without parameters
     /// @param version the plugin version of the caller
-    /// @param username the authenticated caller
-    public record Submission(
-            String mediaType,
-            @Nullable String version,
-            @Nullable String username,
-            String remoteAddress) {}
+    /// @param requester who sent the image, see [RequesterResolver]
+    public record Submission(@Nullable String version, Requester requester, String remoteAddress) {}
 }

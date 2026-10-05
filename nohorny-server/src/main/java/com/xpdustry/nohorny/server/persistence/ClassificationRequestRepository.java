@@ -111,14 +111,15 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     List<SlotCount> countByHourSince(long since);
 
     @Query(nativeQuery = true, value = """
-            SELECT network AS network, COUNT(*) AS total
+            SELECT requester_name AS network, COUNT(*) AS total
             FROM request
-            WHERE created_at >= :since AND network IS NOT NULL
-            GROUP BY network
+            WHERE created_at >= :since AND requester_type = 'MINDUSTRY_NETWORK' AND requester_name IS NOT NULL
+            GROUP BY requester_name
             """)
     List<NetworkCount> countByNetworkSince(long since);
 
-    /// @return the number of retained requests per listed network created since the given instant
+    /// @return the number of retained requests per named Mindustry network requester created since the given
+    ///     instant
     default List<NetworkCount> countByNetworkSince(final Instant since) {
         return this.countByNetworkSince(since.toEpochMilli());
     }

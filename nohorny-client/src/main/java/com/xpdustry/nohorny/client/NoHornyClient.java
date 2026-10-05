@@ -17,6 +17,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -29,6 +32,10 @@ import org.jspecify.annotations.Nullable;
 final class NoHornyClient implements LifecycleListener, GroupClassifier {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyClient.class);
+    private static final int TOO_MANY_REQUESTS = 429;
+    private static final int MAX_RATE_LIMITED_ATTEMPTS = 3;
+    private static final Duration DEFAULT_RETRY_AFTER = Duration.ofSeconds(10);
+    private static final Duration MAX_RETRY_AFTER = Duration.ofMinutes(2);
 
     private final ReusableImageBytes imageBuffer = new ReusableImageBytes();
     private final Semaphore classificationPermits = new Semaphore(1);
@@ -121,10 +128,10 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
     private void classify(final VirtualBuilding.Group<? extends MindustryImage> group) throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", "image/jpeg")
-                .POST(this.imageBuffer.encode(MindustryImageRenderer.render(group), "jpg"))
+                .POST(this.imageBuffer.encodeJpeg(MindustryImageRenderer.render(group)))
                 .build();
 
-        final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        final var response = this.send(request);
         if (response.statusCode() != 200) {
             final var message = getGenericServerMessage(response);
             log.error("The remote nohorny returned http code {}: {}", response.statusCode(), message);
@@ -161,6 +168,50 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
                 classification.identifier(),
                 classification.url() == null ? "" : ", url=" + classification.url());
         Core.app.post(() -> this.events.publish(new ClassificationEvent(group, author, classification)));
+    }
+
+    /// Sends the request, waiting out the rate limit of the server between the attempts.
+    ///
+    /// The worker keeps its classification permit while it waits,
+    /// so the collectors hold their next group meanwhile.
+    private HttpResponse<String> send(final HttpRequest request) throws Exception {
+        var attempt = 1;
+        while (true) {
+            final var response = this.http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() != TOO_MANY_REQUESTS || attempt == MAX_RATE_LIMITED_ATTEMPTS) {
+                return response;
+            }
+            final var wait = retryAfter(response);
+            log.info(
+                    "The NoHorny server is rate limiting this server, retrying in {}s (attempt {}/{})",
+                    wait.toSeconds(),
+                    attempt,
+                    MAX_RATE_LIMITED_ATTEMPTS);
+            Thread.sleep(wait);
+            attempt++;
+        }
+    }
+
+    /// @return the wait announced by the `Retry-After` header, in seconds or as an HTTP date, capped
+    private static Duration retryAfter(final HttpResponse<?> response) {
+        final var header = response.headers().firstValue("Retry-After").orElse(null);
+        Duration wait = DEFAULT_RETRY_AFTER;
+        if (header != null) {
+            try {
+                wait = Duration.ofSeconds(Long.parseLong(header.trim()));
+            } catch (final NumberFormatException _) {
+                try {
+                    wait = Duration.between(
+                            Instant.now(), DateTimeFormatter.RFC_1123_DATE_TIME.parse(header.trim(), Instant::from));
+                } catch (final DateTimeParseException _) {
+                    log.debug("Ignoring the malformed Retry-After header {}", header);
+                }
+            }
+        }
+        if (wait.isNegative() || wait.isZero()) {
+            return Duration.ofSeconds(1);
+        }
+        return wait.compareTo(MAX_RETRY_AFTER) > 0 ? MAX_RETRY_AFTER : wait;
     }
 
     private HttpRequest.Builder request(final String path, final Duration timeout) {

@@ -5,10 +5,14 @@ import arc.util.Timer;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 // PipedInputStream treats a dead reader thread as a broken pipe. HttpClient can
 // resume reading on another thread, so short-lived virtual threads can trigger
@@ -17,6 +21,8 @@ final class ReusableImageBytes extends ByteArrayOutputStream implements Lifecycl
 
     private static final float CLEANUP_INTERVAL_SECONDS = 60F;
     private static final Duration RESET_AFTER_LAST_USES_DELAY = Duration.ofMinutes(5);
+    // Above the 0.75 default, which smears the hard edges and flat colours of the renders
+    private static final float JPEG_QUALITY = 0.9F;
 
     private long lastUsed = System.nanoTime();
     private final ReentrantLock lock = new ReentrantLock();
@@ -39,13 +45,30 @@ final class ReusableImageBytes extends ByteArrayOutputStream implements Lifecycl
         this.lock.unlock();
     }
 
-    public HttpRequest.BodyPublisher encode(final BufferedImage image, final String format) throws IOException {
+    public HttpRequest.BodyPublisher encodeJpeg(final BufferedImage image) throws IOException {
         this.reset();
         this.lastUsed = System.nanoTime();
-        if (!ImageIO.write(image, format, this)) {
-            throw new IOException("No " + format + " image writer is available");
-        }
+        writeJpeg(image, this);
         return HttpRequest.BodyPublishers.ofByteArray(this.buf, 0, this.count);
+    }
+
+    /// Writes the image as the JPEG the plugin sends everywhere, leaving the stream open.
+    static void writeJpeg(final BufferedImage image, final OutputStream stream) throws IOException {
+        final var writers = ImageIO.getImageWritersByFormatName("jpeg");
+        if (!writers.hasNext()) {
+            throw new IOException("No jpeg image writer is available");
+        }
+        final var writer = writers.next();
+        // Buffered in memory, closing it flushes into the stream without closing it
+        try (final var output = new MemoryCacheImageOutputStream(stream)) {
+            writer.setOutput(output);
+            final var param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(JPEG_QUALITY);
+            writer.write(null, new IIOImage(image, null, null), param);
+        } finally {
+            writer.dispose();
+        }
     }
 
     private void releaseIfIdle() {

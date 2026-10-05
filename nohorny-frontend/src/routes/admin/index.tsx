@@ -55,6 +55,7 @@ import {
   number,
   ratingLabel,
   relativeTime,
+  requesterLabel,
   share,
   shortId,
 } from '../../lib/format';
@@ -789,7 +790,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                         ['Client', clientLabel(value().item.client)],
                         ['Plugin', <code>{value().item.version ? `v${value().item.version}` : 'unknown'}</code>],
                         ['Address', <code class="break-all">{value().item.remoteAddress ?? '–'}</code>],
-                        ['API user', value().item.username ?? 'anonymous'],
+                        ['Requester', requesterLabel(value().item.requester)],
                       ]}
                     />
                   </section>

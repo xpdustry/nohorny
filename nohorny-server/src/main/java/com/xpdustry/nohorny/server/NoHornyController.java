@@ -3,11 +3,10 @@ package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.SimpleServerMessage;
 import jakarta.servlet.http.HttpServletRequest;
-import java.security.Principal;
 import org.jspecify.annotations.Nullable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,10 +27,15 @@ public final class NoHornyController {
 
     private final StatusProperties status;
     private final ClassificationService classifications;
+    private final RequesterResolver requesters;
 
-    public NoHornyController(final StatusProperties status, final ClassificationService classifications) {
+    public NoHornyController(
+            final StatusProperties status,
+            final ClassificationService classifications,
+            final RequesterResolver requesters) {
         this.status = status;
         this.classifications = classifications;
+        this.requesters = requesters;
     }
 
     @GetMapping(path = "/api/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -41,20 +45,18 @@ public final class NoHornyController {
 
     @PostMapping(
             path = "/api/classify",
-            consumes = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE},
+            consumes = MediaType.IMAGE_JPEG_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> onClassify(
             final @RequestBody byte[] body,
-            final @RequestHeader(HttpHeaders.CONTENT_TYPE) MediaType contentType,
             final @RequestHeader(name = VERSION_HEADER, required = false) @Nullable String version,
-            final @Nullable Principal principal,
+            final @Nullable Authentication authentication,
             final HttpServletRequest request) {
         return this.classifications.classify(
                 body,
                 new ClassificationService.Submission(
-                        contentType.getType() + "/" + contentType.getSubtype(),
                         version,
-                        principal == null ? null : principal.getName(),
+                        this.requesters.resolve(authentication, request.getRemoteAddr()),
                         request.getRemoteAddr()));
     }
 

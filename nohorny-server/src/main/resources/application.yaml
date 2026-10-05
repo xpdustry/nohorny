@@ -29,8 +29,6 @@ nohorny:
     # Directory of the stored images, one file per distinct image named by its SHA-256 hash.
     images: images
   security:
-    # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user account.
-    api-default-policy: ALLOW_ALL
     # Administrator account created on startup, the other users are managed from the admin page.
     # Its password and role are restored on every startup, which makes the configuration the recovery path.
     # No account is created while the password is blank. Keep the trailing colon of the placeholder,
@@ -43,10 +41,17 @@ nohorny:
     image-retention: 14d
     # How long the requests are kept. The all-time statistics are not affected.
     retention: 90d
-    # Limits of the public request endpoints, per client address. Administrators are not limited.
-    rate-limit:
-      reads-per-minute: 60
-      purges-per-minute: 5
+  # Requests per minute. Limited clients get a 429 with a Retry-After header.
+  rate-limit:
+    # Classifications per address without an account. 0 requires one.
+    anonymous: 5
+    # Classifications per listed Mindustry network without an account, shared by its servers. 0 requires one.
+    mindustry: 60
+    # Classifications of a new account, shared by its addresses. Each account has its own, set from the admin panel.
+    user: 120
+    # Reads and purges of the request pages per address. Administrators are not limited.
+    reads: 60
+    purges: 5
   mindustry:
     # How often the public Mindustry server list is refreshed to recognize the request origins.
     refresh-interval: 10m

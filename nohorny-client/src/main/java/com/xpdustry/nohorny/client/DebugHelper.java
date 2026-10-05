@@ -18,7 +18,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Random;
-import javax.imageio.ImageIO;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.gen.Call;
@@ -128,17 +127,17 @@ final class DebugHelper implements LifecycleListener {
                         .format(LocalDateTime.now(ZoneId.systemDefault()))
                         .replace(':', '-')
                 + "_" + x + "_" + y;
-        final var png = this.directory.resolve(prefix + ".png").toAbsolutePath();
-        try (final var pngStream = Files.newOutputStream(png)) {
-            ImageIO.write(MindustryImageRenderer.render(group), "png", pngStream);
+        final var jpg = this.directory.resolve(prefix + ".jpg").toAbsolutePath();
+        try (final var jpgStream = Files.newOutputStream(jpg)) {
+            ReusableImageBytes.writeJpeg(MindustryImageRenderer.render(group), jpgStream);
         } catch (final IOException e) {
             player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "[scarlet]Failed to create an image of the group at (" + x
                     + ", " + y + "), see console for stacktrace");
             log.error("Failed to process group at ({}, {}) for debugging", x, y, e);
             return;
         }
-        player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + png);
-        log.info("{} rendered the group at ({}, {}) to {}", player.plainName(), x, y, png);
+        player.sendMessage(NoHornyPlugin.MESSAGE_PREFIX + "Rendered group at (" + x + ", " + y + ") to " + jpg);
+        log.info("{} rendered the group at ({}, {}) to {}", player.plainName(), x, y, jpg);
     }
 
     @SuppressWarnings("fallthrough")

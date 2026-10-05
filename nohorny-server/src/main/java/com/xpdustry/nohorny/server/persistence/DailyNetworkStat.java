@@ -6,7 +6,7 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-/// The number of requests per day sent by the servers of a listed Mindustry network, kept after the requests
+/// The number of requests per day of a named [RequesterType#MINDUSTRY_NETWORK] requester, kept after the requests
 /// themselves are deleted. The requests of the other clients are only counted in [DailyStat].
 ///
 /// Only incremented through [DailyNetworkStatRepository#increment].

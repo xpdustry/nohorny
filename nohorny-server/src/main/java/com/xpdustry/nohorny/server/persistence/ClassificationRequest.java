@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 /// A recorded classification request.
 ///
-/// The image itself lives in the [ImageStore], referenced by its hash.
+/// The image itself, always a JPEG, lives in the [ImageStore], referenced by its hash.
 ///
 /// The reads run outside of transactions, so the steps are fetched eagerly: one query loads those of a whole page.
 @Entity
@@ -48,13 +48,12 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
 
     private @Nullable String version;
 
-    private @Nullable String username;
+    @Enumerated(EnumType.STRING)
+    private RequesterType requesterType;
+
+    private @Nullable String requesterName;
 
     private String remoteAddress;
-
-    private @Nullable String network;
-
-    private @Nullable String imageMediaType;
 
     @Enumerated(EnumType.STRING)
     private ImageState imageState;
@@ -74,9 +73,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     /// @param classifier the classifier of the final verdict, or the one that failed
     /// @param outcome the final verdict, or the failure
     /// @param version the plugin version of the caller, if sent
-    /// @param username the authenticated caller
-    /// @param network the normalized network name of the listed Mindustry server that sent the request
-    /// @param imageMediaType the media type of the image, if it is stored
+    /// @param requester who sent the request
     /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
     ///     [ImageState#STORED]
     public ClassificationRequest(
@@ -86,10 +83,8 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
             final String classifier,
             final Outcome outcome,
             final @Nullable String version,
-            final @Nullable String username,
+            final Requester requester,
             final String remoteAddress,
-            final @Nullable String network,
-            final @Nullable String imageMediaType,
             final ImageState imageState,
             final @Nullable String imageHash,
             final List<ClassificationStep> steps) {
@@ -104,10 +99,9 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         this.confidence = Outcome.confidence(outcome);
         this.error = Outcome.error(outcome);
         this.version = version;
-        this.username = username;
+        this.requesterType = requester.type();
+        this.requesterName = requester.name();
         this.remoteAddress = remoteAddress;
-        this.network = network;
-        this.imageMediaType = imageMediaType;
         this.imageState = imageState;
         this.imageHash = imageHash;
         this.steps = new ArrayList<>(steps);
@@ -138,20 +132,12 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         return this.version;
     }
 
-    public @Nullable String getUsername() {
-        return this.username;
+    public Requester getRequester() {
+        return new Requester(this.requesterType, this.requesterName);
     }
 
     public String getRemoteAddress() {
         return this.remoteAddress;
-    }
-
-    public @Nullable String getNetwork() {
-        return this.network;
-    }
-
-    public @Nullable String getImageMediaType() {
-        return this.imageMediaType;
     }
 
     public ImageState getImageState() {

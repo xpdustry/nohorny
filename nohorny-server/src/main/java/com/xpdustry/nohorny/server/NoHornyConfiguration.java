@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
+import com.xpdustry.nohorny.server.ratelimit.RateLimitProperties;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
@@ -21,7 +22,12 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties({NoHornyProperties.class, RequestProperties.class, StatusProperties.class})
+@EnableConfigurationProperties({
+    NoHornyProperties.class,
+    RequestProperties.class,
+    RateLimitProperties.class,
+    StatusProperties.class
+})
 public class NoHornyConfiguration implements WebMvcConfigurer {
 
     @Bean

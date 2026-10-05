@@ -2,25 +2,16 @@
 package com.xpdustry.nohorny.server.security;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/// @param apiDefaultPolicy whether the classification endpoint requires an account
 /// @param admin the bootstrap administrator, created or reset on every startup
 @ConfigurationProperties("nohorny.security")
 @Validated
-public record ApiSecurityProperties(
-        @DefaultValue("ALLOW_ALL") @NotNull ApiDefaultPolicy apiDefaultPolicy,
-        @DefaultValue @Valid Admin admin) {
-
-    public enum ApiDefaultPolicy {
-        ALLOW_ALL,
-        DENY_ALL
-    }
+public record ApiSecurityProperties(@DefaultValue @Valid Admin admin) {
 
     /// @param username the username of the bootstrap administrator
     /// @param password its password, no bootstrap administrator is configured when blank

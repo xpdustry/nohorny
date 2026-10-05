@@ -3,8 +3,10 @@ package com.xpdustry.nohorny.server.user;
 
 import com.xpdustry.nohorny.server.security.Usernames;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -28,6 +30,8 @@ public final class UserController {
 
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final String PASSWORD_MESSAGE = "password must be at least " + MIN_PASSWORD_LENGTH + " characters";
+    private static final int MAX_RATE_LIMIT = 100_000;
+    private static final String RATE_LIMIT_MESSAGE = "rate limit must be between 1 and " + MAX_RATE_LIMIT;
 
     private final UserService users;
 
@@ -43,7 +47,7 @@ public final class UserController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public UserView onCreate(final @Valid @RequestBody CreateUser body) {
-        return this.users.create(body.username(), body.password(), Boolean.TRUE.equals(body.admin()));
+        return this.users.create(body.username(), body.password(), Boolean.TRUE.equals(body.admin()), body.rateLimit());
     }
 
     @PutMapping(path = "/{username}/password", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -64,6 +68,12 @@ public final class UserController {
         this.users.setAdmin(username, body.admin(), authentication.getName());
     }
 
+    @PutMapping(path = "/{username}/rate-limit", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void onSetRateLimit(final @PathVariable String username, final @Valid @RequestBody SetRateLimit body) {
+        this.users.setRateLimit(username, body.rateLimit());
+    }
+
     @DeleteMapping("/{username}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void onDelete(final @PathVariable String username, final Authentication authentication) {
@@ -71,15 +81,21 @@ public final class UserController {
     }
 
     /// @param admin whether the user is an administrator, `false` if omitted
+    /// @param rateLimit the classifications per minute, the configured default if omitted
     public record CreateUser(
             @NotNull(message = "username is required") @Pattern(regexp = Usernames.PATTERN, message = Usernames.MESSAGE) String username,
 
             @NotNull(message = "password is required") @Size(min = MIN_PASSWORD_LENGTH, message = PASSWORD_MESSAGE) String password,
 
-            @Nullable Boolean admin) {}
+            @Nullable Boolean admin,
+
+            @Positive(message = RATE_LIMIT_MESSAGE) @Max(value = MAX_RATE_LIMIT, message = RATE_LIMIT_MESSAGE) @Nullable Integer rateLimit) {}
 
     public record SetPassword(
             @NotNull(message = "password is required") @Size(min = MIN_PASSWORD_LENGTH, message = PASSWORD_MESSAGE) String password) {}
+
+    public record SetRateLimit(
+            @NotNull(message = "rate limit is required") @Positive(message = RATE_LIMIT_MESSAGE) @Max(value = MAX_RATE_LIMIT, message = RATE_LIMIT_MESSAGE) Integer rateLimit) {}
 
     public record SetAdmin(
             @NotNull(message = "admin is required") Boolean admin) {}

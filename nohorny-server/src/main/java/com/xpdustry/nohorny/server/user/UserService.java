@@ -3,11 +3,13 @@ package com.xpdustry.nohorny.server.user;
 
 import com.xpdustry.nohorny.server.persistence.UserAccount;
 import com.xpdustry.nohorny.server.persistence.UserAccountRepository;
+import com.xpdustry.nohorny.server.ratelimit.RateLimitProperties;
 import com.xpdustry.nohorny.server.security.ApiSecurityProperties;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -32,16 +34,19 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final SessionRegistry sessions;
     private final ApiSecurityProperties.Admin bootstrap;
+    private final int defaultRateLimit;
 
     public UserService(
             final UserAccountRepository users,
             final PasswordEncoder passwordEncoder,
             final SessionRegistry sessions,
-            final ApiSecurityProperties properties) {
+            final ApiSecurityProperties properties,
+            final RateLimitProperties limits) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.sessions = sessions;
         this.bootstrap = properties.admin();
+        this.defaultRateLimit = limits.user();
     }
 
     /// Creates the bootstrap administrator if missing, or resets its password and role if they changed.
@@ -60,7 +65,7 @@ public class UserService {
         final var username = this.bootstrap.username();
         final var existing = this.users.findById(username);
         if (existing.isEmpty()) {
-            this.users.save(new UserAccount(username, this.encode(password), true, now()));
+            this.users.save(new UserAccount(username, this.encode(password), true, this.defaultRateLimit, now()));
             log.info("Created the bootstrap administrator {}", username);
             return;
         }
@@ -86,14 +91,24 @@ public class UserService {
                 .toList();
     }
 
+    /// @param rateLimit the classifications per minute, the configured default if `null`
     @Transactional
-    public UserView create(final String username, final String password, final boolean admin) {
+    public UserView create(
+            final String username, final String password, final boolean admin, final @Nullable Integer rateLimit) {
         if (this.users.existsById(username)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "user already exists");
         }
-        final var account = this.users.save(new UserAccount(username, this.encode(password), admin, now()));
-        log.info("Created user {} (admin={})", username, admin);
+        final var limit = rateLimit == null ? this.defaultRateLimit : rateLimit;
+        final var account = this.users.save(new UserAccount(username, this.encode(password), admin, limit, now()));
+        log.info("Created user {} (admin={}, rateLimit={})", username, admin, limit);
         return this.toView(account);
+    }
+
+    /// Applies to the next classification, the sessions are kept.
+    @Transactional
+    public void setRateLimit(final String username, final int rateLimit) {
+        this.find(username).setRateLimit(rateLimit);
+        log.info("Set the rate limit of user {} to {} per minute", username, rateLimit);
     }
 
     /// @param caller the user doing the change, keeps its own sessions
@@ -167,6 +182,7 @@ public class UserService {
         return new UserView(
                 account.getUsername(),
                 account.isAdmin(),
+                account.getRateLimit(),
                 account.getCreatedAt(),
                 this.isBootstrap(account.getUsername()));
     }

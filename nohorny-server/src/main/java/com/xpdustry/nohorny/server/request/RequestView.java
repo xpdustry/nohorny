@@ -33,7 +33,6 @@ public record RequestView(
     /// @param url only present when the image is stored
     public record Image(
             String state,
-            @Nullable String mediaType,
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
 
@@ -44,5 +43,9 @@ public record RequestView(
             long durationMillis,
             @Nullable String error) {}
 
-    public record Restricted(String remoteAddress, @Nullable String username) {}
+    public record Restricted(String remoteAddress, Requester requester) {}
+
+    /// @param type `user`, `mindustry-network` or `anonymous`
+    /// @param name the username of a user, the network of a listed Mindustry server if it has one
+    public record Requester(String type, @Nullable String name) {}
 }

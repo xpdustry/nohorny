@@ -477,6 +477,9 @@ project(":nohorny-server") {
         "implementation"("org.hibernate.orm:hibernate-community-dialects")
         // Required by the Argon2 password encoder
         "implementation"("org.bouncycastle:bcprov-jdk18on:1.86")
+        // Token buckets of the rate limits, held in a cache that forgets the idle ones
+        "implementation"("com.bucket4j:bucket4j_jdk17-core:8.21.0")
+        "implementation"("com.github.ben-manes.caffeine:caffeine")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
     }

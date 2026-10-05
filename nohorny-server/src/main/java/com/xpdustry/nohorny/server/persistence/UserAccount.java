@@ -18,16 +18,25 @@ public class UserAccount extends AssignedIdEntity<String> {
 
     private boolean admin;
 
+    private int rateLimit;
+
     @Convert(converter = EpochMillisConverter.class)
     private Instant createdAt;
 
     @SuppressWarnings("NullAway")
     protected UserAccount() {}
 
-    public UserAccount(final String username, final String passwordHash, final boolean admin, final Instant createdAt) {
+    /// @param rateLimit the classifications per minute, shared by all the addresses of the account
+    public UserAccount(
+            final String username,
+            final String passwordHash,
+            final boolean admin,
+            final int rateLimit,
+            final Instant createdAt) {
         this.username = username;
         this.passwordHash = passwordHash;
         this.admin = admin;
+        this.rateLimit = rateLimit;
         this.createdAt = createdAt;
     }
 
@@ -54,6 +63,14 @@ public class UserAccount extends AssignedIdEntity<String> {
 
     public void setAdmin(final boolean admin) {
         this.admin = admin;
+    }
+
+    public int getRateLimit() {
+        return this.rateLimit;
+    }
+
+    public void setRateLimit(final int rateLimit) {
+        this.rateLimit = rateLimit;
     }
 
     public Instant getCreatedAt() {
