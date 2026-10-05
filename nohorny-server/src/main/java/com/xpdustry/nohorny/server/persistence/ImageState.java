@@ -7,11 +7,11 @@ import java.util.Locale;
 public enum ImageState {
     /// The image was considered safe, it was never stored.
     NONE,
-    /// The image bytes are stored.
+    /// The image file is stored.
     STORED,
-    /// The image retention elapsed, the bytes were deleted.
+    /// The image retention elapsed, the file was deleted.
     EXPIRED,
-    /// The bytes were deleted by hand.
+    /// The file was deleted by hand.
     PURGED;
 
     /// @return the lowercase name used by the API

@@ -23,9 +23,11 @@ nohorny:
   # Public address of the server, such as https://nohorny.example.com.
   # When set, the classification responses link to the request pages.
   # public-url: https://nohorny.example.com
-  database:
+  storage:
     # SQLite database file.
-    path: database.sqlite
+    database: database.sqlite
+    # Directory of the stored images, one file per distinct image named by its SHA-256 hash.
+    images: images
   security:
     # ALLOW_ALL permits anonymous classification. DENY_ALL requires a user account.
     api-default-policy: ALLOW_ALL

@@ -183,8 +183,9 @@ SERVER_PORT=9090 java -jar nohorny-server.jar
 java -Dserver.port=9090 -jar nohorny-server.jar
 ```
 
-The SQLite database is stored at `nohorny.database.path`, which defaults to `database.sqlite`.
-The Docker image stores it at `/data/database.sqlite`, mount the `/data` volume to keep it.
+The SQLite database is stored at `nohorny.storage.database`, which defaults to `database.sqlite`, and the images
+in the `nohorny.storage.images` directory, which defaults to `images`. Identical images share one file named by its hash.
+The Docker image stores both under `/data`, mount the volume to keep them.
 
 Set `nohorny.public-url` to the public address of the server, such as `https://nohorny.example.com`,
 so the classification responses link to their request page.

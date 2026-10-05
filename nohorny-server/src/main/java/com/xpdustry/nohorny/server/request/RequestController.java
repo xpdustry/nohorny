@@ -2,14 +2,18 @@
 package com.xpdustry.nohorny.server.request;
 
 import com.xpdustry.nohorny.server.MindustryClientDirectory;
-import com.xpdustry.nohorny.server.persistence.ClassificationRequestSummary;
+import com.xpdustry.nohorny.server.persistence.ClassificationRequest;
+import com.xpdustry.nohorny.server.persistence.ClassificationStep;
+import com.xpdustry.nohorny.server.persistence.Failure;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.Verdict;
 import com.xpdustry.nohorny.server.security.SecurityConfiguration;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,17 +55,17 @@ public final class RequestController {
     }
 
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> onGetImage(final @PathVariable String id) {
+    public ResponseEntity<Resource> onGetImage(final @PathVariable String id) {
         final var image = this.requests.findImage(id).orElseThrow(RequestController::notFound);
         final var mediaType = image.mediaType();
-        final var bytes = image.bytes();
-        if (image.state() != ImageState.STORED || mediaType == null || bytes == null) {
+        final var content = image.content();
+        if (mediaType == null || content == null) {
             throw new ResponseStatusException(HttpStatus.GONE, "image not available");
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(mediaType))
                 .cacheControl(CacheControl.noStore())
-                .body(bytes.array());
+                .body(content);
     }
 
     @PostMapping(path = "/{id}/purge", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -87,7 +91,7 @@ public final class RequestController {
         final var items = found.subList(0, Math.min(found.size(), size));
         return new RequestPage(
                 items.stream().map(request -> this.toView(request, true)).toList(),
-                found.size() > size ? items.getLast().id() : null);
+                found.size() > size ? items.getLast().getId() : null);
     }
 
     @DeleteMapping("/{id}")
@@ -98,36 +102,43 @@ public final class RequestController {
         }
     }
 
-    private RequestView toView(final ClassificationRequestSummary request, final boolean admin) {
+    private RequestView toView(final ClassificationRequest request, final boolean admin) {
         // The network recorded with the request, older requests and the other clients are looked up
-        final var network = request.network();
+        final var network = request.getNetwork();
         final var client = network != null
                 ? new MindustryClientDirectory.ClientInfo(MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER, network)
-                : this.clients.whois(request.remoteAddress());
+                : this.clients.whois(request.getRemoteAddress());
+        final var verdict = request.getOutcome() instanceof Verdict value ? value : null;
+        final var failure = request.getOutcome() instanceof Failure value ? value : null;
         return new RequestView(
-                request.id(),
-                request.createdAt(),
-                request.durationMillis(),
-                request.successful(),
-                request.rating(),
-                request.confidence(),
-                request.classifier(),
-                request.error(),
-                request.version(),
+                request.getId(),
+                request.getCreatedAt(),
+                request.getDurationMillis(),
+                verdict != null,
+                verdict == null ? null : verdict.rating(),
+                verdict == null ? null : verdict.confidence(),
+                request.getClassifier(),
+                failure == null ? null : failure.error(),
+                request.getVersion(),
                 new RequestView.Client(client.type(), client.network()),
                 new RequestView.Image(
-                        request.imageState().key(),
-                        request.imageMediaType(),
-                        request.imageState() == ImageState.STORED ? "/api/requests/" + request.id() + "/image" : null),
-                request.steps().stream()
-                        .map(step -> new RequestView.Step(
-                                step.classifier(),
-                                step.rating(),
-                                step.confidence(),
-                                step.durationMillis(),
-                                step.error()))
-                        .toList(),
-                admin ? new RequestView.Restricted(request.remoteAddress(), request.username()) : null);
+                        request.getImageState().key(),
+                        request.getImageMediaType(),
+                        request.getImageState() == ImageState.STORED
+                                ? "/api/requests/" + request.getId() + "/image"
+                                : null),
+                request.getSteps().stream().map(RequestController::toView).toList(),
+                admin ? new RequestView.Restricted(request.getRemoteAddress(), request.getUsername()) : null);
+    }
+
+    private static RequestView.Step toView(final ClassificationStep step) {
+        return switch (step.outcome()) {
+            case Verdict verdict ->
+                new RequestView.Step(
+                        step.classifier(), verdict.rating(), verdict.confidence(), step.durationMillis(), null);
+            case Failure failure ->
+                new RequestView.Step(step.classifier(), null, null, step.durationMillis(), failure.error());
+        };
     }
 
     private static String parseIdentifier(final String value) {

@@ -118,7 +118,8 @@ ENV JAVA_OPTS="-server \
     --enable-native-access=ALL-UNNAMED \
     -Djava.security.egd=file:/dev/./urandom"
 
-ENV NOHORNY_DATABASE_PATH=/data/database.sqlite
+ENV NOHORNY_STORAGE_DATABASE=/data/database.sqlite \
+    NOHORNY_STORAGE_IMAGES=/data/images
 
 VOLUME ["/data"]
 

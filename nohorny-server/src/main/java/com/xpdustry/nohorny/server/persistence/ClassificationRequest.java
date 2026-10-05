@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
-import com.xpdustry.nohorny.common.Rating;
 import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
@@ -15,12 +16,14 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.BatchSize;
 import org.jspecify.annotations.Nullable;
 
 /// A recorded classification request.
 ///
-/// Only written through this entity, the reads go through [ClassificationRequestSummary] and [StoredImage] so the
-/// image bytes are never loaded unless requested.
+/// The image itself lives in the [ImageStore], referenced by its hash.
+///
+/// The reads run outside of transactions, so the steps are fetched eagerly: one query loads those of a whole page.
 @Entity
 @Table(name = "request")
 public class ClassificationRequest extends AssignedIdEntity<String> {
@@ -33,14 +36,13 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
 
     private long durationMillis;
 
-    private boolean successful;
+    private String classifier;
 
+    @Column(name = "outcome")
     @Enumerated(EnumType.STRING)
-    private @Nullable Rating rating;
+    private RatingBucket bucket;
 
     private @Nullable Double confidence;
-
-    private String classifier;
 
     private @Nullable String error;
 
@@ -57,65 +59,58 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     @Enumerated(EnumType.STRING)
     private ImageState imageState;
 
-    @ElementCollection
+    private @Nullable String imageHash;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @BatchSize(size = 128)
     @CollectionTable(name = "request_step", joinColumns = @JoinColumn(name = "request_id"))
     @OrderColumn(name = "position")
     private List<ClassificationStep> steps;
-
-    // Only read through StoredImage, loading it with the entity would defeat the projections.
-    //   Not a @Lob, Hibernate would read it with ResultSet#getBlob which SQLite JDBC does not implement.
-    @SuppressWarnings("UnusedVariable")
-    private byte @Nullable [] image;
 
     @SuppressWarnings("NullAway")
     protected ClassificationRequest() {}
 
     /// @param id the UUIDv7 identifier
-    /// @param rating the final rating, `null` if the request failed
-    /// @param confidence the final confidence, `null` if the request failed
     /// @param classifier the classifier of the final verdict, or the one that failed
-    /// @param error the exception name if the request failed
+    /// @param outcome the final verdict, or the failure
     /// @param version the plugin version of the caller, if sent
     /// @param username the authenticated caller
     /// @param network the normalized network name of the listed Mindustry server that sent the request
     /// @param imageMediaType the media type of the image, if it is stored
-    /// @param image the bytes to store, given if and only if the image state is [ImageState#STORED]
+    /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
+    ///     [ImageState#STORED]
     public ClassificationRequest(
             final String id,
             final Instant createdAt,
             final long durationMillis,
-            final boolean successful,
-            final @Nullable Rating rating,
-            final @Nullable Double confidence,
             final String classifier,
-            final @Nullable String error,
+            final Outcome outcome,
             final @Nullable String version,
             final @Nullable String username,
             final String remoteAddress,
             final @Nullable String network,
             final @Nullable String imageMediaType,
             final ImageState imageState,
-            final List<ClassificationStep> steps,
-            final byte @Nullable [] image) {
-        if ((imageState == ImageState.STORED) != (image != null)) {
-            throw new IllegalArgumentException("The image bytes must be given if and only if the image is stored");
+            final @Nullable String imageHash,
+            final List<ClassificationStep> steps) {
+        if ((imageState == ImageState.STORED) != (imageHash != null)) {
+            throw new IllegalArgumentException("The image hash must be given if and only if the image is stored");
         }
         this.id = id;
         this.createdAt = createdAt;
         this.durationMillis = durationMillis;
-        this.successful = successful;
-        this.rating = rating;
-        this.confidence = confidence;
         this.classifier = classifier;
-        this.error = error;
+        this.bucket = outcome.bucket();
+        this.confidence = Outcome.confidence(outcome);
+        this.error = Outcome.error(outcome);
         this.version = version;
         this.username = username;
         this.remoteAddress = remoteAddress;
         this.network = network;
         this.imageMediaType = imageMediaType;
         this.imageState = imageState;
+        this.imageHash = imageHash;
         this.steps = new ArrayList<>(steps);
-        this.image = image;
     }
 
     @Override
@@ -131,24 +126,12 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         return this.durationMillis;
     }
 
-    public boolean isSuccessful() {
-        return this.successful;
-    }
-
-    public @Nullable Rating getRating() {
-        return this.rating;
-    }
-
-    public @Nullable Double getConfidence() {
-        return this.confidence;
-    }
-
     public String getClassifier() {
         return this.classifier;
     }
 
-    public @Nullable String getError() {
-        return this.error;
+    public Outcome getOutcome() {
+        return Outcome.of(this.bucket, this.confidence, this.error);
     }
 
     public @Nullable String getVersion() {
@@ -175,11 +158,15 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         return this.imageState;
     }
 
+    public @Nullable String getImageHash() {
+        return this.imageHash;
+    }
+
     public List<ClassificationStep> getSteps() {
         return List.copyOf(this.steps);
     }
 
     public RatingBucket bucket() {
-        return RatingBucket.of(this.rating);
+        return this.bucket;
     }
 }

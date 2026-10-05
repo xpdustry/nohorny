@@ -6,33 +6,35 @@ import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
-/// The outcome of a classification request, used by the filters and the statistics.
+/// The [Outcome] of a classification request as counted by the statistics and selected by the filters:
+/// the rating of a [Verdict], or `FAILED` for a [Failure].
 public enum RatingBucket {
-    SAFE,
-    WARN,
-    NSFW,
-    FAILED;
+    SAFE(Rating.SAFE),
+    WARN(Rating.WARN),
+    NSFW(Rating.NSFW),
+    FAILED(null);
 
+    private final @Nullable Rating rating;
+
+    RatingBucket(final @Nullable Rating rating) {
+        this.rating = rating;
+    }
+
+    /// @return the lowercase name used by the API
     public String key() {
         return this.name().toLowerCase(Locale.ROOT);
     }
 
-    /// @return the rating of the requests in this bucket, `null` for the failed ones
-    public @Nullable Rating rating() {
-        return switch (this) {
-            case SAFE -> Rating.SAFE;
-            case WARN -> Rating.WARN;
-            case NSFW -> Rating.NSFW;
-            case FAILED -> null;
-        };
+    /// @return the rating of the verdicts in this bucket, empty for the failures
+    public Optional<Rating> rating() {
+        return Optional.ofNullable(this.rating);
     }
 
-    public static RatingBucket of(final @Nullable Rating rating) {
+    public static RatingBucket of(final Rating rating) {
         return switch (rating) {
             case SAFE -> SAFE;
             case WARN -> WARN;
             case NSFW -> NSFW;
-            case null -> FAILED;
         };
     }
 

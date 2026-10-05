@@ -6,11 +6,13 @@ CREATE TABLE request
     id               TEXT    NOT NULL PRIMARY KEY,
     created_at       INTEGER NOT NULL,
     duration_millis  INTEGER NOT NULL,
-    successful       INTEGER NOT NULL CHECK (successful IN (0, 1)),
-    rating           TEXT CHECK (rating IN ('SAFE', 'WARN', 'NSFW')),
-    confidence       REAL,
+    -- The classifier of the final verdict, or the one that failed
     classifier       TEXT    NOT NULL,
-    error            TEXT,
+    -- The rating of the verdict or FAILED. A verdict has a confidence, a failure the name of its exception.
+    -- The same columns are mapped in request_step, see Outcome
+    outcome          TEXT    NOT NULL CHECK (outcome IN ('SAFE', 'WARN', 'NSFW', 'FAILED')),
+    confidence       REAL CHECK ((outcome = 'FAILED') = (confidence IS NULL)),
+    error            TEXT CHECK ((outcome = 'FAILED') = (error IS NOT NULL)),
     version          TEXT,
     username         TEXT,
     remote_address   TEXT    NOT NULL,
@@ -18,23 +20,26 @@ CREATE TABLE request
     network          TEXT,
     image_media_type TEXT,
     image_state      TEXT    NOT NULL CHECK (image_state IN ('NONE', 'STORED', 'EXPIRED', 'PURGED')),
-    -- Last, so reading the other columns never walks the overflow pages of the image
-    image            BLOB
+    -- The lowercase hex SHA-256 of the image, the name of its file in the image directory. Identical images share one
+    image_hash       TEXT
 );
 
 -- Covers the counts of the last 24 hours
-CREATE INDEX request_created_at_idx ON request (created_at, rating);
-CREATE INDEX request_rating_idx ON request (rating, id);
+CREATE INDEX request_created_at_idx ON request (created_at, outcome);
+-- Covers the filtered pages
+CREATE INDEX request_outcome_idx ON request (outcome, id);
+-- Finds the requests sharing an image before its file is deleted. SQLite uses it for image_hash = ? despite the filter
+CREATE INDEX request_image_hash_idx ON request (image_hash) WHERE image_hash IS NOT NULL;
 
 CREATE TABLE request_step
 (
     request_id      TEXT    NOT NULL REFERENCES request (id) ON DELETE CASCADE,
     position        INTEGER NOT NULL,
     classifier      TEXT    NOT NULL,
-    rating          TEXT CHECK (rating IN ('SAFE', 'WARN', 'NSFW')),
-    confidence      REAL,
     duration_millis INTEGER NOT NULL,
-    error           TEXT,
+    outcome         TEXT    NOT NULL CHECK (outcome IN ('SAFE', 'WARN', 'NSFW', 'FAILED')),
+    confidence      REAL CHECK ((outcome = 'FAILED') = (confidence IS NULL)),
+    error           TEXT CHECK ((outcome = 'FAILED') = (error IS NOT NULL)),
     PRIMARY KEY (request_id, position)
 ) WITHOUT ROWID;
 

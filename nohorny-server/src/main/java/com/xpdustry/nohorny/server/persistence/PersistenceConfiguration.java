@@ -13,18 +13,19 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.sqlite.SQLiteConfig;
 import org.sqlite.SQLiteDataSource;
 
-/// The SQLite database. Its schema is migrated by Flyway, then mapped by the JPA entities of this package.
+/// The SQLite database and the image files. The schema is migrated by Flyway, then mapped by the JPA entities of
+/// this package, the images are kept outside the database by the [ImageStore].
 ///
 /// Since every transaction takes the write lock, the repositories do not open transactions by themselves.
 /// Reads run in autocommit mode alongside the writer, writes go through the `@Transactional` services.
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(DatabaseProperties.class)
+@EnableConfigurationProperties(StorageProperties.class)
 @EnableJpaRepositories(enableDefaultTransactions = false)
 public class PersistenceConfiguration {
 
     @Bean
-    public HikariDataSource dataSource(final DatabaseProperties properties) throws IOException {
-        final var absolute = properties.path().toAbsolutePath();
+    public HikariDataSource dataSource(final StorageProperties properties) throws IOException {
+        final var absolute = properties.database().toAbsolutePath();
         final var parent = absolute.getParent();
         if (parent != null) {
             Files.createDirectories(parent);

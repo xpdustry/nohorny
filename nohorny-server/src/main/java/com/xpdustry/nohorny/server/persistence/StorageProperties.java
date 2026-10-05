@@ -7,8 +7,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/// @param path the SQLite database file
-@ConfigurationProperties("nohorny.database")
+/// Where the server keeps its data.
+///
+/// @param database the SQLite database file
+/// @param images the directory of the stored images, see [ImageStore]
+@ConfigurationProperties("nohorny.storage")
 @Validated
-public record DatabaseProperties(
-        @DefaultValue("database.sqlite") @NotNull Path path) {}
+public record StorageProperties(
+        @DefaultValue("database.sqlite") @NotNull Path database,
+        @DefaultValue("images") @NotNull Path images) {}
