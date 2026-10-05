@@ -150,7 +150,7 @@ project(":nohorny-plugin") {
             description = description!!,
             author = "Xpdustry",
             version = version.toString(),
-            mainClass = "com.xpdustry.nohorny.plugin.NoHornyPlugin",
+            mainClass = "com.xpdustry.nohorny.client.NoHornyPlugin",
             repository = "xpdustry/nohorny",
             java = true,
             hidden = true,
