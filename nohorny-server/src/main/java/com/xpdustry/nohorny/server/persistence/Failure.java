@@ -29,6 +29,10 @@ public record Failure(String error) implements Outcome {
     private static String stackTrace(final Throwable throwable) {
         final var writer = new StringWriter();
         throwable.printStackTrace(new PrintWriter(writer));
-        return writer.toString().stripTrailing();
+        final var trace = writer.toString().stripTrailing();
+        // The first line comes from toString(), an override could put the message before the class name
+        final var name = throwable.getClass().getName();
+        final var line = trace.lines().findFirst().orElse("");
+        return line.equals(name) || line.startsWith(name + ':') ? trace : name + '\n' + trace;
     }
 }
