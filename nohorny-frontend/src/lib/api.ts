@@ -38,7 +38,15 @@ export interface Step {
   rating: Rating | null;
   confidence: number | null;
   durationMillis: number;
-  error: string | null;
+  /** The details of a failure, only sent to the administrators. */
+  error?: FailureDetails;
+}
+
+/** Why a classification failed. Only the administrators see it, it reveals the internals of the server. */
+export interface FailureDetails {
+  /** The name of the exception class. */
+  type: string;
+  stackTrace: string;
 }
 
 export interface Client {
@@ -61,7 +69,6 @@ export interface Request {
   rating: Rating | null;
   confidence: number | null;
   classifier: string | null;
-  error: string | null;
   version: string | null;
   client: Client;
   image: { state: 'none' | 'stored' | 'expired' | 'purged'; url?: string };
@@ -69,6 +76,8 @@ export interface Request {
   /** Only sent to the administrators, with `remoteAddress`. */
   remoteAddress?: string;
   requester?: Requester;
+  /** The details of a failure, only sent to the administrators with `remoteAddress`. */
+  error?: FailureDetails | null;
 }
 
 export interface Page<T> {

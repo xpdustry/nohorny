@@ -2,7 +2,7 @@
 
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
-import type { Request } from '../lib/api';
+import type { FailureDetails as FailureDetailsData, Request } from '../lib/api';
 import {
   bucket,
   classifierLabel,
@@ -13,8 +13,20 @@ import {
   percent,
   stepBucket,
 } from '../lib/format';
-import { EyeOffIcon, ImageOffIcon } from './icon';
-import { Button, Chip, Meter, RATING_TEXT, RatingBadge, Spinner, State } from './ui';
+import { Dialog } from './dialog';
+import { CheckIcon, CopyIcon, EyeOffIcon, ImageOffIcon, XIcon } from './icon';
+import {
+  Button,
+  Chip,
+  Meter,
+  RATING_TEXT,
+  RatingBadge,
+  Spinner,
+  State,
+  Timeline,
+  TimelineDot,
+  TimelineItem,
+} from './ui';
 
 const PLACEHOLDERS = {
   none: 'No image kept',
@@ -118,12 +130,16 @@ export function VerdictCard(props: { request: Request }) {
         </div>
       </Show>
       <Show when={props.request.classifier}>
-        <p class="text-ink-2 text-sm">
-          Decided by <Classifier id={props.request.classifier ?? ''} />
+        <p class="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-ink-2 text-sm">
+          {rating() === 'failed' ? 'Failed in' : 'Decided by'} <Classifier id={props.request.classifier ?? ''} />
+          <Show when={props.request.error}>
+            {(error) => (
+              <>
+                with <FailureDetails details={error()} />
+              </>
+            )}
+          </Show>
         </p>
-      </Show>
-      <Show when={props.request.error}>
-        <p class="text-danger text-sm">Classification failed: {props.request.error}</p>
       </Show>
     </Card>
   );
@@ -133,28 +149,106 @@ export function ChainCard(props: { request: Request }) {
   return (
     <Show when={props.request.steps.length > 0}>
       <Card title="Classifier chain">
-        <ol class="flex flex-col gap-4">
-          <For each={props.request.steps}>
-            {(step) => (
-              <li class="flex flex-col gap-1.5">
-                <Classifier id={step.classifier} class="self-start text-sm" />
-                <span class="flex flex-wrap items-center gap-3 text-ink-2 text-sm">
-                  <RatingBadge rating={stepBucket(step)} label={step.rating ?? 'Error'} />
-                  <Show when={step.confidence != null}>
-                    <Meter value={step.confidence ?? 0} rating={stepBucket(step)} class="w-20" />
-                    <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
-                  </Show>
-                  <span>{duration(step.durationMillis)}</span>
-                </span>
-                <Show when={step.error}>
-                  <span class="text-danger text-sm">{step.error}</span>
-                </Show>
-              </li>
-            )}
-          </For>
-        </ol>
+        <ClassifierTimeline request={props.request} />
       </Card>
     </Show>
+  );
+}
+
+/** The classifiers a request went through, in order. An NSFW verdict escalates to the next classifier. */
+export function ClassifierTimeline(props: { request: Request }) {
+  // The verdict comes from the last step of its classifier with a rating, a failed request has none
+  const decided = () =>
+    props.request.successful
+      ? props.request.steps.findLastIndex((step) => step.rating && step.classifier === props.request.classifier)
+      : -1;
+  return (
+    <Timeline>
+      <For each={props.request.steps}>
+        {(step, index) => {
+          const rating = () => stepBucket(step);
+          return (
+            <TimelineItem marker={<TimelineDot rating={rating()} emphasized={index() === decided()} />}>
+              <div class="flex min-h-6 items-center justify-between gap-3">
+                <span class="flex min-w-0 items-center gap-2">
+                  <Classifier id={step.classifier} class="truncate text-sm" />
+                  <Show when={index() === decided()}>
+                    <Chip>final</Chip>
+                  </Show>
+                </span>
+                <span class="shrink-0 font-mono text-ink-3 text-xs">{duration(step.durationMillis)}</span>
+              </div>
+              <div class="flex min-w-0 items-center gap-3 text-sm">
+                <RatingBadge rating={rating()} label={step.rating ?? 'Error'} />
+                <Show when={step.confidence != null}>
+                  <Meter value={step.confidence ?? 0} rating={rating()} class="max-w-40 flex-1" />
+                  <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
+                </Show>
+                <Show when={step.error}>{(error) => <FailureDetails details={error()} />}</Show>
+              </div>
+            </TimelineItem>
+          );
+        }}
+      </For>
+    </Timeline>
+  );
+}
+
+/** The exception of a failure, which opens its stack trace. Only the administrators receive it. */
+function FailureDetails(props: { details: FailureDetailsData }) {
+  const [open, setOpen] = createSignal(false);
+  const [copied, setCopied] = createSignal(false);
+  let trace!: HTMLPreElement;
+  let reset: ReturnType<typeof setTimeout> | undefined;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(props.details.stackTrace);
+      setCopied(true);
+      clearTimeout(reset);
+      reset = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Without clipboard access, select the trace for a manual copy
+      getSelection()?.selectAllChildren(trace);
+    }
+  };
+  return (
+    <>
+      <button
+        type="button"
+        title="Show the stack trace"
+        class="min-w-0 cursor-pointer truncate font-mono text-danger text-xs underline decoration-dotted underline-offset-2 hover:decoration-solid"
+        onClick={() => setOpen(true)}>
+        {props.details.type}
+      </button>
+      <Dialog
+        open={open()}
+        onClose={() => setOpen(false)}
+        label="Stack trace"
+        class="w-[min(64rem,calc(100vw-2rem))]"
+        // Keeps the arrow keys from paging the request viewer of the admin panel underneath
+        onKeyDown={(event) => event.stopPropagation()}>
+        <div class="flex flex-col gap-4 p-6">
+          <header class="flex items-start gap-2">
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
+              <h2 class="text-xl">Stack trace</h2>
+              <code class="wrap-anywhere text-danger text-sm">{props.details.type}</code>
+            </div>
+            <Button size="sm" onClick={copy}>
+              {copied() ? <CheckIcon /> : <CopyIcon />}
+              {copied() ? 'Copied' : 'Copy'}
+            </Button>
+            <Button size="icon" variant="quiet" aria-label="Close" class="-mt-1" onClick={() => setOpen(false)}>
+              <XIcon />
+            </Button>
+          </header>
+          <pre
+            ref={trace}
+            class="max-h-[70dvh] overflow-auto rounded-lg border border-line bg-bg-2 p-4 font-mono text-ink-2 text-xs leading-relaxed">
+            {props.details.stackTrace}
+          </pre>
+        </div>
+      </Dialog>
+    </>
   );
 }
 

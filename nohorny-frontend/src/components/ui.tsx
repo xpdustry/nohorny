@@ -150,6 +150,46 @@ export function Meter(props: { value: number; rating: Bucket; class?: string }) 
   );
 }
 
+/** A vertical sequence of events joined by a line, filled with `TimelineItem`s. */
+export function Timeline(props: { children: JSX.Element; class?: string }) {
+  return <ol class={['flex flex-col', props.class]}>{props.children}</ol>;
+}
+
+/** An event of a `Timeline`. The marker sits on the line, level with the first row of the content. */
+export function TimelineItem(props: { marker: JSX.Element; children: JSX.Element }) {
+  return (
+    <li class="group relative flex gap-3 pb-5 last:pb-0">
+      <span
+        aria-hidden="true"
+        class="absolute top-7 bottom-1 left-3 w-0.5 -translate-x-1/2 rounded-full bg-accent group-last:hidden"
+      />
+      <span class="flex size-6 shrink-0 items-center justify-center">{props.marker}</span>
+      <div class="flex min-w-0 flex-1 flex-col gap-2">{props.children}</div>
+    </li>
+  );
+}
+
+/** The marker of a rated event in a `Timeline`, haloed when `emphasized`. */
+export function TimelineDot(props: { rating: Bucket; emphasized?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      class={[
+        'block rounded-full',
+        props.emphasized ? ['size-3 ring-4', RATING_FILL[props.rating], RATING_RING[props.rating]] : 'size-2.5',
+        !props.emphasized && (props.rating === 'failed' ? 'border-2 border-fill-failed' : RATING_FILL[props.rating]),
+      ]}
+    />
+  );
+}
+
+const RATING_RING: Record<Bucket, string> = {
+  safe: 'ring-fill-safe/25',
+  warn: 'ring-fill-warn/25',
+  nsfw: 'ring-fill-nsfw/25',
+  failed: 'ring-fill-failed/25',
+};
+
 export function Chip(props: { children: JSX.Element; class?: string; title?: string }) {
   return (
     <span

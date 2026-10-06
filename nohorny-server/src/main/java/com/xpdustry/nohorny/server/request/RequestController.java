@@ -118,7 +118,6 @@ public final class RequestController {
                 verdict == null ? null : verdict.rating(),
                 verdict == null ? null : verdict.confidence(),
                 request.getClassifier(),
-                failure == null ? null : failure.error(),
                 request.getVersion(),
                 new RequestView.Client(client.type(), client.network()),
                 new RequestView.Image(
@@ -126,25 +125,32 @@ public final class RequestController {
                         request.getImageState() == ImageState.STORED
                                 ? "/api/requests/" + request.getId() + "/image"
                                 : null),
-                request.getSteps().stream().map(RequestController::toView).toList(),
-                admin ? restricted(request) : null);
+                request.getSteps().stream().map(step -> toView(step, admin)).toList(),
+                admin ? restricted(request, failure) : null);
     }
 
-    private static RequestView.Restricted restricted(final ClassificationRequest request) {
+    private static RequestView.Restricted restricted(
+            final ClassificationRequest request, final @Nullable Failure failure) {
         final var requester = request.getRequester();
         return new RequestView.Restricted(
                 request.getRemoteAddress(),
-                new RequestView.Requester(requester.type().key(), requester.name()));
+                new RequestView.Requester(requester.type().key(), requester.name()),
+                failure == null ? null : toView(failure));
     }
 
-    private static RequestView.Step toView(final ClassificationStep step) {
+    private static RequestView.Step toView(final ClassificationStep step, final boolean admin) {
         return switch (step.outcome()) {
             case Verdict verdict ->
                 new RequestView.Step(
                         step.classifier(), verdict.rating(), verdict.confidence(), step.durationMillis(), null);
             case Failure failure ->
-                new RequestView.Step(step.classifier(), null, null, step.durationMillis(), failure.error());
+                new RequestView.Step(
+                        step.classifier(), null, null, step.durationMillis(), admin ? toView(failure) : null);
         };
+    }
+
+    private static RequestView.FailureDetails toView(final Failure failure) {
+        return new RequestView.FailureDetails(failure.type(), failure.error());
     }
 
     private static String parseIdentifier(final String value) {

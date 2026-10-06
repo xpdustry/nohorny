@@ -19,7 +19,6 @@ public record RequestView(
         @Nullable Rating rating,
         @Nullable Double confidence,
         String classifier,
-        @Nullable String error,
         @Nullable String version,
         Client client,
         Image image,
@@ -36,14 +35,25 @@ public record RequestView(
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
 
+    /// @param error the details of a failure, only sent to the administrators
     public record Step(
             String classifier,
             @Nullable Rating rating,
             @Nullable Double confidence,
             long durationMillis,
-            @Nullable String error) {}
 
-    public record Restricted(String remoteAddress, Requester requester) {}
+            @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable FailureDetails error) {}
+
+    /// @param error the details of a failure
+    public record Restricted(
+            String remoteAddress,
+            Requester requester,
+            @Nullable FailureDetails error) {}
+
+    /// The details of a failure. Kept from the public, they reveal the internals of the server.
+    ///
+    /// @param type the name of the exception class
+    public record FailureDetails(String type, String stackTrace) {}
 
     /// @param type `user`, `mindustry-network` or `anonymous`
     /// @param name the username of a user, the network of a listed Mindustry server if it has one
