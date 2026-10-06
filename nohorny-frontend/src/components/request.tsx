@@ -166,7 +166,7 @@ function StackTrace(props: { trace: string | null | undefined }) {
     <Show when={props.trace}>
       <details class="text-sm">
         <summary class="cursor-pointer text-ink-2">Stack trace</summary>
-        <pre class="mt-2 max-h-80 overflow-auto rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
+        <pre class="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap wrap-anywhere rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
           {props.trace}
         </pre>
       </details>
