@@ -159,7 +159,10 @@ export function Timeline(props: { children: JSX.Element; class?: string }) {
 export function TimelineItem(props: { marker: JSX.Element; children: JSX.Element }) {
   return (
     <li class="group relative flex gap-3 pb-5 last:pb-0">
-      <span aria-hidden="true" class="absolute top-7 bottom-1 left-3 w-px -translate-x-1/2 bg-line group-last:hidden" />
+      <span
+        aria-hidden="true"
+        class="absolute top-7 bottom-1 left-3 w-0.5 -translate-x-1/2 rounded-full bg-accent group-last:hidden"
+      />
       <span class="flex size-6 shrink-0 items-center justify-center">{props.marker}</span>
       <div class="flex min-w-0 flex-1 flex-col gap-2">{props.children}</div>
     </li>

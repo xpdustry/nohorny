@@ -13,7 +13,8 @@ import {
   percent,
   stepBucket,
 } from '../lib/format';
-import { EyeOffIcon, ImageOffIcon } from './icon';
+import { Dialog } from './dialog';
+import { CheckIcon, CopyIcon, EyeOffIcon, ImageOffIcon, XIcon } from './icon';
 import {
   Button,
   Chip,
@@ -129,11 +130,17 @@ export function VerdictCard(props: { request: Request }) {
         </div>
       </Show>
       <Show when={props.request.classifier}>
-        <p class="text-ink-2 text-sm">
+        <p class="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-ink-2 text-sm">
           {rating() === 'failed' ? 'Failed in' : 'Decided by'} <Classifier id={props.request.classifier ?? ''} />
+          <Show when={props.request.error}>
+            {(error) => (
+              <>
+                with <FailureDetails details={error()} />
+              </>
+            )}
+          </Show>
         </p>
       </Show>
-      <Show when={props.request.error}>{(error) => <FailureDetails details={error()} />}</Show>
     </Card>
   );
 }
@@ -150,17 +157,16 @@ export function ChainCard(props: { request: Request }) {
 
 /** The classifiers a request went through, in order. An NSFW verdict escalates to the next classifier. */
 export function ClassifierTimeline(props: { request: Request }) {
-  // A verdict comes from the last step of its classifier with a rating, a failure from the last step
+  // The verdict comes from the last step of its classifier with a rating, a failed request has none
   const decided = () =>
     props.request.successful
       ? props.request.steps.findLastIndex((step) => step.rating && step.classifier === props.request.classifier)
-      : props.request.steps.length - 1;
+      : -1;
   return (
     <Timeline>
       <For each={props.request.steps}>
         {(step, index) => {
           const rating = () => stepBucket(step);
-          const next = () => props.request.steps[index() + 1];
           return (
             <TimelineItem marker={<TimelineDot rating={rating()} emphasized={index() === decided()} />}>
               <div class="flex min-h-6 items-center justify-between gap-3">
@@ -172,26 +178,14 @@ export function ClassifierTimeline(props: { request: Request }) {
                 </span>
                 <span class="shrink-0 font-mono text-ink-3 text-xs">{duration(step.durationMillis)}</span>
               </div>
-              <div class="flex items-center gap-3 text-sm">
+              <div class="flex min-w-0 items-center gap-3 text-sm">
                 <RatingBadge rating={rating()} label={step.rating ?? 'Error'} />
                 <Show when={step.confidence != null}>
                   <Meter value={step.confidence ?? 0} rating={rating()} class="max-w-40 flex-1" />
                   <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
                 </Show>
+                <Show when={step.error}>{(error) => <FailureDetails details={error()} />}</Show>
               </div>
-              <Show when={next() && step.rating === 'NSFW'}>
-                <p class="text-ink-3 text-xs">
-                  Flagged, sent to {classifierLabel(next()?.classifier ?? '')} to confirm.
-                </p>
-              </Show>
-              <Show when={step.rating == null}>
-                <p class="text-ink-3 text-xs">
-                  {index() === decided()
-                    ? 'Failed, the request has no verdict.'
-                    : 'Failed, the previous verdict stands.'}
-                </p>
-              </Show>
-              <Show when={step.error}>{(error) => <FailureDetails details={error()} />}</Show>
             </TimelineItem>
           );
         }}
@@ -200,17 +194,61 @@ export function ClassifierTimeline(props: { request: Request }) {
   );
 }
 
-/** The exception of a failure, which expands into its stack trace. Only the administrators receive it. */
+/** The exception of a failure, which opens its stack trace. Only the administrators receive it. */
 function FailureDetails(props: { details: FailureDetailsData }) {
+  const [open, setOpen] = createSignal(false);
+  const [copied, setCopied] = createSignal(false);
+  let trace!: HTMLPreElement;
+  let reset: ReturnType<typeof setTimeout> | undefined;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(props.details.stackTrace);
+      setCopied(true);
+      clearTimeout(reset);
+      reset = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Without clipboard access, select the trace for a manual copy
+      getSelection()?.selectAllChildren(trace);
+    }
+  };
   return (
-    <details class="text-sm">
-      <summary class="cursor-pointer text-ink-3 text-xs marker:text-ink-3">
-        <code class="wrap-anywhere text-danger">{props.details.type}</code>
-      </summary>
-      <pre class="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap wrap-anywhere rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
-        {props.details.stackTrace}
-      </pre>
-    </details>
+    <>
+      <button
+        type="button"
+        title="Show the stack trace"
+        class="min-w-0 cursor-pointer truncate font-mono text-danger text-xs underline decoration-dotted underline-offset-2 hover:decoration-solid"
+        onClick={() => setOpen(true)}>
+        {props.details.type}
+      </button>
+      <Dialog
+        open={open()}
+        onClose={() => setOpen(false)}
+        label="Stack trace"
+        class="w-[min(64rem,calc(100vw-2rem))]"
+        // Keeps the arrow keys from paging the request viewer of the admin panel underneath
+        onKeyDown={(event) => event.stopPropagation()}>
+        <div class="flex flex-col gap-4 p-6">
+          <header class="flex items-start gap-2">
+            <div class="flex min-w-0 flex-1 flex-col gap-1">
+              <h2 class="text-xl">Stack trace</h2>
+              <code class="wrap-anywhere text-danger text-sm">{props.details.type}</code>
+            </div>
+            <Button size="sm" onClick={copy}>
+              {copied() ? <CheckIcon /> : <CopyIcon />}
+              {copied() ? 'Copied' : 'Copy'}
+            </Button>
+            <Button size="icon" variant="quiet" aria-label="Close" class="-mt-1" onClick={() => setOpen(false)}>
+              <XIcon />
+            </Button>
+          </header>
+          <pre
+            ref={trace}
+            class="max-h-[70dvh] overflow-auto rounded-lg border border-line bg-bg-2 p-4 font-mono text-ink-2 text-xs leading-relaxed">
+            {props.details.stackTrace}
+          </pre>
+        </div>
+      </Dialog>
+    </>
   );
 }
 
