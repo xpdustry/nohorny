@@ -124,6 +124,7 @@ export function VerdictCard(props: { request: Request }) {
       </Show>
       <Show when={props.request.error}>
         <p class="text-danger text-sm">Classification failed: {props.request.error}</p>
+        <StackTrace trace={props.request.stackTrace} />
       </Show>
     </Card>
   );
@@ -148,12 +149,27 @@ export function ChainCard(props: { request: Request }) {
                 </span>
                 <Show when={step.error}>
                   <span class="text-danger text-sm">{step.error}</span>
+                  <StackTrace trace={step.stackTrace} />
                 </Show>
               </li>
             )}
           </For>
         </ol>
       </Card>
+    </Show>
+  );
+}
+
+/** The collapsed stack trace of a failure, when the server sent it. */
+function StackTrace(props: { trace: string | null | undefined }) {
+  return (
+    <Show when={props.trace}>
+      <details class="text-sm">
+        <summary class="cursor-pointer text-ink-2">Stack trace</summary>
+        <pre class="mt-2 max-h-80 overflow-auto rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
+          {props.trace}
+        </pre>
+      </details>
     </Show>
   );
 }

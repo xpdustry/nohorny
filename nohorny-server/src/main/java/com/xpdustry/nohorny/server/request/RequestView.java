@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 /// The JSON representation of a classification request.
 ///
+/// @param error the exception class of a failure, its stack trace is restricted to the administrators
 /// @param restricted the administrator only fields, omitted entirely for the other callers
 public record RequestView(
         String id,
@@ -36,14 +37,22 @@ public record RequestView(
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
 
+    /// @param error the exception class of a failure
+    /// @param stackTrace the stack trace of a failure, only sent to the administrators
     public record Step(
             String classifier,
             @Nullable Rating rating,
             @Nullable Double confidence,
             long durationMillis,
-            @Nullable String error) {}
+            @Nullable String error,
 
-    public record Restricted(String remoteAddress, Requester requester) {}
+            @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String stackTrace) {}
+
+    /// @param stackTrace the stack trace of a failure
+    public record Restricted(
+            String remoteAddress,
+            Requester requester,
+            @Nullable String stackTrace) {}
 
     /// @param type `user`, `mindustry-network` or `anonymous`
     /// @param name the username of a user, the network of a listed Mindustry server if it has one

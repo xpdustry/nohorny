@@ -38,7 +38,10 @@ export interface Step {
   rating: Rating | null;
   confidence: number | null;
   durationMillis: number;
+  /** The exception class of a failure. */
   error: string | null;
+  /** The stack trace of a failure, only sent to the administrators. */
+  stackTrace?: string;
 }
 
 export interface Client {
@@ -61,6 +64,7 @@ export interface Request {
   rating: Rating | null;
   confidence: number | null;
   classifier: string | null;
+  /** The exception class of a failure. */
   error: string | null;
   version: string | null;
   client: Client;
@@ -69,6 +73,8 @@ export interface Request {
   /** Only sent to the administrators, with `remoteAddress`. */
   remoteAddress?: string;
   requester?: Requester;
+  /** The stack trace of a failure, only sent to the administrators. */
+  stackTrace?: string | null;
 }
 
 export interface Page<T> {
