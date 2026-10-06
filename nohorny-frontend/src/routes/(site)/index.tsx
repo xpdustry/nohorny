@@ -109,7 +109,8 @@ export default function Landing() {
         class="wrap grid items-center gap-12 pt-16 pb-24 lg:grid-cols-[1.1fr_1fr] lg:pt-24"
         aria-labelledby="hero">
         <div class="flex flex-col gap-6">
-          <h1 id="hero" class="text-5xl leading-[1.02] sm:text-6xl">
+          {/* Shrinks on the narrowest screens, where "Mindustry" alone would be wider than the page */}
+          <h1 id="hero" class="text-[length:min(3rem,16vw)] leading-[1.02] sm:text-6xl">
             No more <RotatingWord words={HERO_WORDS} /> in your Mindustry server.
           </h1>
           <p class="max-w-xl text-lg text-ink-2">
@@ -140,7 +141,7 @@ export default function Landing() {
           </div>
         </div>
 
-        <section class="card relative flex flex-col gap-6 overflow-hidden p-8" aria-labelledby="live">
+        <section class="card relative flex flex-col gap-6 overflow-hidden p-6 sm:p-8" aria-labelledby="live">
           <div class="flex items-center justify-between">
             <h2 id="live" class="text-ink-2">
               Images classified
@@ -194,7 +195,7 @@ export default function Landing() {
           Why NoHorny
         </h2>
         <div class="grid gap-4 md:grid-cols-2">
-          <article class="card flex flex-col gap-6 p-8">
+          <article class="card flex flex-col gap-6 p-6 sm:p-8">
             <div>
               <h3 class="text-3xl">Incredibly fast</h3>
               <p class="mt-2 text-ink-2">Go on, spam the canvases: we tested that too.</p>
@@ -208,7 +209,8 @@ export default function Landing() {
               </p>
             </div>
           </article>
-          <article class="card flex flex-col gap-6 p-8">
+          {/* A container, so the tree scales down with the card instead of widening the grid past narrow screens */}
+          <article class="@container card flex flex-col gap-6 p-6 sm:p-8">
             <div>
               <h3 class="text-3xl">Zero config needed</h3>
               <p class="mt-2 text-ink-2">
@@ -220,7 +222,7 @@ export default function Landing() {
               </p>
             </div>
             <ul
-              class="tree m-auto rounded-xl border border-line bg-bg-2 px-6 py-5 font-mono text-sm"
+              class="tree m-auto rounded-xl border border-line bg-bg-2 px-[1.7em] py-[1.4em] font-mono text-[length:min(0.875rem,4.5cqi)]"
               aria-hidden="true">
               <li>
                 config/
@@ -228,11 +230,11 @@ export default function Landing() {
                   <li>
                     mods/
                     <ul>
-                      <li class="jar flex items-center gap-2">
-                        <span class="jar-drop whitespace-nowrap rounded-md border border-line-strong bg-surface-2 px-2 py-0.5 text-ink max-sm:text-xs">
+                      <li class="jar flex items-center gap-[0.6em]">
+                        <span class="jar-drop whitespace-nowrap rounded-md border border-line-strong bg-surface-2 px-[0.6em] py-[0.15em] text-ink max-sm:text-[0.86em]">
                           nohorny-plugin.jar
                         </span>
-                        <CheckIcon class="jar-tick size-4 text-safe" />
+                        <CheckIcon class="jar-tick size-[1.15em] text-safe" />
                       </li>
                     </ul>
                   </li>
@@ -244,7 +246,7 @@ export default function Landing() {
       </section>
 
       <section id="install" class="wrap py-12" aria-labelledby="install-title">
-        <div class="card flex flex-col justify-between gap-8 p-8 sm:p-12 md:flex-row md:items-center">
+        <div class="card flex flex-col justify-between gap-8 p-6 sm:p-12 md:flex-row md:items-center">
           <div class="max-w-xl">
             <h2 id="install-title" class="text-4xl">
               What are you waiting for?
