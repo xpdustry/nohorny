@@ -2,7 +2,7 @@
 
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
-import type { Request } from '../lib/api';
+import type { FailureDetails as FailureDetailsData, Request } from '../lib/api';
 import {
   bucket,
   classifierLabel,
@@ -14,7 +14,18 @@ import {
   stepBucket,
 } from '../lib/format';
 import { EyeOffIcon, ImageOffIcon } from './icon';
-import { Button, Chip, Meter, RATING_TEXT, RatingBadge, Spinner, State } from './ui';
+import {
+  Button,
+  Chip,
+  Meter,
+  RATING_TEXT,
+  RatingBadge,
+  Spinner,
+  State,
+  Timeline,
+  TimelineDot,
+  TimelineItem,
+} from './ui';
 
 const PLACEHOLDERS = {
   none: 'No image kept',
@@ -119,13 +130,10 @@ export function VerdictCard(props: { request: Request }) {
       </Show>
       <Show when={props.request.classifier}>
         <p class="text-ink-2 text-sm">
-          Decided by <Classifier id={props.request.classifier ?? ''} />
+          {rating() === 'failed' ? 'Failed in' : 'Decided by'} <Classifier id={props.request.classifier ?? ''} />
         </p>
       </Show>
-      <Show when={props.request.error}>
-        <p class="text-danger text-sm">Classification failed: {props.request.error}</p>
-        <StackTrace trace={props.request.stackTrace} />
-      </Show>
+      <Show when={props.request.error}>{(error) => <FailureDetails details={error()} />}</Show>
     </Card>
   );
 }
@@ -134,43 +142,75 @@ export function ChainCard(props: { request: Request }) {
   return (
     <Show when={props.request.steps.length > 0}>
       <Card title="Classifier chain">
-        <ol class="flex flex-col gap-4">
-          <For each={props.request.steps}>
-            {(step) => (
-              <li class="flex flex-col gap-1.5">
-                <Classifier id={step.classifier} class="self-start text-sm" />
-                <span class="flex flex-wrap items-center gap-3 text-ink-2 text-sm">
-                  <RatingBadge rating={stepBucket(step)} label={step.rating ?? 'Error'} />
-                  <Show when={step.confidence != null}>
-                    <Meter value={step.confidence ?? 0} rating={stepBucket(step)} class="w-20" />
-                    <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
-                  </Show>
-                  <span>{duration(step.durationMillis)}</span>
-                </span>
-                <Show when={step.error}>
-                  <span class="text-danger text-sm">{step.error}</span>
-                  <StackTrace trace={step.stackTrace} />
-                </Show>
-              </li>
-            )}
-          </For>
-        </ol>
+        <ClassifierTimeline request={props.request} />
       </Card>
     </Show>
   );
 }
 
-/** The collapsed stack trace of a failure, when the server sent it. */
-function StackTrace(props: { trace: string | null | undefined }) {
+/** The classifiers a request went through, in order. An NSFW verdict escalates to the next classifier. */
+export function ClassifierTimeline(props: { request: Request }) {
+  // A verdict comes from the last step of its classifier with a rating, a failure from the last step
+  const decided = () =>
+    props.request.successful
+      ? props.request.steps.findLastIndex((step) => step.rating && step.classifier === props.request.classifier)
+      : props.request.steps.length - 1;
   return (
-    <Show when={props.trace}>
-      <details class="text-sm">
-        <summary class="cursor-pointer text-ink-2">Stack trace</summary>
-        <pre class="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap wrap-anywhere rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
-          {props.trace}
-        </pre>
-      </details>
-    </Show>
+    <Timeline>
+      <For each={props.request.steps}>
+        {(step, index) => {
+          const rating = () => stepBucket(step);
+          const next = () => props.request.steps[index() + 1];
+          return (
+            <TimelineItem marker={<TimelineDot rating={rating()} emphasized={index() === decided()} />}>
+              <div class="flex min-h-6 items-center justify-between gap-3">
+                <span class="flex min-w-0 items-center gap-2">
+                  <Classifier id={step.classifier} class="truncate text-sm" />
+                  <Show when={index() === decided()}>
+                    <Chip>final</Chip>
+                  </Show>
+                </span>
+                <span class="shrink-0 font-mono text-ink-3 text-xs">{duration(step.durationMillis)}</span>
+              </div>
+              <div class="flex items-center gap-3 text-sm">
+                <RatingBadge rating={rating()} label={step.rating ?? 'Error'} />
+                <Show when={step.confidence != null}>
+                  <Meter value={step.confidence ?? 0} rating={rating()} class="max-w-40 flex-1" />
+                  <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
+                </Show>
+              </div>
+              <Show when={next() && step.rating === 'NSFW'}>
+                <p class="text-ink-3 text-xs">
+                  Flagged, sent to {classifierLabel(next()?.classifier ?? '')} to confirm.
+                </p>
+              </Show>
+              <Show when={step.rating == null}>
+                <p class="text-ink-3 text-xs">
+                  {index() === decided()
+                    ? 'Failed, the request has no verdict.'
+                    : 'Failed, the previous verdict stands.'}
+                </p>
+              </Show>
+              <Show when={step.error}>{(error) => <FailureDetails details={error()} />}</Show>
+            </TimelineItem>
+          );
+        }}
+      </For>
+    </Timeline>
+  );
+}
+
+/** The exception of a failure, which expands into its stack trace. Only the administrators receive it. */
+function FailureDetails(props: { details: FailureDetailsData }) {
+  return (
+    <details class="text-sm">
+      <summary class="cursor-pointer text-ink-3 text-xs marker:text-ink-3">
+        <code class="wrap-anywhere text-danger">{props.details.type}</code>
+      </summary>
+      <pre class="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap wrap-anywhere rounded-md border border-line bg-surface-2 p-3 font-mono text-ink-2 text-xs">
+        {props.details.stackTrace}
+      </pre>
+    </details>
   );
 }
 

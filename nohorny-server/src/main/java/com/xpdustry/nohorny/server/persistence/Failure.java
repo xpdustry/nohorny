@@ -19,7 +19,7 @@ public record Failure(String error) implements Outcome {
         return RatingBucket.FAILED;
     }
 
-    /// @return the name of the exception class, safe to show publicly unlike the message and the frames
+    /// @return the name of the exception class
     public String type() {
         final var line = this.error.lines().findFirst().orElse("");
         final var end = line.indexOf(':');

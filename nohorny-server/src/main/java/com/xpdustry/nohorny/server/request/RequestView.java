@@ -10,7 +10,6 @@ import org.jspecify.annotations.Nullable;
 
 /// The JSON representation of a classification request.
 ///
-/// @param error the exception class of a failure, its stack trace is restricted to the administrators
 /// @param restricted the administrator only fields, omitted entirely for the other callers
 public record RequestView(
         String id,
@@ -20,7 +19,6 @@ public record RequestView(
         @Nullable Rating rating,
         @Nullable Double confidence,
         String classifier,
-        @Nullable String error,
         @Nullable String version,
         Client client,
         Image image,
@@ -37,22 +35,25 @@ public record RequestView(
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
 
-    /// @param error the exception class of a failure
-    /// @param stackTrace the stack trace of a failure, only sent to the administrators
+    /// @param error the details of a failure, only sent to the administrators
     public record Step(
             String classifier,
             @Nullable Rating rating,
             @Nullable Double confidence,
             long durationMillis,
-            @Nullable String error,
 
-            @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String stackTrace) {}
+            @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable FailureDetails error) {}
 
-    /// @param stackTrace the stack trace of a failure
+    /// @param error the details of a failure
     public record Restricted(
             String remoteAddress,
             Requester requester,
-            @Nullable String stackTrace) {}
+            @Nullable FailureDetails error) {}
+
+    /// The details of a failure. Kept from the public, they reveal the internals of the server.
+    ///
+    /// @param type the name of the exception class
+    public record FailureDetails(String type, String stackTrace) {}
 
     /// @param type `user`, `mindustry-network` or `anonymous`
     /// @param name the username of a user, the network of a listed Mindustry server if it has one

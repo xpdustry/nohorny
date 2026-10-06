@@ -31,7 +31,7 @@ import {
   XIcon,
 } from '../../components/icon';
 import { NetworkChart } from '../../components/network-chart';
-import { KeyValues, RequestImage, VerdictCard } from '../../components/request';
+import { ClassifierTimeline, KeyValues, RequestImage, VerdictCard } from '../../components/request';
 import { Button, buttonClass, Chip, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
 import { AdminContext } from '../../lib/admin';
 import {
@@ -778,6 +778,12 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                 />
                 <div class="flex flex-col gap-4">
                   <VerdictCard request={value().item} />
+                  <Show when={value().item.steps.length > 0}>
+                    <section class="flex flex-col gap-3 px-1 pb-2">
+                      <h3 class="label">Classifier chain</h3>
+                      <ClassifierTimeline request={value().item} />
+                    </section>
+                  </Show>
                   <section class="px-1">
                     <KeyValues
                       rows={[
