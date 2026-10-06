@@ -12,6 +12,7 @@ import {
   ScanSearchIcon,
 } from '../../components/icon';
 import { buttonClass, LiveIndicator, RATING_FILL, RATING_TEXT } from '../../components/ui';
+import type { Bucket } from '../../lib/api';
 import { number } from '../../lib/format';
 import { DOWNLOAD, EXTERNAL, GITHUB, MINDUSTRY } from '../../lib/links';
 import { createLiveStats } from '../../lib/stats';
@@ -84,9 +85,9 @@ function createCountUp(target: () => number | undefined) {
 export default function Landing() {
   const stats = createLiveStats(15);
   const total = createCountUp(() => stats.data()?.total);
-  const day = () => stats.data()?.last24Hours.ratings;
+  const processed = () => stats.data()?.last24Hours.total ?? null;
   const flagged = () => {
-    const ratings = day();
+    const ratings = stats.data()?.last24Hours.ratings;
     return ratings ? ratings.warn + ratings.nsfw : null;
   };
 
@@ -152,25 +153,18 @@ export default function Landing() {
           <p class="sr-only" aria-live="polite" aria-atomic="true">
             {spoken()}
           </p>
-          <div class="grid grid-cols-2 gap-2 border-line-strong border-t border-dashed pt-6 sm:grid-cols-[1fr_auto_auto]">
-            <p class="col-span-2 flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-2.5 sm:col-span-1">
-              <b class="text-3xl font-normal">{number(flagged())}</b>
-              <span class="flex flex-col leading-tight">
-                <span>{flagged() === 1 ? 'image flagged' : 'images flagged'}</span>
-                <small class="text-ink-3">in the last 24 hours</small>
-              </span>
-            </p>
-            <For each={['warn', 'nsfw'] as const}>
-              {(key) => (
-                <p class="flex min-w-20 flex-col rounded-xl border border-line bg-surface-2 px-3 py-2">
-                  <span class={['flex items-center gap-1.5 font-mono text-[0.65rem] uppercase', RATING_TEXT[key]]}>
-                    <span class={['size-1.5 rounded-sm', RATING_FILL[key]]} />
-                    {key}
-                  </span>
-                  <b class="text-xl font-normal">{number(day()?.[key])}</b>
-                </p>
-              )}
-            </For>
+          <div class="@container border-line-strong border-t border-dashed pt-6">
+            <div class="grid grid-cols-2 gap-2 @lg:grid-cols-[1fr_auto_auto]">
+              <p class="col-span-2 flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-2.5 @lg:col-span-1">
+                <b class="text-3xl font-normal">{number(processed())}</b>
+                <span class="flex flex-col leading-tight">
+                  <span>{processed() === 1 ? 'image processed' : 'images processed'}</span>
+                  <small class="text-ink-3">in the last 24 hours</small>
+                </span>
+              </p>
+              <DayCount rating="warn" label="flagged" value={flagged()} />
+              <DayCount rating="nsfw" label="nsfw" value={stats.data()?.last24Hours.ratings.nsfw} />
+            </div>
           </div>
         </section>
       </section>
@@ -270,6 +264,18 @@ export default function Landing() {
         </div>
       </section>
     </>
+  );
+}
+
+function DayCount(props: { rating: Bucket; label: string; value: number | undefined | null }) {
+  return (
+    <p class="flex min-w-20 flex-col rounded-xl border border-line bg-surface-2 px-3 py-2">
+      <span class={['flex items-center gap-1.5 font-mono text-[0.65rem] uppercase', RATING_TEXT[props.rating]]}>
+        <span class={['size-1.5 rounded-sm', RATING_FILL[props.rating]]} />
+        {props.label}
+      </span>
+      <b class="text-xl font-normal">{number(props.value)}</b>
+    </p>
   );
 }
 

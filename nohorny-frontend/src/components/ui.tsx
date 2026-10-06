@@ -204,7 +204,7 @@ export function Chip(props: { children: JSX.Element; class?: string; title?: str
 }
 
 const CONNECTION_DOT: Record<Connection, string> = {
-  live: 'bg-fill-safe motion-safe:animate-pulse',
+  live: 'bg-accent motion-safe:animate-pulse',
   connecting: 'bg-warn',
   polling: 'bg-ink-3',
   offline: 'bg-danger',
