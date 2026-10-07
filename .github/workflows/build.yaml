@@ -106,9 +106,40 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: "${{ secrets.XPDUSTRY_MAVEN_SIGNING_KEY }}"
           ORG_GRADLE_PROJECT_signingPassword: "${{ secrets.XPDUSTRY_MAVEN_SIGNING_PASSWORD }}"
 
+  # Only Linux jobs touch the natives cache, so the native runners only start when it misses
+  natives-plan:
+    name: "Natives Plan"
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+      cached: ${{ steps.lookup.outputs.cache-hit == 'true' }}
+    steps:
+
+      - name: "Checkout Repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Compute Natives Key"
+        id: key
+        env:
+          HASH: ${{ hashFiles('nohorny-native/CMakeLists.txt', 'nohorny-native/cmake/**', 'nohorny-native/src/**') }}
+        run: echo "key=prebuilt-natives-$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: "Lookup Natives"
+        id: lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: prebuilt-natives
+          key: ${{ steps.key.outputs.key }}
+          lookup-only: true
+
   natives:
     name: "Natives (${{ matrix.platform }})"
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    needs: natives-plan
+    if: ${{ needs.natives-plan.outputs.cached != 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -144,26 +175,16 @@ jobs:
       - name: "Trust Repository"
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: "Cache Natives"
-        id: cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: nohorny-native/build/generated/native
-          key: natives-${{ matrix.platform }}-${{ hashFiles('nohorny-native/CMakeLists.txt', 'nohorny-native/cmake/**', 'nohorny-native/src/**') }}
-
       - name: "Setup Java 25"
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
           java-version: "25"
           distribution: "temurin"
 
       - name: "Setup Gradle"
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
       - name: "Build Natives"
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: ./gradlew :nohorny-native:cmakeBuild
 
       - name: "Upload Natives"
@@ -175,8 +196,9 @@ jobs:
 
   server:
     name: "Server"
-    needs: natives
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    needs: [ natives-plan, natives ]
+    # The natives job is skipped when the natives are cached, which would skip this one too
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name) }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
@@ -212,12 +234,29 @@ jobs:
           cache-dependency-path: "nohorny-frontend/pnpm-lock.yaml"
 
       # The natives of every platform are bundled in the server jar
+      - name: "Restore Natives"
+        if: ${{ needs.natives-plan.outputs.cached == 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: prebuilt-natives
+          key: ${{ needs.natives-plan.outputs.key }}
+          fail-on-cache-miss: true
+
       - name: "Download Natives"
+        if: ${{ needs.natives-plan.outputs.cached != 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: natives-*
           path: prebuilt-natives
           merge-multiple: true
+
+      # Saved before the build, so failing tests do not throw away freshly compiled natives
+      - name: "Save Natives"
+        if: ${{ needs.natives-plan.outputs.cached != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: prebuilt-natives
+          key: ${{ needs.natives-plan.outputs.key }}
 
       - name: "Build Server"
         run: ./gradlew :nohorny-frontend:check :nohorny-server:build -Pprebuilt_natives=prebuilt-natives
@@ -241,8 +280,9 @@ jobs:
 
   docker:
     name: "Docker"
-    needs: server
-    if: ${{ github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
+    needs: [ natives-plan, server ]
+    # The natives job is skipped when the natives are cached, which would skip this one too
+    if: ${{ !cancelled() && !failure() && (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
@@ -256,12 +296,16 @@ jobs:
       - name: "Checkout Repository"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # The image only needs the linux-x86_64 natives
-      - name: "Download Natives"
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      # The server job fills the natives cache, the image only needs the linux-x86_64 natives
+      - name: "Restore Natives"
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
-          name: natives-linux-x86_64
           path: prebuilt-natives
+          key: ${{ needs.natives-plan.outputs.key }}
+          fail-on-cache-miss: true
+
+      - name: "Keep Linux x86_64 Natives"
+        run: find prebuilt-natives/com/xpdustry/nohorny/server/natives -mindepth 1 -maxdepth 1 ! -name linux-x86_64 -exec rm -rf {} +
 
       - name: "Setup Docker Builder"
         uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2
@@ -301,7 +345,8 @@ jobs:
   release:
     name: "Release"
     needs: [ plugin, server ]
-    if: ${{ github.event_name == 'release' }}
+    # The natives job is skipped when the natives are cached, which would skip this one too
+    if: ${{ !cancelled() && !failure() && github.event_name == 'release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:

@@ -310,7 +310,6 @@ Run these commands from the repository root:
 
 The server build also builds the native classifier and the frontend, then bundles them in the JAR file.
 The first native build takes longer because it compiles OpenCV.
-If CMake is absent, Gradle skips the native build. The default ViT classifier then cannot run.
 
 The [`nohorny-frontend`](nohorny-frontend) app uses Solid 2 and Tailwind CSS.
 To work on the frontend, start the Java server at `127.0.0.1:8080`.

@@ -297,23 +297,6 @@ abstract class CMakeBuild : DefaultTask() {
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
-    init {
-        // The native library is optional, the server gracefully fails to load it when missing
-        onlyIf("CMake is available") {
-            val available =
-                try {
-                    ProcessBuilder("cmake", "--version").redirectErrorStream(true).start().run {
-                        inputStream.readAllBytes()
-                        waitFor() == 0
-                    }
-                } catch (_: java.io.IOException) {
-                    false
-                }
-            if (!available) logger.warn("CMake is not available, skipping the nohorny native library")
-            available
-        }
-    }
-
     @TaskAction
     fun build() {
         // CMake relinks the library if it is missing, so it does not leave stale files behind
