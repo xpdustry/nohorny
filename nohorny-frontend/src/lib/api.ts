@@ -28,6 +28,13 @@ export interface Networks {
   networks: { name: string; count: number }[];
 }
 
+/** The requests per plugin version, the most used first. The rest of `total` comes from the clients sending none. */
+export interface Versions {
+  range: HistoryRange;
+  total: number;
+  versions: { name: string; count: number }[];
+}
+
 export interface Retention {
   imageMillis: number;
   requestMillis: number;

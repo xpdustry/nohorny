@@ -25,9 +25,9 @@ public interface DailyNetworkStatRepository extends Repository<DailyNetworkStat,
     /// @param from the first ISO-8601 day, included
     /// @return the number of requests per listed network since the given day, deleted requests included
     @Query("""
-            SELECT d.id.network AS network, SUM(d.count) AS total FROM DailyNetworkStat d
+            SELECT d.id.network AS name, SUM(d.count) AS total FROM DailyNetworkStat d
             WHERE d.id.day >= :from
             GROUP BY d.id.network
             """)
-    List<NetworkCount> countByNetworkSince(String from);
+    List<NamedCount> countByNetworkSince(String from);
 }

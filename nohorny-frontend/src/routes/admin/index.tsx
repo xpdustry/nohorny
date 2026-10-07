@@ -1,6 +1,7 @@
 // The requests page of the admin panel, with the activity chart, the filtered request list and the viewer.
 
 import { Meta, Title } from '@solidjs/meta';
+import type { JSX } from '@solidjs/web';
 import {
   createEffect,
   createMemo,
@@ -33,6 +34,7 @@ import {
 import { NetworkChart } from '../../components/network-chart';
 import { ClassifierTimeline, KeyValues, RequestImage, VerdictCard } from '../../components/request';
 import { Button, buttonClass, Chip, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
+import { VersionChart } from '../../components/version-chart';
 import { AdminContext } from '../../lib/admin';
 import {
   BUCKETS,
@@ -45,6 +47,7 @@ import {
   type Request,
   requestPath,
   statusOf,
+  type Versions,
 } from '../../lib/api';
 import { cursorAt, parsePrefix, toLocalInput } from '../../lib/cursor';
 import {
@@ -94,6 +97,7 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
 
   const history = createMemo(() => call<History>(`/api/stats/history?range=${range()}`));
   const networks = createMemo(() => call<Networks>(`/api/stats/networks?range=${range()}`));
+  const versions = createMemo(() => call<Versions>(`/api/stats/versions?range=${range()}`));
 
   // Reloads the history when the live total changes. A busy server classifies many images per second, so the reloads
   // wait at least REFRESH_MILLIS apart
@@ -109,6 +113,7 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
           lastLoad = Date.now();
           refresh(history);
           refresh(networks);
+          refresh(versions);
         },
         Math.max(0, lastLoad + REFRESH_MILLIS - Date.now()),
       );
@@ -204,31 +209,45 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
         </Loading>
       </Errored>
 
-      <section class="flex flex-col gap-4 border-line border-t pt-6" aria-labelledby="networks">
-        <h2 id="networks" class="text-xl">
-          Networks
-        </h2>
-        <Errored
-          fallback={(error, reset) => (
-            <Show when={!(error() instanceof SessionExpired)}>
-              <State title="Could not load the networks" tone="error">
-                <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
-                <Button onClick={() => reset()}>Retry</Button>
-              </State>
-            </Show>
-          )}>
-          <Loading
-            fallback={
-              <div class="grid h-48 place-items-center text-ink-3">
-                <Spinner class="size-5" />
-              </div>
-            }>
-            <div class={['transition-opacity', { 'opacity-60': isPending(() => networks()) }]}>
-              <NetworkChart networks={networks()} />
+      <div class="grid gap-8 border-line border-t pt-6 lg:grid-cols-[3fr_2fr]">
+        <Breakdown id="networks" title="Networks" data={networks}>
+          {(data) => <NetworkChart networks={data()} />}
+        </Breakdown>
+        <Breakdown id="versions" title="Client versions" data={versions}>
+          {(data) => <VersionChart versions={data()} />}
+        </Breakdown>
+      </div>
+    </section>
+  );
+}
+
+/** A titled chart of the overview, loading and failing on its own. */
+function Breakdown<T>(props: { id: string; title: string; data: () => T; children: (data: () => T) => JSX.Element }) {
+  return (
+    <section class="flex min-w-0 flex-col gap-4" aria-labelledby={props.id}>
+      <h2 id={props.id} class="text-xl">
+        {props.title}
+      </h2>
+      <Errored
+        fallback={(error, reset) => (
+          <Show when={!(error() instanceof SessionExpired)}>
+            <State title={`Could not load the ${props.title.toLowerCase()}`} tone="error">
+              <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
+              <Button onClick={() => reset()}>Retry</Button>
+            </State>
+          </Show>
+        )}>
+        <Loading
+          fallback={
+            <div class="grid h-48 place-items-center text-ink-3">
+              <Spinner class="size-5" />
             </div>
-          </Loading>
-        </Errored>
-      </section>
+          }>
+          <div class={['transition-opacity', { 'opacity-60': isPending(() => props.data()) }]}>
+            {props.children(props.data)}
+          </div>
+        </Loading>
+      </Errored>
     </section>
   );
 }

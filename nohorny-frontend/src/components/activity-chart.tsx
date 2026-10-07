@@ -90,14 +90,19 @@ export function ActivityChart(props: {
                     props.onSelect?.(from, from + SLOT_MILLIS[props.history.slot]);
                   }}>
                   {/* Empty slots render no segments. Most of the 90 day range is empty. */}
+                  {/* 1.5rem wide, narrower when the slots are packed, and half the slot when they are few, like the 7 days */}
                   <Show when={bar().total > 0}>
                     <div
-                      class="flex max-w-6 flex-col-reverse self-center overflow-hidden rounded-t-[4px]"
-                      style={{ height: `${(bar().total / max()) * 100}%`, width: '85%' }}>
+                      class="flex flex-col-reverse self-center overflow-hidden rounded-t-[4px]"
+                      style={{ height: `${(bar().total / max()) * 100}%`, width: 'max(50%, min(85%, 1.5rem))' }}>
+                      {/* At least 4px of colour per segment, so a handful of failures among hundreds still shows */}
                       <For each={bar().parts} keyed={(part) => part.key}>
                         {(part) => (
                           <span
-                            class={['border-surface border-t-2 last:border-t-0', RATING_FILL[part().key]]}
+                            class={[
+                              'min-h-1.5 border-surface border-t-2 last:min-h-1 last:border-t-0',
+                              RATING_FILL[part().key],
+                            ]}
                             style={{ 'flex-grow': part().count }}
                           />
                         )}

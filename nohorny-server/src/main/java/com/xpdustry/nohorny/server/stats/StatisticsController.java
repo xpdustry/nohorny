@@ -41,6 +41,14 @@ public final class StatisticsController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown range"));
     }
 
+    /// Restricted to the administrators by the security configuration.
+    @GetMapping(path = "/api/stats/versions", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Versions onVersions(final @RequestParam(defaultValue = "30d") String range) {
+        return this.statistics
+                .versions(range)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown range"));
+    }
+
     @GetMapping(path = "/api/stats/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter onStream() throws IOException {
         return this.broadcaster.subscribe();

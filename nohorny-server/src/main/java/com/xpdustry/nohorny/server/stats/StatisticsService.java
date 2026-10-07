@@ -5,7 +5,8 @@ import com.xpdustry.nohorny.server.persistence.BucketCount;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.persistence.DailyNetworkStatRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
-import com.xpdustry.nohorny.server.persistence.NetworkCount;
+import com.xpdustry.nohorny.server.persistence.DailyVersionStatRepository;
+import com.xpdustry.nohorny.server.persistence.NamedCount;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
 import com.xpdustry.nohorny.server.persistence.SlotCount;
 import java.time.Duration;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,14 +30,17 @@ public class StatisticsService {
     private final ClassificationRequestRepository requests;
     private final DailyStatRepository dailyStats;
     private final DailyNetworkStatRepository networkStats;
+    private final DailyVersionStatRepository versionStats;
 
     public StatisticsService(
             final ClassificationRequestRepository requests,
             final DailyStatRepository dailyStats,
-            final DailyNetworkStatRepository networkStats) {
+            final DailyNetworkStatRepository networkStats,
+            final DailyVersionStatRepository versionStats) {
         this.requests = requests;
         this.dailyStats = dailyStats;
         this.networkStats = networkStats;
+        this.versionStats = versionStats;
     }
 
     public Statistics compute() {
@@ -50,32 +55,57 @@ public class StatisticsService {
     ///     over the same windows as [#history]
     /// @return the requests per listed network, or empty for an unknown range
     public Optional<Networks> networks(final String range) {
-        final List<NetworkCount> counts;
-        final long total;
+        return this.counts(range, this.requests::countByNetworkSince, this.networkStats::countByNetworkSince)
+                .map(counts -> new Networks(range, counts.total(), counts.named()));
+    }
+
+    /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
+    ///     over the same windows as [#history]
+    /// @return the requests per plugin version, or empty for an unknown range
+    public Optional<Versions> versions(final String range) {
+        return this.counts(range, this.requests::countByVersionSince, this.versionStats::countByVersionSince)
+                .map(counts -> new Versions(range, counts.total(), counts.named()));
+    }
+
+    /// The named counts of a range, from the retained requests for `24h` and from the daily statistics otherwise,
+    /// with every request of the range.
+    ///
+    /// @return empty for an unknown range
+    private Optional<Counts> counts(
+            final String range,
+            final Function<Instant, List<NamedCount>> retained,
+            final Function<String, List<NamedCount>> daily) {
         if (range.equals("24h")) {
             final var first = firstHour();
-            counts = this.requests.countByNetworkSince(first);
-            total = sum(this.requests.countByBucketSince(first).stream()
+            final var total = sum(this.requests.countByBucketSince(first).stream()
                     .map(BucketCount::getTotal)
                     .toList());
-        } else {
-            final var days = days(range);
-            if (days == 0) {
-                return Optional.empty();
-            }
-            final var first = firstDay(days).toString();
-            counts = this.networkStats.countByNetworkSince(first);
-            total = sum(this.dailyStats.countByDaySince(first).stream()
-                    .map(SlotCount::getTotal)
-                    .toList());
+            return Optional.of(Counts.of(retained.apply(first), total));
         }
-        final var networks = counts.stream()
-                .map(count -> new Networks.Network(count.getNetwork(), count.getTotal()))
-                .sorted(Comparator.comparingLong(Networks.Network::count)
-                        .reversed()
-                        .thenComparing(Networks.Network::name))
-                .toList();
-        return Optional.of(new Networks(range, total, networks));
+        final var days = days(range);
+        if (days == 0) {
+            return Optional.empty();
+        }
+        final var first = firstDay(days).toString();
+        final var total = sum(this.dailyStats.countByDaySince(first).stream()
+                .map(SlotCount::getTotal)
+                .toList());
+        return Optional.of(Counts.of(daily.apply(first), total));
+    }
+
+    /// @param named the counts by name, the highest first then by name
+    private record Counts(List<Count> named, long total) {
+
+        static Counts of(final List<NamedCount> counts, final long total) {
+            return new Counts(
+                    counts.stream()
+                            .map(count -> new Count(count.getName(), count.getTotal()))
+                            .sorted(Comparator.comparingLong(Count::count)
+                                    .reversed()
+                                    .thenComparing(Count::name))
+                            .toList(),
+                    total);
+        }
     }
 
     /// @param range `24h` for hourly slots from the retained requests,

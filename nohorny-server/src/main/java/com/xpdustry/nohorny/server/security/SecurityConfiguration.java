@@ -85,7 +85,8 @@ public class SecurityConfiguration {
         return http.authorizeHttpRequests(authorize -> {
                     // The classifications are restricted by the RateLimitFilter, which can require an account
                     authorize
-                            .requestMatchers(HttpMethod.GET, "/api/requests", "/api/stats/networks")
+                            .requestMatchers(
+                                    HttpMethod.GET, "/api/requests", "/api/stats/networks", "/api/stats/versions")
                             .hasRole(ADMIN_ROLE)
                             .requestMatchers(HttpMethod.DELETE, "/api/requests/*")
                             .hasRole(ADMIN_ROLE)
