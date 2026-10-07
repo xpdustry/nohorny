@@ -49,15 +49,9 @@ export interface FailureDetails {
   stackTrace: string;
 }
 
-export interface Client {
-  type: 'mindustry-server' | 'localhost' | 'unknown';
-  /** The network name of a listed Mindustry server, normalized by the server. */
-  network: string | null;
-}
-
 export interface Requester {
   type: 'user' | 'mindustry-network' | 'anonymous';
-  /** The username of a user, the network of a listed Mindustry server if it has one. */
+  /** The network of a listed Mindustry server if it has one, the username of a user for the administrators only. */
   name: string | null;
 }
 
@@ -70,12 +64,11 @@ export interface Request {
   confidence: number | null;
   classifier: string | null;
   version: string | null;
-  client: Client;
+  requester: Requester;
   image: { state: 'none' | 'stored' | 'expired' | 'purged'; url?: string };
   steps: Step[];
-  /** Only sent to the administrators, with `remoteAddress`. */
+  /** Only sent to the administrators. */
   remoteAddress?: string;
-  requester?: Requester;
   /** The details of a failure, only sent to the administrators with `remoteAddress`. */
   error?: FailureDetails | null;
 }

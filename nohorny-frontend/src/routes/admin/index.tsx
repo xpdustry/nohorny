@@ -49,7 +49,6 @@ import {
 import { cursorAt, parsePrefix, toLocalInput } from '../../lib/cursor';
 import {
   bucket,
-  clientLabel,
   duration,
   formatTime,
   number,
@@ -793,7 +792,6 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                             {relativeTime(value().item.createdAt)}
                           </time>,
                         ],
-                        ['Client', clientLabel(value().item.client)],
                         ['Plugin', <code>{value().item.version ? `v${value().item.version}` : 'unknown'}</code>],
                         ['Address', <code class="break-all">{value().item.remoteAddress ?? '–'}</code>],
                         ['Requester', requesterLabel(value().item.requester)],
@@ -903,7 +901,7 @@ function RequestRow(props: {
             {shortId(props.request.id)}
           </a>
           <Chip>{props.request.version ? `v${props.request.version}` : 'unknown'}</Chip>
-          <span class="truncate text-sm">{clientLabel(props.request.client)}</span>
+          <span class="truncate text-sm">{requesterLabel(props.request.requester)}</span>
         </span>
         <span class="truncate font-mono text-ink-3 text-xs">{props.request.remoteAddress}</span>
       </div>

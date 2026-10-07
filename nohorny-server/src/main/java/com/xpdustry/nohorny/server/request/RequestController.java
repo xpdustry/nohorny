@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.request;
 
-import com.xpdustry.nohorny.server.MindustryClientDirectory;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequest;
 import com.xpdustry.nohorny.server.persistence.ClassificationStep;
 import com.xpdustry.nohorny.server.persistence.Failure;
@@ -41,11 +40,9 @@ public final class RequestController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final RequestService requests;
-    private final MindustryClientDirectory clients;
 
-    public RequestController(final RequestService requests, final MindustryClientDirectory clients) {
+    public RequestController(final RequestService requests) {
         this.requests = requests;
-        this.clients = clients;
     }
 
     @GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -102,12 +99,9 @@ public final class RequestController {
     }
 
     private RequestView toView(final ClassificationRequest request, final boolean admin) {
-        // A Mindustry network requester was listed when it sent the request, the other clients are looked up
+        // The network names come from the public server list, the usernames are kept from the public
         final var requester = request.getRequester();
-        final var client = requester.type() == RequesterType.MINDUSTRY_NETWORK
-                ? new MindustryClientDirectory.ClientInfo(
-                        MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER, requester.name())
-                : this.clients.whois(request.getRemoteAddress());
+        final var name = admin || requester.type() != RequesterType.USER ? requester.name() : null;
         final var verdict = request.getOutcome() instanceof Verdict value ? value : null;
         final var failure = request.getOutcome() instanceof Failure value ? value : null;
         return new RequestView(
@@ -119,7 +113,7 @@ public final class RequestController {
                 verdict == null ? null : verdict.confidence(),
                 request.getClassifier(),
                 request.getVersion(),
-                new RequestView.Client(client.type(), client.network()),
+                new RequestView.Requester(requester.type().key(), name),
                 new RequestView.Image(
                         request.getImageState().key(),
                         request.getImageState() == ImageState.STORED
@@ -131,11 +125,7 @@ public final class RequestController {
 
     private static RequestView.Restricted restricted(
             final ClassificationRequest request, final @Nullable Failure failure) {
-        final var requester = request.getRequester();
-        return new RequestView.Restricted(
-                request.getRemoteAddress(),
-                new RequestView.Requester(requester.type().key(), requester.name()),
-                failure == null ? null : toView(failure));
+        return new RequestView.Restricted(request.getRemoteAddress(), failure == null ? null : toView(failure));
     }
 
     private static RequestView.Step toView(final ClassificationStep step, final boolean admin) {

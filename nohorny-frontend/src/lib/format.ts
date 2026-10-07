@@ -1,6 +1,6 @@
 // Formatting of numbers, dates and requests for display.
 
-import type { Bucket, Client, Request, Requester, Step } from './api';
+import type { Bucket, Request, Requester, Step } from './api';
 
 const numberFormat = new Intl.NumberFormat();
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
@@ -95,22 +95,11 @@ export function ratingLabel(key: Bucket): string {
   return RATING_LABELS[key];
 }
 
-export function isServer(client: Client): boolean {
-  return client.type === 'mindustry-server';
-}
-
-export function clientLabel(client: Client): string {
-  if (client.type === 'localhost') return 'Localhost';
-  if (!isServer(client)) return 'Unknown client';
-  return client.network ?? 'Mindustry server';
-}
-
-/** 'User bob', 'Mindustry network Foo', or 'Anonymous'. */
-export function requesterLabel(requester: Requester | undefined): string {
-  if (!requester) return '–';
+/** 'User bob', 'Mindustry network Foo', or 'Anonymous'. The usernames are only sent to the administrators. */
+export function requesterLabel(requester: Requester): string {
   switch (requester.type) {
     case 'user':
-      return `User ${requester.name}`;
+      return requester.name ? `User ${requester.name}` : 'User account';
     case 'mindustry-network':
       return requester.name ? `Mindustry network ${requester.name}` : 'Unnamed Mindustry server';
     case 'anonymous':

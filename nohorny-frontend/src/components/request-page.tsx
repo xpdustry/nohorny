@@ -4,7 +4,7 @@
 import { Title } from '@solidjs/meta';
 import { createMemo, createSignal, Errored, Loading, onSettled, refresh, Show } from 'solid-js';
 import { api, describe, type Request, requestPath, statusOf } from '../lib/api';
-import { relativeTime, requesterLabel, shortId } from '../lib/format';
+import { relativeTime, shortId } from '../lib/format';
 import { checkSession, isAdmin } from '../lib/session';
 import { confirm } from './dialog';
 import { ArrowLeftIcon, FlagIcon, ListIcon, LockIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
@@ -210,12 +210,7 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
           <DetailsCard request={props.request} />
           <Show when={isAdmin()}>
             <Card title="Moderation · admins only">
-              <KeyValues
-                rows={[
-                  ['Address', <code class="break-all">{props.request.remoteAddress ?? '–'}</code>],
-                  ['Requester', requesterLabel(props.request.requester)],
-                ]}
-              />
+              <KeyValues rows={[['Address', <code class="break-all">{props.request.remoteAddress ?? '–'}</code>]]} />
               <div class="flex flex-wrap gap-2">
                 <Button variant="danger" busy={busy()} onClick={remove}>
                   <TrashIcon />

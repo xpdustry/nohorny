@@ -20,14 +20,10 @@ public record RequestView(
         @Nullable Double confidence,
         String classifier,
         @Nullable String version,
-        Client client,
+        Requester requester,
         Image image,
         List<Step> steps,
         @JsonUnwrapped @Nullable Restricted restricted) {
-
-    /// @param type `mindustry-server`, `localhost` or `unknown`
-    /// @param network the normalized network name of a listed Mindustry server
-    public record Client(String type, @Nullable String network) {}
 
     /// @param url only present when the image is stored
     public record Image(
@@ -45,10 +41,7 @@ public record RequestView(
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable FailureDetails error) {}
 
     /// @param error the details of a failure
-    public record Restricted(
-            String remoteAddress,
-            Requester requester,
-            @Nullable FailureDetails error) {}
+    public record Restricted(String remoteAddress, @Nullable FailureDetails error) {}
 
     /// The details of a failure. Kept from the public, they reveal the internals of the server.
     ///
@@ -56,6 +49,7 @@ public record RequestView(
     public record FailureDetails(String type, String stackTrace) {}
 
     /// @param type `user`, `mindustry-network` or `anonymous`
-    /// @param name the username of a user, the network of a listed Mindustry server if it has one
+    /// @param name the network of a listed Mindustry server if it has one,
+    ///     the username of a user for the administrators only
     public record Requester(String type, @Nullable String name) {}
 }

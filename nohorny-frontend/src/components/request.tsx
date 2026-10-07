@@ -3,16 +3,7 @@
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
 import type { FailureDetails as FailureDetailsData, Request } from '../lib/api';
-import {
-  bucket,
-  classifierLabel,
-  clientLabel,
-  duration,
-  formatTime,
-  isServer,
-  percent,
-  stepBucket,
-} from '../lib/format';
+import { bucket, classifierLabel, duration, formatTime, percent, requesterLabel, stepBucket } from '../lib/format';
 import { Dialog } from './dialog';
 import { CheckIcon, CopyIcon, EyeOffIcon, ImageOffIcon, XIcon } from './icon';
 import {
@@ -277,15 +268,7 @@ export function DetailsCard(props: { request: Request }) {
       </time>,
     ],
     ['Duration', duration(props.request.durationMillis)],
-    [
-      'Client',
-      <span class="flex flex-wrap items-center gap-2">
-        <Show when={isServer(props.request.client)}>
-          <Chip>Server</Chip>
-        </Show>
-        <span class="break-all">{clientLabel(props.request.client)}</span>
-      </span>,
-    ],
+    ['Requester', <span class="break-all">{requesterLabel(props.request.requester)}</span>],
     ['Plugin', <code>{props.request.version ? `v${props.request.version}` : 'unknown'}</code>],
     ['Request ID', <code class="break-all">{props.request.id}</code>],
   ];
