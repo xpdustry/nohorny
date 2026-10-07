@@ -62,7 +62,10 @@ export function RequestImage(props: {
             <img
               src={src()}
               alt={`Rendered build submitted for classification, rated ${rating()}`}
-              class={['veil size-full object-contain [image-rendering:pixelated]', { 'blur-veil': blurred() }]}
+              class={[
+                'veil absolute inset-0 size-full object-contain [image-rendering:pixelated]',
+                { 'blur-veil': blurred() },
+              ]}
               onError={() => setBroken(src())}
             />
             <Show
@@ -185,28 +188,59 @@ export function ClassifierTimeline(props: { request: Request }) {
   );
 }
 
-/** The exception of a failure, which opens its stack trace. Only the administrators receive it. */
-function FailureDetails(props: { details: FailureDetailsData }) {
-  const [open, setOpen] = createSignal(false);
+/** Copies `text` to the clipboard, `copied` stays true for 2 seconds. Without clipboard access, selects `fallback` for a manual copy. */
+function createCopy(text: () => string, fallback: () => Node) {
   const [copied, setCopied] = createSignal(false);
-  let trace!: HTMLPreElement;
   let reset: ReturnType<typeof setTimeout> | undefined;
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(props.details.stackTrace);
+      await navigator.clipboard.writeText(text());
       setCopied(true);
       clearTimeout(reset);
       reset = setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Without clipboard access, select the trace for a manual copy
-      getSelection()?.selectAllChildren(trace);
+      getSelection()?.selectAllChildren(fallback());
     }
   };
+  return [copied, copy] as const;
+}
+
+/** Code copied to the clipboard on click. */
+function CopyCode(props: { text: string; label: string }) {
+  let code!: HTMLElement;
+  const [copied, copy] = createCopy(
+    () => props.text,
+    () => code,
+  );
+  return (
+    <button
+      type="button"
+      data-tooltip={copied() ? 'Copied' : `Copy the ${props.label}`}
+      class="group inline-flex cursor-pointer items-start gap-2 text-left"
+      onClick={copy}>
+      <code ref={code} class="break-all">
+        {props.text}
+      </code>
+      <span class={['mt-1 shrink-0 [&_svg]:size-3.5', copied() ? 'text-safe' : 'text-ink-3 group-hover:text-ink']}>
+        {copied() ? <CheckIcon /> : <CopyIcon />}
+      </span>
+    </button>
+  );
+}
+
+/** The exception of a failure, which opens its stack trace. Only the administrators receive it. */
+function FailureDetails(props: { details: FailureDetailsData }) {
+  const [open, setOpen] = createSignal(false);
+  let trace!: HTMLPreElement;
+  const [copied, copy] = createCopy(
+    () => props.details.stackTrace,
+    () => trace,
+  );
   return (
     <>
       <button
         type="button"
-        title="Show the stack trace"
+        data-tooltip="Show the stack trace"
         class="min-w-0 cursor-pointer truncate font-mono text-danger text-xs underline decoration-dotted underline-offset-2 hover:decoration-solid"
         onClick={() => setOpen(true)}>
         {props.details.type}
@@ -253,7 +287,7 @@ function Classifier(props: { id: string; class?: string }) {
         { 'cursor-help underline decoration-dotted underline-offset-4': label() !== props.id },
         props.class,
       ]}
-      title={label() !== props.id ? props.id : undefined}>
+      data-tooltip={label() !== props.id ? props.id : undefined}>
       {label()}
     </code>
   );
@@ -263,14 +297,14 @@ export function DetailsCard(props: { request: Request }) {
   const rows = (): [string, JSX.Element][] => [
     [
       'Created',
-      <time datetime={props.request.createdAt} title={props.request.createdAt}>
+      <time datetime={props.request.createdAt} data-tooltip={props.request.createdAt}>
         {formatTime(props.request.createdAt)}
       </time>,
     ],
     ['Duration', duration(props.request.durationMillis)],
     ['Requester', <span class="break-all">{requesterLabel(props.request.requester)}</span>],
     ['Plugin', <code>{props.request.version ? `v${props.request.version}` : 'unknown'}</code>],
-    ['Request ID', <code class="break-all">{props.request.id}</code>],
+    ['Request ID', <CopyCode text={props.request.id} label="request ID" />],
   ];
   return (
     <Card title="Details">

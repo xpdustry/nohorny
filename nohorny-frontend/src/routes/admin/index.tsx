@@ -173,7 +173,7 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
                   <button
                     type="button"
                     aria-pressed={shown[key] ? 'true' : 'false'}
-                    title={shown[key] ? `Hide ${ratingLabel(key)} from the chart` : `Show ${ratingLabel(key)}`}
+                    data-tooltip={shown[key] ? `Hide ${ratingLabel(key)} from the chart` : `Show ${ratingLabel(key)}`}
                     class={[
                       'flex flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition-colors',
                       shown[key]
@@ -594,7 +594,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
           <Button
             size="sm"
             aria-pressed={revealAll() ? 'true' : 'false'}
-            title={revealAll() ? 'Blur flagged images' : 'Reveal all images'}
+            data-tooltip={revealAll() ? 'Blur flagged images' : 'Reveal all images'}
             onClick={() => setRevealAll(!revealAll())}>
             <Show when={revealAll()} fallback={<EyeIcon />}>
               <EyeOffIcon />
@@ -604,7 +604,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
           <Button
             size="sm"
             busy={refreshing()}
-            title="Load the newer requests"
+            data-tooltip="Load the newer requests"
             onClick={() => {
               void loadNewer();
               admin.stats.refresh();
@@ -734,6 +734,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
         open={viewed() !== null}
         onClose={() => setViewing(null)}
         label="Request viewer"
+        top
         onKeyDown={(event) => {
           if (event.key === 'ArrowLeft') step(-1);
           else if (event.key === 'ArrowRight') step(1);
@@ -753,6 +754,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                 <Button
                   size="icon"
                   aria-label="Previous request"
+                  data-tooltip="Previous request"
                   disabled={value().index === 0}
                   onClick={() => step(-1)}>
                   <ChevronLeftIcon />
@@ -760,6 +762,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                 <Button
                   size="icon"
                   aria-label="Next request"
+                  data-tooltip="Next request"
                   disabled={value().index === list.items.length - 1 && list.exhausted}
                   onClick={() => step(1)}>
                   <ChevronRightIcon />
@@ -769,36 +772,14 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                 </Button>
               </header>
               <div class="grid gap-4 md:grid-cols-[1.1fr_1fr]">
-                <RequestImage
-                  class="aspect-square self-start"
-                  request={value().item}
-                  revealed={revealed(value().item)}
-                  onReveal={(revealed) => setRevealed(value().item, revealed)}
-                />
-                <div class="flex flex-col gap-4">
-                  <VerdictCard request={value().item} />
-                  <Show when={value().item.steps.length > 0}>
-                    <section class="flex flex-col gap-3 px-1 pb-2">
-                      <h3 class="label">Classifier chain</h3>
-                      <ClassifierTimeline request={value().item} />
-                    </section>
-                  </Show>
-                  <section class="px-1">
-                    <KeyValues
-                      rows={[
-                        [
-                          'Created',
-                          <time datetime={value().item.createdAt} title={formatTime(value().item.createdAt)}>
-                            {relativeTime(value().item.createdAt)}
-                          </time>,
-                        ],
-                        ['Plugin', <code>{value().item.version ? `v${value().item.version}` : 'unknown'}</code>],
-                        ['Address', <code class="break-all">{value().item.remoteAddress ?? '–'}</code>],
-                        ['Requester', requesterLabel(value().item.requester)],
-                      ]}
-                    />
-                  </section>
-                  <div class="flex flex-wrap gap-2 border-line border-t pt-4">
+                {/* The actions sit under the image, whose size is fixed, so stepping through requests never moves them */}
+                <div class="flex flex-col gap-4 self-start">
+                  <RequestImage
+                    request={value().item}
+                    revealed={revealed(value().item)}
+                    onReveal={(revealed) => setRevealed(value().item, revealed)}
+                  />
+                  <div class="flex flex-wrap gap-2">
                     <a class={buttonClass()} href={`/requests/${value().item.id}`}>
                       <ExternalLinkIcon />
                       Full page
@@ -820,6 +801,30 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                       Delete
                     </Button>
                   </div>
+                </div>
+                <div class="flex flex-col gap-4">
+                  <VerdictCard request={value().item} />
+                  <Show when={value().item.steps.length > 0}>
+                    <section class="flex flex-col gap-3 px-1 pb-2">
+                      <h3 class="label">Classifier chain</h3>
+                      <ClassifierTimeline request={value().item} />
+                    </section>
+                  </Show>
+                  <section class="px-1">
+                    <KeyValues
+                      rows={[
+                        [
+                          'Created',
+                          <time datetime={value().item.createdAt} data-tooltip={formatTime(value().item.createdAt)}>
+                            {relativeTime(value().item.createdAt)}
+                          </time>,
+                        ],
+                        ['Plugin', <code>{value().item.version ? `v${value().item.version}` : 'unknown'}</code>],
+                        ['Address', <code class="break-all">{value().item.remoteAddress ?? '–'}</code>],
+                        ['Requester', requesterLabel(value().item.requester)],
+                      ]}
+                    />
+                  </section>
                 </div>
               </div>
             </div>
@@ -889,7 +894,7 @@ function RequestRow(props: {
           <a class="link-quiet font-mono" href={`/requests/${props.request.id}`}>
             {shortId(props.request.id)}
           </a>
-          <time class="truncate text-ink-3" datetime={props.request.createdAt} title={props.request.createdAt}>
+          <time class="truncate text-ink-3" datetime={props.request.createdAt} data-tooltip={props.request.createdAt}>
             {relativeTime(props.request.createdAt)}
           </time>
         </span>
@@ -907,7 +912,7 @@ function RequestRow(props: {
       </div>
 
       <div class="hidden flex-col md:flex">
-        <time class="text-sm" datetime={props.request.createdAt} title={formatTime(props.request.createdAt)}>
+        <time class="text-sm" datetime={props.request.createdAt} data-tooltip={formatTime(props.request.createdAt)}>
           {relativeTime(props.request.createdAt)}
         </time>
         <span class="font-mono text-ink-3 text-xs">{duration(props.request.durationMillis)}</span>
@@ -920,7 +925,7 @@ function RequestRow(props: {
             size="icon"
             variant="quiet"
             aria-label="Purge the image"
-            title="Purge the image"
+            data-tooltip="Purge the image"
             disabled={props.busy}
             onClick={() => props.onPurge()}>
             <ImageOffIcon />
@@ -930,7 +935,7 @@ function RequestRow(props: {
           size="icon"
           variant="quiet-danger"
           aria-label="Delete the request"
-          title="Delete the request"
+          data-tooltip="Delete the request"
           disabled={props.busy}
           onClick={() => props.onDelete()}>
           <TrashIcon />

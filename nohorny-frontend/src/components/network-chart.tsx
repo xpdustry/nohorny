@@ -162,7 +162,7 @@ function LegendRow(props: {
       onMouseEnter={() => props.onHover(true)}
       onMouseLeave={() => props.onHover(false)}>
       <span aria-hidden="true" class="size-2.5 shrink-0 rounded-sm" style={{ background: props.color }} />
-      <span class="min-w-0 flex-1 truncate" title={props.label}>
+      <span class="min-w-0 flex-1 truncate" data-tooltip={props.label}>
         {props.label}
       </span>
       <span class="font-mono text-ink-2 text-xs tabular-nums">{number(props.count)}</span>

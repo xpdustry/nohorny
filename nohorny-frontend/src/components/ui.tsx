@@ -11,15 +11,16 @@ import { CheckIcon, TriangleAlertIcon } from './icon';
 type Variant = 'primary' | 'default' | 'danger' | 'solid-danger' | 'quiet' | 'quiet-danger';
 type Size = 'md' | 'sm' | 'icon';
 
+// A disabled button keeps the pointer for its tooltip, which often explains why, so its hover is left out instead
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-accent text-on-accent hover:bg-accent-hover',
+  primary: 'bg-accent text-on-accent not-disabled:hover:bg-accent-hover',
   default:
-    'border border-line-strong text-ink hover:bg-surface-2 aria-pressed:border-accent-edge aria-pressed:bg-accent-soft aria-pressed:text-on-accent-soft',
-  danger: 'border border-danger/60 text-danger hover:bg-danger-soft',
-  'solid-danger': 'bg-danger text-on-danger hover:bg-danger-hover',
-  quiet: 'text-ink-2 hover:bg-surface-2 hover:text-ink',
+    'border border-line-strong text-ink not-disabled:hover:bg-surface-2 aria-pressed:border-accent-edge aria-pressed:bg-accent-soft aria-pressed:text-on-accent-soft',
+  danger: 'border border-danger/60 text-danger not-disabled:hover:bg-danger-soft',
+  'solid-danger': 'bg-danger text-on-danger not-disabled:hover:bg-danger-hover',
+  quiet: 'text-ink-2 not-disabled:hover:bg-surface-2 not-disabled:hover:text-ink',
   // A destructive action repeated on every row, which only turns red under the pointer
-  'quiet-danger': 'text-ink-2 hover:bg-danger-soft hover:text-danger',
+  'quiet-danger': 'text-ink-2 not-disabled:hover:bg-danger-soft not-disabled:hover:text-danger',
 };
 
 // Touch screens get taller targets
@@ -33,8 +34,8 @@ const SIZES: Record<Size, string> = {
 export function buttonClass(variant: Variant = 'default', size: Size = 'md'): string[] {
   return [
     'inline-flex shrink-0 select-none items-center whitespace-nowrap rounded-full no-underline [&_svg]:size-4',
-    'transition-[color,background-color,border-color,scale] duration-150 ease-out motion-safe:active:scale-[0.97]',
-    'disabled:pointer-events-none disabled:opacity-50',
+    'transition-[color,background-color,border-color,scale] duration-150 ease-out motion-safe:not-disabled:active:scale-[0.97]',
+    'disabled:cursor-not-allowed disabled:opacity-50 aria-busy:cursor-progress',
     VARIANTS[variant],
     SIZES[size],
   ];
@@ -190,10 +191,10 @@ const RATING_RING: Record<Bucket, string> = {
   failed: 'ring-fill-failed/25',
 };
 
-export function Chip(props: { children: JSX.Element; class?: string; title?: string }) {
+export function Chip(props: { children: JSX.Element; class?: string; tooltip?: string }) {
   return (
     <span
-      title={props.title}
+      data-tooltip={props.tooltip}
       class={[
         'inline-flex items-center rounded-full border border-line bg-surface-2 px-2.5 py-0.5 font-mono text-[0.7rem] text-ink-2',
         props.class,

@@ -11,6 +11,8 @@ export function Dialog(props: {
   label: string;
   children: JSX.Element;
   class?: string;
+  /** Pins the dialog below the navigation bar instead of centering it, so a change of its height does not move its controls. */
+  top?: boolean;
   onKeyDown?: (event: KeyboardEvent) => void;
 }) {
   let dialog!: HTMLDialogElement;
@@ -27,7 +29,8 @@ export function Dialog(props: {
       ref={dialog}
       aria-label={props.label}
       class={[
-        'm-auto max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-0 text-ink',
+        'overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-0 text-ink',
+        props.top ? 'mx-auto mt-20 mb-auto max-h-[calc(100dvh-7rem)]' : 'm-auto max-h-[calc(100dvh-2rem)]',
         props.class ?? 'w-[min(28rem,calc(100vw-2rem))]',
       ]}
       onCancel={(event) => {

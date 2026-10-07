@@ -129,7 +129,12 @@ export default function Users() {
             </p>
           </Loading>
         </div>
-        <Button variant="primary" size="icon" aria-label="New user" title="New user" onClick={() => setCreating(true)}>
+        <Button
+          variant="primary"
+          size="icon"
+          aria-label="New user"
+          data-tooltip="New user"
+          onClick={() => setCreating(true)}>
           <PlusIcon />
         </Button>
       </div>
@@ -168,7 +173,7 @@ export default function Users() {
                           <Chip class="border-line-strong text-ink">admin</Chip>
                         </Show>
                         <Show when={account().bootstrap}>
-                          <Chip title={`${BOOTSTRAP}.`}>bootstrap</Chip>
+                          <Chip tooltip={`${BOOTSTRAP}.`}>bootstrap</Chip>
                         </Show>
                       </span>
                       <span class="text-ink-3 text-xs">
@@ -181,7 +186,7 @@ export default function Users() {
                         size="sm"
                         variant="quiet"
                         disabled={busy[account().username] || (account().admin && demoteBlocked(account()) !== null)}
-                        title={
+                        data-tooltip={
                           account().admin
                             ? (demoteBlocked(account()) ?? 'Remove the administrator role')
                             : 'Make administrator'
@@ -196,7 +201,7 @@ export default function Users() {
                         size="sm"
                         variant="quiet"
                         disabled={busy[account().username] || account().bootstrap}
-                        title={
+                        data-tooltip={
                           account().bootstrap
                             ? `${BOOTSTRAP}, change its password in the configuration.`
                             : 'Set a new password'
@@ -209,7 +214,7 @@ export default function Users() {
                         size="sm"
                         variant="quiet"
                         disabled={busy[account().username]}
-                        title="Change the rate limit"
+                        data-tooltip="Change the rate limit"
                         onClick={() => setLimiting(account())}>
                         <GaugeIcon />
                         Limit
@@ -218,7 +223,7 @@ export default function Users() {
                         size="icon"
                         variant="quiet-danger"
                         aria-label={`Delete ${account().username}`}
-                        title={deleteBlocked(account()) ?? `Delete ${account().username}`}
+                        data-tooltip={deleteBlocked(account()) ?? `Delete ${account().username}`}
                         disabled={busy[account().username] || deleteBlocked(account()) !== null}
                         onClick={() => remove(account())}>
                         <TrashIcon />

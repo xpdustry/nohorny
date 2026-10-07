@@ -68,16 +68,27 @@ export default function SiteLayout(props: RouteSectionProps) {
           </nav>
           <span class="flex-1" />
           <div class="flex gap-2 [&_svg]:size-4">
-            <a class={buttonClass('default', 'icon')} href={GITHUB} {...EXTERNAL} aria-label="NoHorny on GitHub">
+            <a
+              class={buttonClass('default', 'icon')}
+              href={GITHUB}
+              {...EXTERNAL}
+              aria-label="NoHorny on GitHub"
+              data-tooltip="NoHorny on GitHub">
               <GitHubIcon />
             </a>
-            <a class={buttonClass('default', 'icon')} href={DISCORD} {...EXTERNAL} aria-label="Xpdustry Discord">
+            <a
+              class={buttonClass('default', 'icon')}
+              href={DISCORD}
+              {...EXTERNAL}
+              aria-label="Xpdustry Discord"
+              data-tooltip="Xpdustry Discord">
               <DiscordIcon />
             </a>
             <button
               type="button"
               class={buttonClass('default', 'icon')}
               aria-label="Back to top"
+              data-tooltip="Back to top"
               onClick={() => window.scrollTo({ top: 0 })}>
               <ArrowUpIcon />
             </button>

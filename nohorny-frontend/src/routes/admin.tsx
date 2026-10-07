@@ -175,7 +175,7 @@ function AdminShell(props: { children: JSX.Element }) {
               type="button"
               class={buttonClass('default', 'icon')}
               aria-label="Sign out"
-              title="Sign out"
+              data-tooltip="Sign out"
               onClick={() => logout().catch((error: Error) => admin.notify(error.message, 'error'))}>
               <LogOutIcon />
             </button>

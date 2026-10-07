@@ -174,7 +174,7 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
           </h1>
           <p class="mt-1 text-ink-2">
             Classified{' '}
-            <time datetime={props.request.createdAt} title={props.request.createdAt}>
+            <time datetime={props.request.createdAt} data-tooltip={props.request.createdAt}>
               {relativeTime(props.request.createdAt)}
             </time>
             .
@@ -191,7 +191,7 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
       </Show>
 
       {/* The verdict follows the image on small screens, the report box comes after the details */}
-      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr]">
+      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr] lg:grid-rows-[auto_1fr]">
         <div class="flex flex-col gap-4">
           <RequestImage request={props.request} revealed={revealed()} onReveal={setRevealed} />
           <Show when={CAPTIONS[props.request.image.state as keyof typeof CAPTIONS]}>
