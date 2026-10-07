@@ -11,10 +11,10 @@ import {
   ImageIcon,
   ScanSearchIcon,
 } from '../../components/icon';
-import { buttonClass, LiveIndicator, RATING_FILL, RATING_TEXT } from '../../components/ui';
+import { buttonClass, LiveIndicator, RATING_TEXT } from '../../components/ui';
 import type { Bucket } from '../../lib/api';
 import { number } from '../../lib/format';
-import { DOWNLOAD, EXTERNAL, GITHUB, MINDUSTRY } from '../../lib/links';
+import { EXTERNAL, GITHUB, MINDUSTRY, RELEASE } from '../../lib/links';
 import { createLiveStats } from '../../lib/stats';
 
 /** The 8 by 6 heart drawn in the steps, in the colours of the logo: `p` for pink, `d` for deep pink, `.` for empty. */
@@ -136,7 +136,7 @@ export default function Landing() {
             intended it to be.
           </p>
           <div class="flex flex-wrap gap-3">
-            <a class={buttonClass('primary')} href={DOWNLOAD}>
+            <a class={buttonClass('primary')} href={RELEASE} {...EXTERNAL}>
               <DownloadIcon />
               Download the plugin
             </a>
@@ -164,10 +164,7 @@ export default function Landing() {
             <div class="grid grid-cols-2 gap-2 @lg:grid-cols-[1fr_auto_auto]">
               <p class="col-span-2 flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-2.5 @lg:col-span-1">
                 <b class="text-3xl font-normal">{number(processed())}</b>
-                <span class="flex flex-col leading-tight">
-                  <span>{processed() === 1 ? 'image processed' : 'images processed'}</span>
-                  <small class="text-ink-3">in the last 24 hours</small>
-                </span>
+                <span class="text-ink-3">in the last 24 hours</span>
               </p>
               <DayCount rating="warn" label="flagged" value={flagged()} />
               <DayCount rating="nsfw" label="nsfw" value={stats.data()?.last24Hours.ratings.nsfw} />
@@ -265,7 +262,7 @@ export default function Landing() {
               and <strong class="font-normal text-accent-ink">Java 25</strong> or above.
             </p>
           </div>
-          <a class={['self-start md:self-center', ...buttonClass('primary')]} href={DOWNLOAD}>
+          <a class={['self-start md:self-center', ...buttonClass('primary')]} href={RELEASE} {...EXTERNAL}>
             <DownloadIcon />
             Download the plugin
           </a>
@@ -277,12 +274,9 @@ export default function Landing() {
 
 function DayCount(props: { rating: Bucket; label: string; value: number | undefined | null }) {
   return (
-    <p class="flex min-w-20 flex-col rounded-xl border border-line bg-surface-2 px-3 py-2">
-      <span class={['flex items-center gap-1.5 font-mono text-[0.65rem] uppercase', RATING_TEXT[props.rating]]}>
-        <span class={['size-1.5 rounded-sm', RATING_FILL[props.rating]]} />
-        {props.label}
-      </span>
+    <p class="flex items-center gap-2.5 rounded-xl border border-line bg-surface-2 px-4 py-2">
       <b class="text-xl font-normal">{number(props.value)}</b>
+      <span class={RATING_TEXT[props.rating]}>{props.label}</span>
     </p>
   );
 }

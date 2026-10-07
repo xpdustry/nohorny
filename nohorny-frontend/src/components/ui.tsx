@@ -212,7 +212,7 @@ const CONNECTION_DOT: Record<Connection, string> = {
 
 export function LiveIndicator(props: { connection: Connection; label: string }) {
   return (
-    <span class="inline-flex items-center gap-2 font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-3">
+    <span class="inline-flex items-center gap-2 text-sm text-ink-3">
       <span aria-hidden="true" class={['size-2 rounded-full', CONNECTION_DOT[props.connection]]} />
       {props.label}
     </span>
