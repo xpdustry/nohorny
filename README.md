@@ -18,8 +18,6 @@ It can delete the buildings, refund their cost, and ban the offending players.
 
 Enjoy this family-friendly factory building game as the [cat](https://github.com/Anuken) intended it to be.
 
-The plugin uses the Xpdustry classification API by default. You can also [host your own](#host-the-classification-server).
-
 [Install](#install-the-plugin) · [Configure](#configure-the-plugin) · [Self-host](#host-the-classification-server) · [Develop](#develop) · [Performance](#performance) · [Support](#support)
 
 ## Install the plugin
@@ -412,41 +410,62 @@ Publication triggers Maven and Docker publishing, then a version bump in `build.
 ## Performance
 
 NoHorny renders and classifies art on separate threads.
-The Mindustry main loop tracks changes to the buildings.
+The Mindustry main loop only tracks changes to the buildings.
 In the recorded benchmark, this tracking added under 0.2 ms per tick at 10 art changes per tick on a 500×500 map,
 and about 50 MiB of heap.
 
-<details>
-<summary>Benchmark results and reproduction</summary>
+### Conditions
 
-The recorded measurements used Xpdustry's server hardware, a Xeon E5-1650 v4 with Java 25 and a 2 GiB heap.
-Each benchmark ran on the G1 and Serial garbage collectors, the Java defaults on servers and on small machines.
-The maps were covered with canvases, logic displays, sorters, and illuminators.
-Players changed random art each tick, and the classifier returned immediately.
-This setup measures tracking cost under sustained changes. It does not measure real classification latency.
+- **Hardware:** Xpdustry's server, a Xeon E5-1650 v4.
+- **Java:** Java 25 with a 2 GiB heap.
+- **Garbage collectors:** G1 and Serial, the Java defaults on servers and on small machines.
+- **Maps:** covered with canvases, logic displays, sorters, and illuminators.
+- **Changes:** players changed random art each tick.
+- **Classifier:** returned immediately, so the results measure the tracking cost, not the real classification latency.
 
-The table shows the mean main loop cost per tick, on G1 then on Serial. At 60 TPS, one tick has about 16.7 ms available.
-The **Without NoHorny** column measures Mindustry's own cost to apply the art changes.
+### Tick cost
 
-| Map | Art changes per tick | Without NoHorny | Added by NoHorny |
-| --- | ---: | ---: | ---: |
-| 100×100, 6k buildings | 0 | ~0 µs | +0.05 / +0.04 µs |
-| 250×250, 38k buildings | 0 | ~0 µs | +0.05 / +0.04 µs |
-| 500×500, 150k buildings | 0 | ~0 µs | +0.05 / +0.04 µs |
-| 100×100 | 10 | 422 / 405 µs | +102 / +126 µs |
-| 250×250 | 10 | 458 / 465 µs | +172 / +173 µs |
-| 500×500 | 10 | 459 / 523 µs | +143 / +178 µs |
-| 100×100 | 100 | 4.27 / 4.13 ms | +0.76 / +0.55 ms |
-| 250×250 | 100 | 4.48 / 4.83 ms | +0.87 / +1.29 ms |
-| 500×500 | 100 | 4.67 / 5.37 ms | +1.14 / +1.01 ms |
+The table shows the mean main loop cost per tick. At 60 TPS, one tick has about 16.7 ms available.
+The **Mindustry** columns measure the game's own cost to apply the art changes.
 
-At 10 changes per tick, the added cost stayed below 1.1% of the tick budget.
-At 100 changes per tick, the largest added cost was 1.29 ms, below 8% of the tick budget.
-The initial map scan took 4.6 / 2.8 ms, 32 / 22 ms, and 127 / 110 ms for the three map sizes in order.
+| Map | Art changes per tick | Mindustry, G1 | NoHorny, G1 | Mindustry, Serial | NoHorny, Serial |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100×100, 6k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
+| 250×250, 38k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
+| 500×500, 150k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
+| 100×100 | 10 | 422 µs | +102 µs | 405 µs | +126 µs |
+| 250×250 | 10 | 458 µs | +172 µs | 465 µs | +173 µs |
+| 500×500 | 10 | 459 µs | +143 µs | 523 µs | +178 µs |
+| 100×100 | 100 | 4.27 ms | +0.76 ms | 4.13 ms | +0.55 ms |
+| 250×250 | 100 | 4.48 ms | +0.87 ms | 4.83 ms | +1.29 ms |
+| 500×500 | 100 | 4.67 ms | +1.14 ms | 5.37 ms | +1.01 ms |
 
-NoHorny also kept about 200 bytes of heap per tile, measured after a full garbage collection:
-2.2 MiB, 12.7 MiB, and 50 to 53 MiB for the three map sizes in order.
-The maps alone kept 25 MiB, 94 MiB, and 340 MiB.
+- At 10 art changes per tick, NoHorny took at most 1.1% of a tick.
+- At 100 art changes per tick, NoHorny took at most 1.29 ms, under 8% of a tick.
+
+### Map scan and memory
+
+The table shows the initial scan of the map, and the heap still in use after a full garbage collection.
+
+| Map | Scan, G1 | Scan, Serial | Map heap | NoHorny heap |
+| --- | ---: | ---: | ---: | ---: |
+| 100×100 | 4.6 ms | 2.8 ms | 25 MiB | +2.2 MiB |
+| 250×250 | 32 ms | 22 ms | 94 MiB | +12.7 MiB |
+| 500×500 | 127 ms | 110 ms | 340 MiB | +50 to 53 MiB |
+
+NoHorny keeps about 200 bytes of heap per tile.
+
+### Conclusion
+
+Even in the worst scenario, NoHorny stays incredibly light:
+
+- **Idle:** with no art changes, NoHorny costs under 0.1 µs per tick.
+- **Under a flood:** at 100 art changes per tick, 6,000 a second without a break, NoHorny took under 8% of a tick on every map.
+  Mindustry itself took 4 to 7 times as much to apply the changes.
+- **Memory:** on the largest map, NoHorny adds about 15% to the heap the map already uses.
+- **Garbage collectors:** G1 and Serial give the same picture.
+
+### Run the benchmarks
 
 Run the [JMH benchmarks](nohorny-plugin/src/jmh/java/com/xpdustry/nohorny/client) with:
 
@@ -454,15 +473,11 @@ Run the [JMH benchmarks](nohorny-plugin/src/jmh/java/com/xpdustry/nohorny/client
 ./gradlew :nohorny-plugin:jmh
 ```
 
-Use `--args` to pass JMH arguments. For example:
-
-```sh
-./gradlew :nohorny-plugin:jmh --args="-p size=100 -p gc=G1 Tick"
-```
-
-</details>
+It runs each benchmark once on G1, in about 10 minutes.
+The recorded measurements come from `jmhFull`, which runs 3 forks on G1 and Serial, in about an hour.
 
 ## Support
 
 Ask the maintainers in the `#support` channel of the [Xpdustry Discord server](https://discord.xpdustry.com).
+
 NoHorny is available under the [MIT license](LICENSE.md).
