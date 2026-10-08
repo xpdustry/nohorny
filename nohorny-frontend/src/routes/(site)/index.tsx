@@ -358,7 +358,7 @@ function Verdicts() {
   );
 }
 
-/** The share of a server tick taken by NoHorny, 2%. A sweep goes around and NoHorny pulses as it is passed. */
+/** The share of a server tick taken by NoHorny, 1%. A sweep goes around and NoHorny pulses as it is passed. */
 function TickRing() {
   return (
     <span class="relative grid size-32 shrink-0 place-items-center">
@@ -385,10 +385,10 @@ function TickRing() {
           stroke="var(--accent)"
           stroke-width="16"
           pathLength="100"
-          stroke-dasharray="2 98"
+          stroke-dasharray="1 99"
         />
       </svg>
-      <b class="text-3xl font-normal">2%</b>
+      <b class="text-3xl font-normal">1%</b>
     </span>
   );
 }
