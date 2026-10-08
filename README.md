@@ -337,7 +337,7 @@ To use native libraries from a directory in the build context, pass `--build-arg
 <summary>Integrate another Mindustry plugin</summary>
 
 Add the NoHorny API dependencies to your `build.gradle`.
-Replace `VERSION` with a [published version](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny-plugin).
+They point to the latest release, see the [published versions](https://maven.xpdustry.com/#/releases/com/xpdustry/nohorny-plugin) for the others.
 
 ```gradle
 repositories {
@@ -345,12 +345,12 @@ repositories {
 }
 
 dependencies {
-  compileOnly("com.xpdustry:nohorny-common:VERSION")
-  compileOnly("com.xpdustry:nohorny-plugin:VERSION")
+  compileOnly("com.xpdustry:nohorny-common:4.0.0-beta.11")
+  compileOnly("com.xpdustry:nohorny-plugin:4.0.0-beta.11")
 }
 ```
 
-For older releases, use `com.xpdustry:nohorny-client:VERSION` instead of `com.xpdustry:nohorny-plugin:VERSION`.
+Up to 4.0.0-beta.10, the plugin was published as `com.xpdustry:nohorny-client` instead of `com.xpdustry:nohorny-plugin`.
 
 Subscribe to [`ClassificationEvent`](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java) to handle classification results:
 

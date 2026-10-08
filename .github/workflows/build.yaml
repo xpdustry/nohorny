@@ -331,8 +331,8 @@ jobs:
             fi
           done
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          # The branch may have moved since the draft was created, so bump its build file rather than the tagged one
-          git checkout "origin/$branch" -- build.gradle.kts
+          # The branch may have moved since the draft was created, so bump its files rather than the tagged ones
+          git checkout "origin/$branch" -- build.gradle.kts README.md
           if [ "v$(java .github/scripts/Version.java get)" != "$TAG" ]; then
             echo "::notice::The version of $branch already moved past $TAG, nothing to bump"
           else
@@ -348,7 +348,7 @@ jobs:
           commit_message: "chore(release): Bump version to ${{ steps.bump.outputs.version }}"
           repo: ${{ github.repository }}
           branch: ${{ steps.bump.outputs.branch }}
-          file_pattern: "build.gradle.kts"
+          file_pattern: "build.gradle.kts README.md"
 
   event-file:
     name: "Event File"
