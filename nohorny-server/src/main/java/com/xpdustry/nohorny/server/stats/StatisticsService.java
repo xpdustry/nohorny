@@ -3,9 +3,7 @@ package com.xpdustry.nohorny.server.stats;
 
 import com.xpdustry.nohorny.server.persistence.BucketCount;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
-import com.xpdustry.nohorny.server.persistence.DailyNetworkStatRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
-import com.xpdustry.nohorny.server.persistence.DailyVersionStatRepository;
 import com.xpdustry.nohorny.server.persistence.NamedCount;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
 import com.xpdustry.nohorny.server.persistence.SlotCount;
@@ -29,18 +27,10 @@ public class StatisticsService {
 
     private final ClassificationRequestRepository requests;
     private final DailyStatRepository dailyStats;
-    private final DailyNetworkStatRepository networkStats;
-    private final DailyVersionStatRepository versionStats;
 
-    public StatisticsService(
-            final ClassificationRequestRepository requests,
-            final DailyStatRepository dailyStats,
-            final DailyNetworkStatRepository networkStats,
-            final DailyVersionStatRepository versionStats) {
+    public StatisticsService(final ClassificationRequestRepository requests, final DailyStatRepository dailyStats) {
         this.requests = requests;
         this.dailyStats = dailyStats;
-        this.networkStats = networkStats;
-        this.versionStats = versionStats;
     }
 
     public Statistics compute() {
@@ -53,18 +43,30 @@ public class StatisticsService {
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
     ///     over the same windows as [#history]
-    /// @return the requests per listed network, or empty for an unknown range
+    /// @return the requests per listed network and from the loopback interface, or empty for an unknown range
     public Optional<Networks> networks(final String range) {
-        return this.counts(range, this.requests::countByNetworkSince, this.networkStats::countByNetworkSince)
-                .map(counts -> new Networks(range, counts.total(), counts.named()));
+        return this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince)
+                .map(counts -> new Networks(range, counts.total(), counts.named(), this.localhost(range)));
+    }
+
+    /// @param range a known range, see [#networks]
+    private long localhost(final String range) {
+        return range.equals("24h")
+                ? this.requests.countLocalhostSince(firstHour())
+                : this.dailyStats.countLocalhostSince(firstDay(days(range)).toString());
     }
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
     ///     over the same windows as [#history]
     /// @return the requests per plugin version, or empty for an unknown range
     public Optional<Versions> versions(final String range) {
-        return this.counts(range, this.requests::countByVersionSince, this.versionStats::countByVersionSince)
-                .map(counts -> new Versions(range, counts.total(), counts.named()));
+        return this.counts(range, this.requests::countByVersionSince, this.dailyStats::countByVersionSince)
+                .map(counts -> new Versions(
+                        range,
+                        counts.total(),
+                        counts.named().stream()
+                                .sorted(Comparator.comparing(Count::name, VersionComparator.INSTANCE.reversed()))
+                                .toList()));
     }
 
     /// The named counts of a range, from the retained requests for `24h` and from the daily statistics otherwise,

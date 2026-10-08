@@ -528,7 +528,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   async function purge(item: Request) {
     const confirmed = await confirm({
       title: `Purge the image of ${shortId(item.id)}?`,
-      body: 'The image bytes are deleted immediately. The request stays as a tombstone with its verdict. This cannot be undone.',
+      body: 'The image is deleted immediately. The request stays as a tombstone with its verdict. This cannot be undone.',
       action: 'Purge image',
     });
     if (!confirmed) return;
@@ -943,8 +943,8 @@ function RequestRow(props: {
           <Button
             size="icon"
             variant="quiet"
-            aria-label="Purge the image"
-            data-tooltip="Purge the image"
+            aria-label="Purge image"
+            data-tooltip="Purge image"
             disabled={props.busy}
             onClick={() => props.onPurge()}>
             <ImageOffIcon />

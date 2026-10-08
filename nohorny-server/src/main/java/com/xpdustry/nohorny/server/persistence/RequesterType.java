@@ -9,6 +9,8 @@ public enum RequesterType {
     USER,
     /// A listed Mindustry server without an account, named by its normalized network if the listing has one.
     MINDUSTRY_NETWORK,
+    /// A client on the loopback interface without an account, like a server running on the same machine, never named.
+    LOCALHOST,
     /// Any other client, never named.
     ANONYMOUS;
 

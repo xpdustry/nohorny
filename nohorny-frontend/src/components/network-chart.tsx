@@ -1,15 +1,17 @@
-// The requests per Mindustry network, as a donut and a legend listing every network, from GET /api/stats/networks.
+// The requests per Mindustry network and from localhost, as a donut and a legend listing every network, from
+// GET /api/stats/networks.
 
 import { createMemo, createSignal, For, Show } from 'solid-js';
 import type { Networks } from '../lib/api';
 import { number, share } from '../lib/format';
 
-/** The networks drawn in their own colour, the others share the "Other networks" slice. */
+/** The networks drawn in their own colour, the others share the "Other networks" slice. Localhost always has its own. */
 const COLORED = 3;
 
 /** The colours of the slices, App.css validates the categorical ones for colour blindness against the card. */
 const COLORS = ['var(--network-1)', 'var(--network-2)', 'var(--network-3)'];
 const OTHER_COLOR = 'var(--ink-3)';
+const LOCALHOST_COLOR = 'var(--accent)';
 const UNLISTED_COLOR = 'var(--line-strong)';
 
 /** The gap between two slices, in hundredths of the circumference. */
@@ -22,22 +24,49 @@ interface Slice {
   color: string;
 }
 
+/** A row of the legend, a network or localhost, with the key of the slice it is drawn in. */
+interface Row extends Slice {
+  slice: string;
+}
+
 export function NetworkChart(props: { networks: Networks }) {
   const [hovered, setHovered] = createSignal<string | null>(null);
 
-  const slices = createMemo(() => {
-    const { networks, total } = props.networks;
-    const listed = networks.reduce((sum, network) => sum + network.count, 0);
-    const other = networks.slice(COLORED).reduce((sum, network) => sum + network.count, 0);
-    const slices: Slice[] = networks.slice(0, COLORED).map((network, index) => ({
-      key: network.name,
+  /** The networks and localhost, the most active first. */
+  const rows = createMemo(() => {
+    const { networks, localhost } = props.networks;
+    const entries = networks.map((network) => ({
+      key: `network:${network.name}`,
       label: network.name,
       count: network.count,
-      color: COLORS[index],
     }));
+    if (localhost > 0) entries.push({ key: 'localhost', label: 'Localhost', count: localhost });
+    // Stable, so the networks keep their order by name on a tie
+    entries.sort((a, b) => b.count - a.count);
+    let colored = 0;
+    return entries.map((entry): Row => {
+      if (entry.key === 'localhost') return { ...entry, color: LOCALHOST_COLOR, slice: entry.key };
+      const index = colored++;
+      return index < COLORED
+        ? { ...entry, color: COLORS[index], slice: entry.key }
+        : { ...entry, color: OTHER_COLOR, slice: 'other' };
+    });
+  });
+
+  const slices = createMemo(() => {
+    const slices: Slice[] = rows().filter((row) => row.slice === row.key);
+    const other = rows()
+      .filter((row) => row.slice === 'other')
+      .reduce((sum, row) => sum + row.count, 0);
+    const listed = rows().reduce((sum, row) => sum + row.count, 0);
     if (other > 0) slices.push({ key: 'other', label: 'Other networks', count: other, color: OTHER_COLOR });
-    if (total > listed)
-      slices.push({ key: 'unlisted', label: 'Not a listed server', count: total - listed, color: UNLISTED_COLOR });
+    if (props.networks.total > listed)
+      slices.push({
+        key: 'unlisted',
+        label: 'Not a listed server',
+        count: props.networks.total - listed,
+        color: UNLISTED_COLOR,
+      });
     return slices;
   });
 
@@ -53,8 +82,6 @@ export function NetworkChart(props: { networks: Networks }) {
     });
   });
 
-  /** The slice of a legend row, the networks past the coloured ones belong to "Other networks". */
-  const sliceOf = (index: number) => (index < COLORED ? props.networks.networks[index].name : 'other');
   const focus = () => slices().find((slice) => slice.key === hovered());
 
   return (
@@ -112,15 +139,15 @@ export function NetworkChart(props: { networks: Networks }) {
         </div>
 
         <ul class="flex max-h-80 w-full max-w-md flex-col overflow-y-auto text-sm">
-          <For each={props.networks.networks} keyed={(network) => network.name}>
-            {(network, index) => (
+          <For each={rows()} keyed={(row) => row.key}>
+            {(row) => (
               <LegendRow
-                label={network().name}
-                count={network().count}
+                label={row().label}
+                count={row().count}
                 total={props.networks.total}
-                color={index() < COLORED ? COLORS[index()] : OTHER_COLOR}
-                active={hovered() === sliceOf(index())}
-                onHover={(on) => setHovered(on ? sliceOf(index()) : null)}
+                color={row().color}
+                active={hovered() === row().slice}
+                onHover={(on) => setHovered(on ? row().slice : null)}
               />
             )}
           </For>

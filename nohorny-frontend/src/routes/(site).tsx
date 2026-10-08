@@ -1,12 +1,10 @@
 // The layout of the public pages, their header and footer.
 
 import type { RouteSectionProps } from '@solidjs/router';
-import { Show } from 'solid-js';
 import xpdustryLogo from '../assets/xpdustry.svg';
-import { ArrowUpIcon, DiscordIcon, GitHubIcon } from '../components/icon';
+import { ArrowUpIcon, CircleUserRoundIcon, DiscordIcon, GitHubIcon } from '../components/icon';
 import { Brand, buttonClass } from '../components/ui';
 import { DISCORD, EXTERNAL, GITHUB } from '../lib/links';
-import { isAdmin } from '../lib/session';
 
 const NAV_LINK =
   'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-ink-2 no-underline transition hover:bg-surface-2 hover:text-ink aria-[current=page]:text-ink [&_svg]:size-4';
@@ -32,11 +30,6 @@ export default function SiteLayout(props: RouteSectionProps) {
             <a href="/privacy" class={NAV_LINK}>
               Privacy
             </a>
-            <Show when={isAdmin()}>
-              <a href="/admin" class={NAV_LINK}>
-                Admin panel
-              </a>
-            </Show>
           </nav>
           <span class="flex-1" />
           <a href={DISCORD} {...EXTERNAL} class={NAV_LINK}>
@@ -46,6 +39,13 @@ export default function SiteLayout(props: RouteSectionProps) {
           <a href={GITHUB} {...EXTERNAL} class={NAV_LINK}>
             <GitHubIcon />
             <span class="max-sm:sr-only">GitHub</span>
+          </a>
+          <a
+            href="/admin"
+            class={[buttonClass('default', 'icon'), 'ml-2']}
+            aria-label="Admin panel"
+            data-tooltip="Admin panel">
+            <CircleUserRoundIcon />
           </a>
         </div>
       </header>

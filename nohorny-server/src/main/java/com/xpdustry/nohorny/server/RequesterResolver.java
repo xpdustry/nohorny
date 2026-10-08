@@ -20,7 +20,7 @@ public final class RequesterResolver {
 
     /// @param authentication the caller, `null` or anonymous when it did not authenticate
     /// @param address the client address
-    /// @return an account first, then a listed Mindustry server, then an anonymous client
+    /// @return an account first, then a listed Mindustry server or the loopback interface, then an anonymous client
     public Requester resolve(final @Nullable Authentication authentication, final String address) {
         if (authentication != null
                 && authentication.isAuthenticated()
@@ -28,8 +28,10 @@ public final class RequesterResolver {
             return Requester.user(authentication.getName());
         }
         final var client = this.clients.whois(address);
-        return client.type().equals(MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER)
-                ? Requester.mindustryNetwork(client.network())
-                : Requester.anonymous();
+        return switch (client.type()) {
+            case MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER -> Requester.mindustryNetwork(client.network());
+            case MindustryClientDirectory.ClientInfo.LOCALHOST -> Requester.localhost();
+            default -> Requester.anonymous();
+        };
     }
 }

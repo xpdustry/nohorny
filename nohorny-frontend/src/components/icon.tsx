@@ -74,6 +74,17 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
+// Source: https://lucide.dev/icons/circle-user-round
+export function CircleUserRoundIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <path d="M18 20a6 6 0 0 0-12 0" />
+      <circle cx="12" cy="10" r="4" />
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  );
+}
+
 // Source: https://lucide.dev/icons/copy
 export function CopyIcon(props: IconProps) {
   return (

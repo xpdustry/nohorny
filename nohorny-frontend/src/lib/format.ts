@@ -95,13 +95,15 @@ export function ratingLabel(key: Bucket): string {
   return RATING_LABELS[key];
 }
 
-/** 'User bob', 'Mindustry network Foo', or 'Anonymous'. The usernames are only sent to the administrators. */
+/** 'User bob', 'Mindustry network Foo', 'Localhost' or 'Anonymous'. The usernames are only sent to the administrators. */
 export function requesterLabel(requester: Requester): string {
   switch (requester.type) {
     case 'user':
       return requester.name ? `User ${requester.name}` : 'User account';
     case 'mindustry-network':
       return requester.name ? `Mindustry network ${requester.name}` : 'Unnamed Mindustry server';
+    case 'localhost':
+      return 'Localhost';
     case 'anonymous':
       return 'Anonymous';
   }

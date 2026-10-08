@@ -21,11 +21,15 @@ export interface History {
   slots: { start: string; ratings: Ratings }[];
 }
 
-/** The requests per listed Mindustry network without an account. The rest of `total` comes from users and anonymous clients. */
+/**
+ * The requests per listed Mindustry network and from the loopback interface without an account. The rest of `total`
+ * comes from users, unnamed listed servers and anonymous clients.
+ */
 export interface Networks {
   range: HistoryRange;
   total: number;
   networks: { name: string; count: number }[];
+  localhost: number;
 }
 
 /** The requests per plugin version, the most used first. The rest of `total` comes from the clients sending none. */
@@ -57,7 +61,7 @@ export interface FailureDetails {
 }
 
 export interface Requester {
-  type: 'user' | 'mindustry-network' | 'anonymous';
+  type: 'user' | 'mindustry-network' | 'localhost' | 'anonymous';
   /** The network of a listed Mindustry server if it has one, the username of a user for the administrators only. */
   name: string | null;
 }

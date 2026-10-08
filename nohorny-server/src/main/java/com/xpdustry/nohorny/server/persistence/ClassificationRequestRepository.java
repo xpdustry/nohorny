@@ -125,6 +125,17 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     }
 
     @Query(nativeQuery = true, value = """
+            SELECT COUNT(*) FROM request
+            WHERE created_at >= :since AND requester_type = 'LOCALHOST'
+            """)
+    long countLocalhostSince(long since);
+
+    /// @return the number of retained [RequesterType#LOCALHOST] requests created since the given instant
+    default long countLocalhostSince(final Instant since) {
+        return this.countLocalhostSince(since.toEpochMilli());
+    }
+
+    @Query(nativeQuery = true, value = """
             SELECT version AS name, COUNT(*) AS total
             FROM request
             WHERE created_at >= :since AND version IS NOT NULL AND length(version) BETWEEN 1 AND 32
@@ -133,7 +144,7 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     List<NamedCount> countByVersionSince(long since);
 
     /// @return the number of retained requests per plugin version created since the given instant, the versions past
-    ///     32 characters left out like in [DailyVersionStat]
+    ///     32 characters left out like in [DailyStat]
     default List<NamedCount> countByVersionSince(final Instant since) {
         return this.countByVersionSince(since.toEpochMilli());
     }

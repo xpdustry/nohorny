@@ -3,13 +3,10 @@ package com.xpdustry.nohorny.server.request;
 
 import com.xpdustry.nohorny.server.persistence.ClassificationRequest;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
-import com.xpdustry.nohorny.server.persistence.DailyNetworkStatRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
-import com.xpdustry.nohorny.server.persistence.DailyVersionStatRepository;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.ImageStore;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
-import com.xpdustry.nohorny.server.persistence.RequesterType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -25,30 +22,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RequestService {
 
-    /// The longest version counted in the statistics. The clients send it freely, a longer one is not a release.
-    private static final int MAX_VERSION_LENGTH = 32;
-
     private final ClassificationRequestRepository requests;
     private final DailyStatRepository dailyStats;
-    private final DailyNetworkStatRepository networkStats;
-    private final DailyVersionStatRepository versionStats;
     private final ImageStore images;
 
     public RequestService(
             final ClassificationRequestRepository requests,
             final DailyStatRepository dailyStats,
-            final DailyNetworkStatRepository networkStats,
-            final DailyVersionStatRepository versionStats,
             final ImageStore images) {
         this.requests = requests;
         this.dailyStats = dailyStats;
-        this.networkStats = networkStats;
-        this.versionStats = versionStats;
         this.images = images;
     }
 
-    /// Records a request with its steps and counts it in the all-time statistics, those of its Mindustry network and
-    /// plugin version included.
+    /// Records a request with its steps and counts it in the daily statistics.
     ///
     /// @param image the image to store, given if and only if the image state of the request is [ImageState#STORED]
     @Transactional
@@ -60,16 +47,7 @@ public class RequestService {
             throw new IllegalArgumentException("The image must be given if and only if it is stored");
         }
         this.requests.save(request);
-        this.dailyStats.increment(request.getCreatedAt(), request.bucket());
-        final var requester = request.getRequester();
-        final var network = requester.name();
-        if (requester.type() == RequesterType.MINDUSTRY_NETWORK && network != null) {
-            this.networkStats.increment(request.getCreatedAt(), network);
-        }
-        final var version = request.getVersion();
-        if (version != null && !version.isEmpty() && version.length() <= MAX_VERSION_LENGTH) {
-            this.versionStats.increment(request.getCreatedAt(), version);
-        }
+        this.dailyStats.increment(request);
     }
 
     public Optional<ClassificationRequest> find(final String id) {
