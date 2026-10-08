@@ -25,18 +25,23 @@ import org.openjdk.jmh.annotations.Warmup;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 3, time = 3)
 @Measurement(iterations = 5, time = 3)
-@Fork(
-        value = 1,
-        jvmArgsAppend = {"-Xmx2g", "--enable-native-access=ALL-UNNAMED"})
+// The forks inherit their JVM arguments from the jmh task
+@Fork(3)
 public class WorldLoadBenchmark {
 
     @Param({"100", "250", "500"})
     public int size;
 
+    // Applied by GarbageCollectorSelector when starting the fork
+    @Param({"G1", "Serial"})
+    @SuppressWarnings("NullAway.Init")
+    public String gc;
+
     private @Nullable NoHornyHarness harness;
 
     @Setup(Level.Trial)
     public void setup() {
+        GarbageCollectorSelector.check(this.gc);
         HeadlessMindustry.init();
         final var world = ArtWorld.generate(this.size, 42L);
         System.out.printf("%n%d buildings in a %dx%d world%n", world.buildings(), this.size, this.size);

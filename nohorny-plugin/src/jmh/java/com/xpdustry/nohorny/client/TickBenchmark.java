@@ -25,9 +25,8 @@ import org.openjdk.jmh.annotations.Warmup;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @Warmup(iterations = 3, time = 3)
 @Measurement(iterations = 5, time = 3)
-@Fork(
-        value = 1,
-        jvmArgsAppend = {"-Xmx2g", "--enable-native-access=ALL-UNNAMED"})
+// The forks inherit their JVM arguments from the jmh task
+@Fork(3)
 public class TickBenchmark {
 
     @Param({"100", "250", "500"})
@@ -39,6 +38,11 @@ public class TickBenchmark {
     @Param({"false", "true"})
     public boolean nohorny;
 
+    // Applied by GarbageCollectorSelector when starting the fork
+    @Param({"G1", "Serial"})
+    @SuppressWarnings("NullAway.Init")
+    public String gc;
+
     private @Nullable ArtWorld world;
     private @Nullable NoHornyHarness harness;
     private long groups;
@@ -46,6 +50,7 @@ public class TickBenchmark {
 
     @Setup(Level.Trial)
     public void setup() {
+        GarbageCollectorSelector.check(this.gc);
         HeadlessMindustry.init();
         this.world = ArtWorld.generate(this.size, 42L);
         this.harness = this.nohorny ? new NoHornyHarness() : null;

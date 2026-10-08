@@ -252,15 +252,28 @@ project(":nohorny-plugin") {
     }
 
     tasks.register<JavaExec>("jmh") {
-        description = "Run the JMH benchmarks, use -Pjmh=\"<args>\" to pass arguments to JMH."
+        description = "Run the JMH benchmarks, use --args=\"<args>\" to pass arguments to JMH."
         group = LifecycleBasePlugin.VERIFICATION_GROUP
         classpath = jmhSourceSet.runtimeClasspath
         mainClass = "org.openjdk.jmh.Main"
+        doNotTrackState("Benchmarks must always run")
+        // Inherited by the forks, unlike the @Fork arguments, -jvmArgsAppend then adds to them instead of replacing them
+        jvmArgs("-Xmx2g", "--enable-native-access=ALL-UNNAMED")
         val results = layout.buildDirectory.file("jmh/results.json")
-        outputs.file(results)
-        outputs.upToDateWhen { false }
-        args(providers.gradleProperty("jmh").getOrElse("").split(' ').filter { it.isNotBlank() })
-        args("-rf", "json", "-rff", results.get().asFile.absolutePath)
+        // Providers, unlike args, are kept when --args replaces the arguments
+        argumentProviders.add {
+            listOf(
+                // The gc param of the benchmarks only takes effect through this profiler
+                "-prof",
+                "com.xpdustry.nohorny.client.GarbageCollectorSelector",
+                "-prof",
+                "com.xpdustry.nohorny.client.RetainedHeapProfiler",
+                "-rf",
+                "json",
+                "-rff",
+                results.get().asFile.absolutePath,
+            )
+        }
         doFirst { results.get().asFile.parentFile.mkdirs() }
     }
 
