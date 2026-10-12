@@ -11,8 +11,11 @@ export default function Privacy() {
   // Each server sets its own periods, so the browser fetches them rather than the build.
   // The generic wording stays until they load, or if they fail to.
   const [retention, setRetention] = createSignal<Retention | null>(null);
+  // Whether this server reports the errors of the pages, see lib/sentry.ts. Read after the hydration like the periods
+  const [reporting, setReporting] = createSignal(false);
   onSettled(() => {
     api<Retention>('/api/retention').then(setRetention, () => {});
+    setReporting(Boolean(window.NOHORNY_CONFIG?.sentryDsn));
   });
   const IMAGE = 'a limited time';
   const REQUEST = 'a longer time';
@@ -41,13 +44,25 @@ export default function Privacy() {
     ['Can I delete an image?', () => 'Yes, with "Report and delete" on its page.'],
     ['Cookies?', () => 'Session data for admins. Nothing else.'],
   ];
+  const errorReports: [string, () => JSX.Element] = [
+    'Error reports?',
+    () => (
+      <>
+        When a page fails, the error is sent to{' '}
+        <a class="link" href="https://sentry.io" {...EXTERNAL}>
+          Sentry
+        </a>{' '}
+        with the browser version and the page address, without its identifiers. No cookies or account data.
+      </>
+    ),
+  ];
 
   return (
     <div class="wrap max-w-3xl! py-16">
       <Title>Privacy · NoHorny</Title>
       <h1 class="text-5xl">Privacy</h1>
       <dl class="mt-10 divide-y divide-line border-y border-line">
-        <For each={answers}>
+        <For each={reporting() ? [...answers, errorReports] : answers}>
           {([question, answer]) => (
             <div class="grid gap-1 py-5 sm:grid-cols-[12rem_1fr] sm:gap-6">
               <dt class="text-accent-ink text-lg">{question}</dt>
