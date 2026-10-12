@@ -26,6 +26,8 @@ export default function Document(props: ParentProps) {
         <link rel="preload" as="font" type="font/woff2" href={momoLatin} crossorigin="anonymous" />
         <link rel="preload" as="font" type="font/woff2" href={martianLatin} crossorigin="anonymous" />
         <title>NoHorny · Autonomous NSFW moderation for Mindustry servers</title>
+        {/* The runtime configuration from the server. A classic script, it runs before the app module */}
+        <script src="/config.js" />
         <HydrationScript />
       </head>
       <body>{props.children}</body>

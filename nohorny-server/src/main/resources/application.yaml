@@ -108,3 +108,7 @@ nohorny:
         nsfw: 0.55
   status:
     motd: ok
+  sentry:
+    # Sentry project receiving the errors of the pages, such as https://key@o0.ingest.sentry.io/0.
+    # Only the errors are reported, without personal data. Nothing is reported while it is unset.
+    # dsn: ${NOHORNY_SENTRY_DSN}

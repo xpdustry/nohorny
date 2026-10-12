@@ -207,6 +207,9 @@ For example, `SERVER_PORT=9090 java -jar nohorny-server.jar` changes the port.
 Set `nohorny.public-url` to the public address, such as `https://nohorny.example.com`, to include request page links in API responses and Discord alerts.
 Use the address **without `/api`** here.
 
+Set `nohorny.sentry.dsn` (or `NOHORNY_SENTRY_DSN`) to report the errors of the web pages to your Sentry project.
+Only the errors are reported, without cookies, user data, request identifiers or usernames.
+
 <details>
 <summary>Choose a classifier</summary>
 

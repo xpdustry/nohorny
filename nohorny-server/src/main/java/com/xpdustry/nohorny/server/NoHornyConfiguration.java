@@ -26,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
     NoHornyProperties.class,
     RequestProperties.class,
     RateLimitProperties.class,
+    SentryProperties.class,
     StatusProperties.class
 })
 public class NoHornyConfiguration implements WebMvcConfigurer {

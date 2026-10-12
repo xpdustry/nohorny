@@ -1,3 +1,4 @@
+import './lib/sentry';
 import { Loading } from 'solid-js';
 import { ConfirmHost } from './components/dialog';
 import { OverlayScrollbar } from './components/scrollbar';

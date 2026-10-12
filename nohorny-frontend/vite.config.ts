@@ -34,7 +34,7 @@ export default defineConfig({
   ],
   server: {
     host: '127.0.0.1',
-    proxy: Object.fromEntries(['/api', '/login', '/logout'].map((path) => [path, backend])),
+    proxy: Object.fromEntries(['/api', '/login', '/logout', '/config.js'].map((path) => [path, backend])),
   },
   preview: {
     host: '127.0.0.1',
@@ -42,5 +42,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     assetsInlineLimit: 0,
+    // Served with the pages, so Sentry can resolve the minified stack traces. The sources are public anyway
+    sourcemap: true,
   },
 });
