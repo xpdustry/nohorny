@@ -10,7 +10,6 @@ import {
   Errored,
   For,
   isPending,
-  Loading,
   onSettled,
   reconcile,
   refresh,
@@ -137,7 +136,9 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
             Activity
           </h1>
           <p class="text-ink-2">
-            <b class="font-normal text-2xl text-ink">{number(admin.stats.data()?.total)}</b> all time
+            {/* Waits for the first statistics, so the page reveals with the total */}
+            <b class="font-normal text-2xl text-ink">{admin.stats.ready() && number(admin.stats.data()?.total)}</b> all
+            time
           </p>
         </div>
         <fieldset class={SEGMENTED}>
@@ -165,48 +166,41 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
             </State>
           </Show>
         )}>
-        <Loading
-          fallback={
-            <div class="grid h-72 place-items-center text-ink-3">
-              <Spinner class="size-5" />
-            </div>
-          }>
-          <div class={['flex flex-col gap-6 transition-opacity', { 'opacity-60': isPending(() => history()) }]}>
-            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <For each={BUCKETS}>
-                {(key) => (
-                  <button
-                    type="button"
-                    aria-pressed={shown[key] ? 'true' : 'false'}
-                    data-tooltip={shown[key] ? `Hide ${ratingLabel(key)} from the chart` : `Show ${ratingLabel(key)}`}
-                    class={[
-                      'flex flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition-colors',
-                      shown[key]
-                        ? 'border-line bg-surface-2 hover:border-line-strong'
-                        : 'border-line-strong border-dashed text-ink-3 hover:bg-surface-2',
-                    ]}
-                    onClick={() =>
-                      setShown((draft) => {
-                        draft[key] = !draft[key];
-                      })
-                    }>
-                    <span class="label flex items-center gap-2">
-                      <RatingDot rating={key} hollow={!shown[key]} />
-                      {ratingLabel(key)}
-                    </span>
-                    <span class="text-2xl">{number(totals()[key])}</span>
-                    <span class="font-mono text-ink-3 text-xs">{share(totals()[key], rangeTotal()) || '–'}</span>
-                  </button>
-                )}
-              </For>
-            </div>
-            <ActivityChart history={history()} shown={shown} onSelect={props.onSelect} />
-            <p class="sr-only">
-              Classified requests over the range:{' '}
-              {BUCKETS.map((key) => `${number(totals()[key])} ${ratingLabel(key)}`).join(', ')}.
-            </p>
+        <div class={['flex flex-col gap-6 transition-opacity', { 'opacity-60': isPending(() => history()) }]}>
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <For each={BUCKETS}>
+              {(key) => (
+                <button
+                  type="button"
+                  aria-pressed={shown[key] ? 'true' : 'false'}
+                  data-tooltip={shown[key] ? `Hide ${ratingLabel(key)} from the chart` : `Show ${ratingLabel(key)}`}
+                  class={[
+                    'flex flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition-colors',
+                    shown[key]
+                      ? 'border-line bg-surface-2 hover:border-line-strong'
+                      : 'border-line-strong border-dashed text-ink-3 hover:bg-surface-2',
+                  ]}
+                  onClick={() =>
+                    setShown((draft) => {
+                      draft[key] = !draft[key];
+                    })
+                  }>
+                  <span class="label flex items-center gap-2">
+                    <RatingDot rating={key} hollow={!shown[key]} />
+                    {ratingLabel(key)}
+                  </span>
+                  <span class="text-2xl">{number(totals()[key])}</span>
+                  <span class="font-mono text-ink-3 text-xs">{share(totals()[key], rangeTotal()) || '–'}</span>
+                </button>
+              )}
+            </For>
           </div>
-        </Loading>
+          <ActivityChart history={history()} shown={shown} onSelect={props.onSelect} />
+          <p class="sr-only">
+            Classified requests over the range:{' '}
+            {BUCKETS.map((key) => `${number(totals()[key])} ${ratingLabel(key)}`).join(', ')}.
+          </p>
+        </div>
       </Errored>
 
       <div class="grid gap-8 border-line border-t pt-6 lg:grid-cols-[3fr_2fr]">
@@ -221,7 +215,7 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
   );
 }
 
-/** A titled chart of the overview, loading and failing on its own. */
+/** A titled chart of the overview, failing on its own. */
 function Breakdown<T>(props: { id: string; title: string; data: () => T; children: (data: () => T) => JSX.Element }) {
   return (
     <section class="flex min-w-0 flex-col gap-4" aria-labelledby={props.id}>
@@ -237,16 +231,9 @@ function Breakdown<T>(props: { id: string; title: string; data: () => T; childre
             </State>
           </Show>
         )}>
-        <Loading
-          fallback={
-            <div class="grid h-48 place-items-center text-ink-3">
-              <Spinner class="size-5" />
-            </div>
-          }>
-          <div class={['transition-opacity', { 'opacity-60': isPending(() => props.data()) }]}>
-            {props.children(props.data)}
-          </div>
-        </Loading>
+        <div class={['transition-opacity', { 'opacity-60': isPending(() => props.data()) }]}>
+          {props.children(props.data)}
+        </div>
       </Errored>
     </section>
   );
@@ -294,6 +281,8 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   const [list, setList] = createStore({
     /** Loaded requests, newest first. */
     items: [] as Request[],
+    /** Whether the items belong to the previous filters, until the first page of the new ones replaces them. */
+    stale: false,
     loading: false,
     exhausted: false,
     error: null as string | null,
@@ -305,12 +294,13 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   /** Index of the request open in the viewer, null when closed. */
   const [viewing, setViewing] = createSignal<number | null>(null);
 
-  // Plain variables for the control flow. A store write shows only after the next flush
+  // Plain variables for the control flow. A store write shows only after the next flush. The first page is loading
   let generation = 0;
   let cursor: string | null = null;
-  let loading = false;
+  let loading = true;
   let exhausted = false;
   let failed = false;
+  let stale = false;
   let current: Query = NO_QUERY;
   let section!: HTMLElement;
   let sentinel!: HTMLDivElement;
@@ -338,6 +328,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   /** Clears the identifier and the time range, the rating filter stays. */
   const clearFilters = () => reset({ ...NO_QUERY, rating: current.rating });
 
+  /** Loads the list of `next` filters. The current requests stay, dimmed, until its first page replaces them. */
   function reset(next: Query) {
     generation++;
     current = next;
@@ -345,18 +336,71 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     loading = false;
     exhausted = false;
     failed = false;
+    stale = true;
     setQuery(next);
     setIdText(next.id);
     setViewing(null);
     setList((draft) => {
-      draft.items = [];
+      draft.stale = true;
       draft.loading = false;
       draft.exhausted = false;
       draft.error = null;
-      draft.revealed = {};
-      draft.busy = {};
     });
     void loadMore();
+  }
+
+  /** The URL of the page of the current filters that starts before `before`. */
+  function pageUrl(before: string | null): string {
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+    if (current.rating) params.set('rating', current.rating);
+    if (before) params.set('before', before);
+    return `/api/requests?${params}`;
+  }
+
+  /** Adds a page to the list, or replaces the stale requests with it. */
+  function applyPage(page: Page<Request>) {
+    const end = page.items.findIndex((item) => !matches(item));
+    const items = end === -1 ? page.items : page.items.slice(0, end);
+    cursor = page.nextCursor;
+    exhausted = cursor === null || end !== -1;
+    const replacing = stale;
+    stale = false;
+    setList((draft) => {
+      if (replacing) {
+        draft.items = items;
+        draft.stale = false;
+        draft.revealed = {};
+        draft.busy = {};
+      } else {
+        const known = new Set(draft.items.map((item) => item.id));
+        draft.items.push(...items.filter((item) => !known.has(item.id)));
+      }
+      draft.exhausted = exhausted;
+    });
+  }
+
+  function failPage(error: unknown) {
+    if (error instanceof SessionExpired) return;
+    failed = true;
+    const replacing = stale;
+    stale = false;
+    setList((draft) => {
+      if (replacing) {
+        draft.items = [];
+        draft.stale = false;
+      }
+      draft.error = describe(error, 'Could not load requests');
+    });
+  }
+
+  function settlePage() {
+    loading = false;
+    setList((draft) => {
+      draft.loading = false;
+    });
+    // A second observe() call reports the sentinel again if it is still on screen
+    observer?.unobserve(sentinel);
+    observer?.observe(sentinel);
   }
 
   async function loadMore() {
@@ -366,39 +410,29 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     setList((draft) => {
       draft.loading = true;
     });
-    const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-    if (current.rating) params.set('rating', current.rating);
-    if (cursor) params.set('before', cursor);
     try {
-      const page = await call<Page<Request>>(`/api/requests?${params}`);
-      if (at !== generation) return;
-      const end = page.items.findIndex((item) => !matches(item));
-      const items = end === -1 ? page.items : page.items.slice(0, end);
-      cursor = page.nextCursor;
-      exhausted = cursor === null || end !== -1;
-      setList((draft) => {
-        const known = new Set(draft.items.map((item) => item.id));
-        draft.items.push(...items.filter((item) => !known.has(item.id)));
-        draft.exhausted = exhausted;
-      });
+      const page = await call<Page<Request>>(pageUrl(cursor));
+      if (at === generation) applyPage(page);
     } catch (error) {
-      if (at !== generation || error instanceof SessionExpired) return;
-      failed = true;
-      setList((draft) => {
-        draft.error = describe(error, 'Could not load requests');
-      });
+      if (at === generation) failPage(error);
     } finally {
-      if (at === generation) {
-        loading = false;
-        setList((draft) => {
-          draft.loading = false;
-        });
-        // A second observe() call reports the sentinel again if it is still on screen
-        observer?.unobserve(sentinel);
-        observer?.observe(sentinel);
-      }
+      if (at === generation) settlePage();
     }
   }
+
+  // The first page loads with the panel, which reveals once it is here. The next ones load as the list scrolls
+  const firstPage = createMemo(() =>
+    call<Page<Request>>(pageUrl(null)).then(
+      (page) => ({ page }),
+      (error: unknown) => ({ error }),
+    ),
+  );
+  createEffect(firstPage, (first) => {
+    if (generation !== 0) return;
+    if ('page' in first) applyPage(first.page);
+    else failPage(first.error);
+    settlePage();
+  });
 
   createEffect(
     () => props.slot,
@@ -428,7 +462,6 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
       rootMargin: '0px 0px 600px 0px',
     });
     observer.observe(sentinel);
-    void loadMore();
     return () => observer?.disconnect();
   });
 
@@ -447,10 +480,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     setRefreshing(true);
     try {
       for (let pages = 0; pages < MAX_REFRESH_PAGES; pages++) {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        if (current.rating) params.set('rating', current.rating);
-        if (before) params.set('before', before);
-        const page = await call<Page<Request>>(`/api/requests?${params}`);
+        const page = await call<Page<Request>>(pageUrl(before));
         if (at !== generation) return;
         const overlap = page.items.findIndex((item) => known.has(item.id));
         newer.push(...(overlap === -1 ? page.items : page.items.slice(0, overlap)));
@@ -691,8 +721,11 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
       </Show>
 
       <div class="card overflow-hidden">
-        <ul class="divide-y divide-line">
-          <For each={list.items}>
+        <ul
+          class={['divide-y divide-line transition-opacity', { 'opacity-60': list.stale }]}
+          aria-busy={list.stale ? 'true' : undefined}>
+          {/* Reading the first page holds the reveal of the page until it is here */}
+          <For each={firstPage() && list.items}>
             {(item, index) => (
               <li>
                 <RequestRow
@@ -709,8 +742,9 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
           </For>
         </ul>
         <div ref={sentinel} class="flex flex-col items-center gap-3 p-6 text-ink-3 text-sm">
-          <Show when={list.loading}>
-            <Spinner class="size-5 text-ink-3" />
+          {/* A change of the filters dims the current requests instead */}
+          <Show when={list.loading && !list.stale}>
+            <Spinner class="pending size-5 text-ink-3" />
           </Show>
           <Show when={list.error}>
             <p role="alert" class="text-danger">

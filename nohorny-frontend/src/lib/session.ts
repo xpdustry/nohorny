@@ -2,12 +2,15 @@
 
 import { createStore } from 'solid-js';
 import { type ApiOptions, api, describe, hasCsrfToken, probeSession, type Session, statusOf } from './api';
+import { config } from './config';
 
 /** Thrown by call() when the session has ended. The sign in form shows by then. */
 export class SessionExpired extends Error {}
 
-type Status = 'unknown' | 'loading' | 'signed-out' | 'ready' | 'error';
+type Status = 'unknown' | 'signed-out' | 'ready' | 'error';
 
+// The server writes the session into /config.js, so the browser knows it from the start. Without it, checkSession()
+// asks the server
 const [state, setState] = createStore<{
   status: Status;
   session: Session | null;
@@ -15,37 +18,45 @@ const [state, setState] = createStore<{
   error: string | null;
   /** Shown above the sign in form, such as an expired session. */
   notice: string | null;
-}>({ status: 'unknown', session: null, error: null, notice: null });
+}>({
+  status: config ? (config.session ? 'ready' : 'signed-out') : 'unknown',
+  session: config?.session ?? null,
+  error: null,
+  notice: null,
+});
 
 export const session = state;
 
 export const isAdmin = () => state.session?.admin === true;
 
-let checked: Promise<void> | null = null;
+let checked: Promise<Status> | null = config ? Promise.resolve(state.status) : null;
 
-/** Checks the session. Without `force`, it checks only once. */
-export function checkSession(force = false): Promise<void> {
+/**
+ * Checks the session and resolves to its status. Without `force`, it checks only once. It writes the outcome only once
+ * the server answered, so an async memo can call it, and the previous status stays meanwhile.
+ */
+export function checkSession(force = false): Promise<Status> {
   if (force || !checked) checked = probe();
   return checked;
 }
 
-async function probe(): Promise<void> {
-  setState((draft) => {
-    draft.status = 'loading';
-    draft.error = null;
-  });
+async function probe(): Promise<Status> {
   try {
     const value = await probeSession();
+    const status = value ? 'ready' : 'signed-out';
     setState((draft) => {
-      draft.status = value ? 'ready' : 'signed-out';
+      draft.status = status;
       draft.session = value;
+      draft.error = null;
     });
+    return status;
   } catch (error) {
     setState((draft) => {
       draft.status = 'error';
       draft.session = null;
       draft.error = describe(error, 'The session check failed');
     });
+    return 'error';
   }
 }
 
@@ -77,7 +88,8 @@ export async function login(username: string, password: string): Promise<void> {
   setState((draft) => {
     draft.notice = null;
   });
-  await checkSession(true);
+  // The browser did not keep the session cookie, the form must not wait for a panel that never comes
+  if ((await checkSession(true)) === 'signed-out') throw new Error('Sign in failed, allow the cookies of this site.');
 }
 
 /** Signs out. Rejects with the message to show when the server did not end the session, which stays signed in. */

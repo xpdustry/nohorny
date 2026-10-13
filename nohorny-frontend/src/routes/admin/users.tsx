@@ -1,10 +1,10 @@
 // The users page of the admin panel, which manages the accounts, their roles, passwords and rate limits.
 
 import { Meta, Title } from '@solidjs/meta';
-import { createMemo, createSignal, createStore, Errored, For, Loading, refresh, Show, useContext } from 'solid-js';
+import { createMemo, createSignal, createStore, Errored, For, refresh, Show, useContext } from 'solid-js';
 import { confirm, Dialog } from '../../components/dialog';
 import { GaugeIcon, KeyIcon, PlusIcon, ShieldMinusIcon, ShieldPlusIcon, TrashIcon } from '../../components/icon';
-import { Button, Chip, Field, Spinner, State } from '../../components/ui';
+import { Button, Chip, Field, State } from '../../components/ui';
 import { AdminContext } from '../../lib/admin';
 import { describe, statusOf, type User, userPath } from '../../lib/api';
 import { formatDate } from '../../lib/format';
@@ -123,11 +123,12 @@ export default function Users() {
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-1">
           <h1 class="text-3xl">Users</h1>
-          <Loading fallback={<p class="text-ink-3 text-sm">&nbsp;</p>}>
+          {/* The list below tells why the users failed to load */}
+          <Errored fallback={null}>
             <p class="text-ink-3 text-sm">
               {plural(users().length, 'account')}, {plural(adminCount(), 'administrator')}
             </p>
-          </Loading>
+          </Errored>
         </div>
         <Button
           variant="primary"
@@ -148,92 +149,84 @@ export default function Users() {
               </State>
             </Show>
           )}>
-          <Loading
-            fallback={
-              <div class="grid h-40 place-items-center text-ink-3">
-                <Spinner class="size-5" />
-              </div>
-            }>
-            <ul class="divide-y divide-line">
-              <For each={users()} keyed={(account) => account.username}>
-                {(account) => (
-                  <li class="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-4 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:px-6">
-                    <span
-                      aria-hidden="true"
-                      class="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-surface-2 text-ink-2 uppercase">
-                      {account().username[0]}
+          <ul class="divide-y divide-line">
+            <For each={users()} keyed={(account) => account.username}>
+              {(account) => (
+                <li class="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-4 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:px-6">
+                  <span
+                    aria-hidden="true"
+                    class="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-surface-2 text-ink-2 uppercase">
+                    {account().username[0]}
+                  </span>
+                  <div class="flex min-w-0 flex-col gap-1.5">
+                    <span class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <span class="[overflow-wrap:anywhere]">{account().username}</span>
+                      <Show when={isSelf(account())}>
+                        <Chip>you</Chip>
+                      </Show>
+                      <Show when={account().admin}>
+                        <Chip class="border-line-strong text-ink">admin</Chip>
+                      </Show>
+                      <Show when={account().bootstrap}>
+                        <Chip tooltip={`${BOOTSTRAP}.`}>bootstrap</Chip>
+                      </Show>
                     </span>
-                    <div class="flex min-w-0 flex-col gap-1.5">
-                      <span class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                        <span class="[overflow-wrap:anywhere]">{account().username}</span>
-                        <Show when={isSelf(account())}>
-                          <Chip>you</Chip>
-                        </Show>
-                        <Show when={account().admin}>
-                          <Chip class="border-line-strong text-ink">admin</Chip>
-                        </Show>
-                        <Show when={account().bootstrap}>
-                          <Chip tooltip={`${BOOTSTRAP}.`}>bootstrap</Chip>
-                        </Show>
-                      </span>
-                      <span class="text-ink-3 text-xs">
-                        Created {formatDate(account().createdAt)} · {account().rateLimit.toLocaleString('en')} per
-                        minute
-                      </span>
-                    </div>
-                    <div class="col-start-2 -ml-3 flex flex-wrap gap-1 sm:col-start-3 sm:ml-0">
-                      <Button
-                        size="sm"
-                        variant="quiet"
-                        disabled={busy[account().username] || (account().admin && demoteBlocked(account()) !== null)}
-                        data-tooltip={
-                          account().admin
-                            ? (demoteBlocked(account()) ?? 'Remove the administrator role')
-                            : 'Make administrator'
-                        }
-                        onClick={() => toggleAdmin(account())}>
-                        <Show when={account().admin} fallback={<ShieldPlusIcon />}>
-                          <ShieldMinusIcon />
-                        </Show>
-                        {account().admin ? 'Demote' : 'Promote'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="quiet"
-                        disabled={busy[account().username] || account().bootstrap}
-                        data-tooltip={
-                          account().bootstrap
-                            ? `${BOOTSTRAP}, change its password in the configuration.`
-                            : 'Set a new password'
-                        }
-                        onClick={() => setEditing(account())}>
-                        <KeyIcon />
-                        Password
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="quiet"
-                        disabled={busy[account().username]}
-                        data-tooltip="Change the rate limit"
-                        onClick={() => setLimiting(account())}>
-                        <GaugeIcon />
-                        Limit
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="quiet-danger"
-                        aria-label={`Delete ${account().username}`}
-                        data-tooltip={deleteBlocked(account()) ?? `Delete ${account().username}`}
-                        disabled={busy[account().username] || deleteBlocked(account()) !== null}
-                        onClick={() => remove(account())}>
-                        <TrashIcon />
-                      </Button>
-                    </div>
-                  </li>
-                )}
-              </For>
-            </ul>
-          </Loading>
+                    <span class="text-ink-3 text-xs">
+                      Created {formatDate(account().createdAt)} · {account().rateLimit.toLocaleString('en')} per minute
+                    </span>
+                  </div>
+                  <div class="col-start-2 -ml-3 flex flex-wrap gap-1 sm:col-start-3 sm:ml-0">
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      disabled={busy[account().username] || (account().admin && demoteBlocked(account()) !== null)}
+                      data-tooltip={
+                        account().admin
+                          ? (demoteBlocked(account()) ?? 'Remove the administrator role')
+                          : 'Make administrator'
+                      }
+                      onClick={() => toggleAdmin(account())}>
+                      <Show when={account().admin} fallback={<ShieldPlusIcon />}>
+                        <ShieldMinusIcon />
+                      </Show>
+                      {account().admin ? 'Demote' : 'Promote'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      disabled={busy[account().username] || account().bootstrap}
+                      data-tooltip={
+                        account().bootstrap
+                          ? `${BOOTSTRAP}, change its password in the configuration.`
+                          : 'Set a new password'
+                      }
+                      onClick={() => setEditing(account())}>
+                      <KeyIcon />
+                      Password
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      disabled={busy[account().username]}
+                      data-tooltip="Change the rate limit"
+                      onClick={() => setLimiting(account())}>
+                      <GaugeIcon />
+                      Limit
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="quiet-danger"
+                      aria-label={`Delete ${account().username}`}
+                      data-tooltip={deleteBlocked(account()) ?? `Delete ${account().username}`}
+                      disabled={busy[account().username] || deleteBlocked(account()) !== null}
+                      onClick={() => remove(account())}>
+                      <TrashIcon />
+                    </Button>
+                  </div>
+                </li>
+              )}
+            </For>
+          </ul>
         </Errored>
       </section>
 

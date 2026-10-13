@@ -18,10 +18,15 @@ public final class RetentionController {
 
     @GetMapping(path = "/api/retention", produces = MediaType.APPLICATION_JSON_VALUE)
     public Retention onRetention() {
-        return new Retention(
-                this.properties.imageRetention().toMillis(),
-                this.properties.retention().toMillis());
+        return Retention.of(this.properties);
     }
 
-    public record Retention(long imageMillis, long requestMillis) {}
+    public record Retention(long imageMillis, long requestMillis) {
+
+        public static Retention of(final RequestProperties properties) {
+            return new Retention(
+                    properties.imageRetention().toMillis(),
+                    properties.retention().toMillis());
+        }
+    }
 }

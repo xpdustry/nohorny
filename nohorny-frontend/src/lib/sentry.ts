@@ -2,13 +2,7 @@
 // it starts before the hydration. Only the errors are collected: no tracing, no replays and no personal data.
 
 import * as Sentry from '@sentry/browser';
-
-declare global {
-  interface Window {
-    /** Written by /config.js, which the document loads before the app. Missing under `vite preview`. */
-    NOHORNY_CONFIG?: { sentryDsn: string | null };
-  }
-}
+import { config } from './config';
 
 // A request URL grants access to the request and a user URL names an account, both are left out of the reports
 const redact = (url: string) => url.replace(/\/(requests|users)\/[^/?#]+/g, '/$1/:id');
@@ -18,7 +12,7 @@ const redactField = (data: Record<string, unknown> | undefined, key: string) => 
   if (data && typeof value === 'string') data[key] = redact(value);
 };
 
-const dsn = import.meta.env.SSR ? null : window.NOHORNY_CONFIG?.sentryDsn;
+const dsn = config?.sentryDsn;
 
 if (dsn) {
   Sentry.init({

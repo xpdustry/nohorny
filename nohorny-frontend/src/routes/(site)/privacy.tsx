@@ -2,30 +2,39 @@
 
 import { Title } from '@solidjs/meta';
 import type { JSX } from '@solidjs/web';
-import { createSignal, For, onSettled } from 'solid-js';
-import { api, type Retention } from '../../lib/api';
+import { createMemo, For, Loading } from 'solid-js';
+import type { Retention } from '../../lib/api';
+import { config } from '../../lib/config';
 import { period } from '../../lib/format';
 import { DISCORD, EXTERNAL, GITHUB } from '../../lib/links';
 
 export default function Privacy() {
-  // Each server sets its own periods, so the browser fetches them rather than the build.
-  // The generic wording stays until they load, or if they fail to.
-  const [retention, setRetention] = createSignal<Retention | null>(null);
-  // Whether this server reports the errors of the pages, see lib/sentry.ts. Read after the hydration like the periods
-  const [reporting, setReporting] = createSignal(false);
-  onSettled(() => {
-    api<Retention>('/api/retention').then(setRetention, () => {});
-    setReporting(Boolean(window.NOHORNY_CONFIG?.sentryDsn));
-  });
-  const IMAGE = 'a limited time';
-  const REQUEST = 'a longer time';
+  // Each server sets its own periods and whether it reports the errors of the pages, see lib/sentry.ts. The build
+  // cannot know them, the browser reads them once hydrated
+  const settings = createMemo(() => config ?? null, { ssrSource: 'client' });
+
+  return (
+    <div class="wrap max-w-3xl! py-16">
+      <Title>Privacy · NoHorny</Title>
+      {/*
+       * The prerendered page holds the generic wording, shown only when the app is slow to start or does not. The page
+       * of this server replaces it at once after the hydration
+       */}
+      <Loading fallback={<Policy class="pending" retention={null} reporting={false} />}>
+        <Policy class="reveal" retention={settings()?.retention ?? null} reporting={Boolean(settings()?.sentryDsn)} />
+      </Loading>
+    </div>
+  );
+}
+
+function Policy(props: { class: string; retention: Retention | null; reporting: boolean }) {
   const image = () => {
-    const millis = retention()?.imageMillis;
-    return millis ? period(millis) : IMAGE;
+    const millis = props.retention?.imageMillis;
+    return millis ? period(millis) : 'a limited time';
   };
   const request = () => {
-    const millis = retention()?.requestMillis;
-    return millis ? period(millis) : REQUEST;
+    const millis = props.retention?.requestMillis;
+    return millis ? period(millis) : 'a longer time';
   };
 
   const answers: [string, () => JSX.Element][] = [
@@ -58,11 +67,10 @@ export default function Privacy() {
   ];
 
   return (
-    <div class="wrap max-w-3xl! py-16">
-      <Title>Privacy · NoHorny</Title>
+    <div class={props.class}>
       <h1 class="text-5xl">Privacy</h1>
       <dl class="mt-10 divide-y divide-line border-y border-line">
-        <For each={reporting() ? [...answers, errorReports] : answers}>
+        <For each={props.reporting ? [...answers, errorReports] : answers}>
           {([question, answer]) => (
             <div class="grid gap-1 py-5 sm:grid-cols-[12rem_1fr] sm:gap-6">
               <dt class="text-accent-ink text-lg">{question}</dt>

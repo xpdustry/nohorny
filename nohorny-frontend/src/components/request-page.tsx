@@ -2,13 +2,13 @@
 // It renders in the browser only, so one prerendered shell serves every request identifier.
 
 import { Title } from '@solidjs/meta';
-import { createMemo, createSignal, Errored, Loading, onSettled, refresh, Show } from 'solid-js';
+import { createMemo, createSignal, Errored, onSettled, refresh, Show } from 'solid-js';
 import { api, describe, type Request, requestPath, statusOf } from '../lib/api';
 import { relativeTime, shortId } from '../lib/format';
 import { checkSession, isAdmin } from '../lib/session';
 import { confirm } from './dialog';
 import { ArrowLeftIcon, FlagIcon, ListIcon, LockIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
-import { Card, ChainCard, DetailsCard, KeyValues, RequestImage, RequestLoading, VerdictCard } from './request';
+import { Card, ChainCard, DetailsCard, KeyValues, RequestImage, VerdictCard } from './request';
 import { Button, buttonClass, Notice, State } from './ui';
 
 const CAPTIONS = {
@@ -59,7 +59,11 @@ export default function RequestPage(props: { id: string }) {
               </Button>
             </State>
           )}>
-          <Loading fallback={<RequestLoading />}>
+          {/*
+           * No Loading boundary of its own: the one of the app holds the swap from the fallback of the route, so the
+           * page shows a single loading state until the request is here
+           */}
+          <div class="reveal">
             <Show
               when={request()}
               fallback={
@@ -79,7 +83,7 @@ export default function RequestPage(props: { id: string }) {
                 />
               )}
             </Show>
-          </Loading>
+          </div>
         </Errored>
       </Show>
     </div>

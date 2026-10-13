@@ -1,16 +1,24 @@
 // The layout of the admin panel. It shows the sign in form until an administrator signs in, then the tabs and the page.
 
 import { Meta, Title } from '@solidjs/meta';
-import type { RouteSectionProps } from '@solidjs/router';
+import { type RouteSectionProps, useIsRouting } from '@solidjs/router';
 import type { JSX } from '@solidjs/web';
-import { createSignal, Match, onSettled, Show, Switch } from 'solid-js';
+import { createMemo, createSignal, Loading, Match, Show, Switch } from 'solid-js';
 import { ListIcon, LockIcon, LogOutIcon, ShieldIcon, TriangleAlertIcon, UsersIcon } from '../components/icon';
-import { Brand, Button, buttonClass, Field, Notice, Spinner, State } from '../components/ui';
+import { Brand, Button, buttonClass, Field, LoadingSpinner, Notice, State } from '../components/ui';
 import { AdminContext, createAdmin } from '../lib/admin';
 import { checkSession, login, logout, session } from '../lib/session';
 
 export default function AdminLayout(props: RouteSectionProps) {
-  onSettled(() => void checkSession());
+  // The session is only known in the browser. Waiting for it holds the Loading boundary below, so the prerendered page
+  // is its fallback, and the panel reveals at once with the data of its page
+  const checked = createMemo(() => checkSession().then(() => true), { ssrSource: 'client' });
+  const [retrying, setRetrying] = createSignal(false);
+  async function retry() {
+    setRetrying(true);
+    await checkSession(true);
+    setRetrying(false);
+  }
   const [signOutFailure, setSignOutFailure] = createSignal<string | null>(null);
   async function signOut() {
     setSignOutFailure(null);
@@ -24,52 +32,51 @@ export default function AdminLayout(props: RouteSectionProps) {
     <>
       <Title>NoHorny admin</Title>
       <Meta name="robots" content="noindex, nofollow" />
-      <Switch>
-        <Match when={session.status === 'ready' && session.session?.admin}>
-          <AdminShell>{props.children}</AdminShell>
-        </Match>
-        <Match when={session.status === 'ready'}>
-          <Gate>
-            <State icon={<ShieldIcon />} title="Administrators only">
-              <p class="text-ink-2">
-                You are signed in as <b class="font-normal text-ink">{session.session?.username}</b>, which is not an
-                administrator.
-              </p>
-              <Button onClick={() => void signOut()}>
-                <LogOutIcon />
-                Sign out
-              </Button>
-              <Show when={signOutFailure()}>
-                <p role="alert" class="text-danger text-sm">
-                  {signOutFailure()}
-                </p>
-              </Show>
-            </State>
-          </Gate>
-        </Match>
-        <Match when={session.status === 'signed-out'}>
-          <Gate>
-            <Login />
-          </Gate>
-        </Match>
-        <Match when={session.status === 'error'}>
-          <Gate>
-            <State icon={<TriangleAlertIcon />} title="Something went wrong" tone="error">
-              <p role="alert" class="text-ink-2">
-                {session.error}
-              </p>
-              <Button variant="primary" onClick={() => void checkSession(true)}>
-                Retry
-              </Button>
-            </State>
-          </Gate>
-        </Match>
-        <Match when>
-          <div class="grid min-h-dvh place-items-center text-ink-3">
-            <Spinner class="size-6" />
-          </div>
-        </Match>
-      </Switch>
+      <Loading fallback={<LoadingSpinner class="min-h-dvh" size="size-6" />}>
+        <Show when={checked()}>
+          <Switch>
+            <Match when={session.status === 'ready' && session.session?.admin}>
+              <AdminShell>{props.children}</AdminShell>
+            </Match>
+            <Match when={session.status === 'ready'}>
+              <Gate>
+                <State icon={<ShieldIcon />} title="Administrators only">
+                  <p class="text-ink-2">
+                    You are signed in as <b class="font-normal text-ink">{session.session?.username}</b>, which is not
+                    an administrator.
+                  </p>
+                  <Button onClick={() => void signOut()}>
+                    <LogOutIcon />
+                    Sign out
+                  </Button>
+                  <Show when={signOutFailure()}>
+                    <p role="alert" class="text-danger text-sm">
+                      {signOutFailure()}
+                    </p>
+                  </Show>
+                </State>
+              </Gate>
+            </Match>
+            <Match when={session.status === 'signed-out'}>
+              <Gate>
+                <Login />
+              </Gate>
+            </Match>
+            <Match when={session.status === 'error'}>
+              <Gate>
+                <State icon={<TriangleAlertIcon />} title="Something went wrong" tone="error">
+                  <p role="alert" class="text-ink-2">
+                    {session.error}
+                  </p>
+                  <Button variant="primary" busy={retrying()} onClick={() => void retry()}>
+                    Retry
+                  </Button>
+                </State>
+              </Gate>
+            </Match>
+          </Switch>
+        </Show>
+      </Loading>
     </>
   );
 }
@@ -77,7 +84,7 @@ export default function AdminLayout(props: RouteSectionProps) {
 /** The centered card holding the sign in form and the error states. */
 function Gate(props: { children: JSX.Element }) {
   return (
-    <main class="grid min-h-dvh place-items-center p-4">
+    <main class="reveal grid min-h-dvh place-items-center p-4">
       <div class="flex w-full max-w-sm flex-col items-center gap-6">
         <Brand tag="Admin" />
         <div class="card w-full">{props.children}</div>
@@ -101,13 +108,13 @@ function Login() {
     setBusy(true);
     setError(null);
     try {
+      // On success the form stays busy, until the panel replaces it with the data of its page
       await login(String(data.get('username')), String(data.get('password')));
     } catch (failure) {
+      setBusy(false);
       setError((failure as Error).message);
       password.value = '';
       password.focus();
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -151,10 +158,13 @@ const TAB = [
 
 function AdminShell(props: { children: JSX.Element }) {
   const admin = createAdmin();
+  const routing = useIsRouting();
   return (
     <AdminContext value={admin}>
-      <div class="flex min-h-dvh flex-col">
+      <div class="reveal flex min-h-dvh flex-col">
         <header class="sticky top-0 z-40 border-line border-b bg-bg">
+          {/* The previous page stays until the next one is ready, the bar tells that the click was heard */}
+          <span aria-hidden="true" class={['progress-bar', { active: routing() }]} />
           <div class="wrap flex h-16 items-center gap-3">
             <Brand tag="Admin" />
             <nav aria-label="Admin sections" class="ml-4 flex gap-1">

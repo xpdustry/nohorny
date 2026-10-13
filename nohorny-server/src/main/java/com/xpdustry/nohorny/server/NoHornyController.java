@@ -2,6 +2,10 @@
 package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.SimpleServerMessage;
+import com.xpdustry.nohorny.server.request.RetentionController;
+import com.xpdustry.nohorny.server.security.SecurityConfiguration;
+import com.xpdustry.nohorny.server.security.SessionController;
+import com.xpdustry.nohorny.server.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
@@ -30,18 +34,26 @@ public final class NoHornyController {
     private final StatusProperties status;
     private final ClassificationService classifications;
     private final RequesterResolver requesters;
-    private final String config;
+    private final SentryProperties sentry;
+    private final RequestProperties requests;
+    private final UserService users;
+    private final JsonMapper mapper;
 
     public NoHornyController(
             final StatusProperties status,
             final ClassificationService classifications,
             final RequesterResolver requesters,
             final SentryProperties sentry,
+            final RequestProperties requests,
+            final UserService users,
             final JsonMapper mapper) {
         this.status = status;
         this.classifications = classifications;
         this.requesters = requesters;
-        this.config = "window.NOHORNY_CONFIG = " + mapper.writeValueAsString(new PageConfig(sentry.dsn())) + ";\n";
+        this.sentry = sentry;
+        this.requests = requests;
+        this.users = users;
+        this.mapper = mapper;
     }
 
     @GetMapping(path = "/api/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -66,14 +78,27 @@ public final class NoHornyController {
                         request.getRemoteAddr()));
     }
 
-    /// The runtime configuration of the pages, loaded by a blocking script before their own.
+    /// The runtime configuration of the pages, loaded by a blocking script before their own. It holds the session of
+    /// the caller, so the pages know it without a request of their own. Other sites must not load it.
     @GetMapping(path = "/config.js", produces = "text/javascript")
-    public ResponseEntity<String> onConfig() {
-        return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(this.config);
+    public ResponseEntity<String> onConfig(final @Nullable Authentication authentication) {
+        final var config = new PageConfig(
+                this.sentry.dsn(),
+                SecurityConfiguration.isAuthenticated(authentication)
+                        ? SessionController.Session.of(authentication, this.users)
+                        : null,
+                RetentionController.Retention.of(this.requests));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header("Cross-Origin-Resource-Policy", "same-origin")
+                .body("window.NOHORNY_CONFIG = " + this.mapper.writeValueAsString(config) + ";\n");
     }
 
-    /// Read by nohorny-frontend/src/lib/sentry.ts.
-    private record PageConfig(@Nullable String sentryDsn) {}
+    /// Read by nohorny-frontend/src/lib/config.ts.
+    private record PageConfig(
+            @Nullable String sentryDsn,
+            SessionController.@Nullable Session session,
+            RetentionController.Retention retention) {}
 
     @GetMapping(path = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
     public String onRobots() {

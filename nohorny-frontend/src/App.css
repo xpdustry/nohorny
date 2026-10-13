@@ -273,6 +273,56 @@
   }
 }
 
+/* The fallback of a Loading boundary. It fades in after a moment, so a fast load goes straight to the content instead
+   of flashing it, and it holds the space of the content meanwhile */
+@utility pending {
+  transition: opacity 200ms ease-out 400ms;
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Fades a page in as its Loading boundary reveals it, all at once. Only for elements the browser creates: the
+   prerendered ones would fade in again on every load */
+@utility reveal {
+  transition: opacity 250ms ease-out;
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* A thin bar under a header while a navigation waits for its page, which stays on screen meanwhile. It shows after a
+   moment, so a quick navigation shows nothing, and it fills up as it fades out */
+.progress-bar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+.progress-bar.active {
+  opacity: 1;
+  transition-delay: 150ms;
+  animation: progress-bar 10s cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+@keyframes progress-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.95);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar.active {
+    animation: none;
+  }
+}
+
 @utility blur-veil {
   filter: blur(18px) saturate(1.2);
   transform: scale(1.1);

@@ -96,6 +96,15 @@ export function Spinner(props: { class?: string }) {
   );
 }
 
+/** The fallback of a Loading boundary, a spinner centered in a box sized by `class`. It shows after a moment. */
+export function LoadingSpinner(props: { class: string; size?: string }) {
+  return (
+    <div class={['pending grid place-items-center text-ink-3', props.class]}>
+      <Spinner class={props.size ?? 'size-5'} />
+    </div>
+  );
+}
+
 export const RATING_TEXT: Record<Bucket, string> = {
   safe: 'text-safe',
   warn: 'text-warn',

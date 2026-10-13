@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.Contract;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.Authentication;
@@ -47,10 +48,16 @@ public class SecurityConfiguration {
     public static final String ADMIN_ROLE = "ADMIN";
     private static final String ADMIN_AUTHORITY = "ROLE_" + ADMIN_ROLE;
 
-    public static boolean isAdmin(final @Nullable Authentication authentication) {
+    /// Whether the caller signed in, the anonymous authentication of the public paths excluded.
+    @Contract("null -> false")
+    public static boolean isAuthenticated(final @Nullable Authentication authentication) {
         return authentication != null
                 && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken)
+                && !(authentication instanceof AnonymousAuthenticationToken);
+    }
+
+    public static boolean isAdmin(final @Nullable Authentication authentication) {
+        return isAuthenticated(authentication)
                 && authentication.getAuthorities().stream()
                         .anyMatch(authority -> ADMIN_AUTHORITY.equals(authority.getAuthority()));
     }

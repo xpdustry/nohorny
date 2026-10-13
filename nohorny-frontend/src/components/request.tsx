@@ -328,13 +328,15 @@ export function KeyValues(props: { rows: [string, JSX.Element][] }) {
   );
 }
 
-/** Shown while a request loads. The prerendered shell of the request pages contains it. */
+/** Shown while a request loads, after a moment. The prerendered shell of the request pages contains it. */
 export function RequestLoading() {
   return (
-    <State icon={<Spinner class="size-5" />} title="Loading request…">
-      <span class="sr-only" role="status">
-        Loading request
-      </span>
-    </State>
+    <div class="pending">
+      <State icon={<Spinner class="size-5" />} title="Loading request…">
+        <span class="sr-only" role="status">
+          Loading request
+        </span>
+      </State>
+    </div>
   );
 }
