@@ -3,8 +3,17 @@
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
 import type { FailureDetails as FailureDetailsData, Request } from '../lib/api';
-import { bucket, classifierLabel, duration, formatTime, percent, requesterLabel, stepBucket } from '../lib/format';
-import { Dialog } from './dialog';
+import {
+  bucket,
+  classifierLabel,
+  duration,
+  formatTime,
+  percent,
+  requesterLabel,
+  shortId,
+  stepBucket,
+} from '../lib/format';
+import { confirm, Dialog } from './dialog';
 import { CheckIcon, CopyIcon, EyeOffIcon, ImageOffIcon, XIcon } from './icon';
 import {
   Button,
@@ -23,8 +32,28 @@ const PLACEHOLDERS = {
   none: 'No image kept',
   stored: 'Image unavailable',
   expired: 'Image expired after the retention period',
-  purged: 'Image removed',
+  deleted: 'Image deleted',
 };
+
+// The confirmations are shared by the request page and the admin panel
+
+/** Asks to confirm the deletion of the image of a request. */
+export function confirmImageDeletion(request: Request): Promise<boolean> {
+  return confirm({
+    title: `Delete the image of ${shortId(request.id)}?`,
+    body: 'The image is deleted immediately. This cannot be undone.',
+    action: 'Delete image',
+  });
+}
+
+/** Asks to confirm the deletion of a request. */
+export function confirmRequestDeletion(request: Request): Promise<boolean> {
+  return confirm({
+    title: `Delete request ${shortId(request.id)}?`,
+    body: 'The request, its verdict and its image are removed for good and its link stops working. Statistics are not affected.',
+    action: 'Delete request',
+  });
+}
 
 /** The image of a request. Flagged images stay blurred until `revealed`. */
 export function RequestImage(props: {

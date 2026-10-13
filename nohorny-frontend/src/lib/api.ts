@@ -76,7 +76,7 @@ export interface Request {
   classifier: string | null;
   version: string | null;
   requester: Requester;
-  image: { state: 'none' | 'stored' | 'expired' | 'purged'; url?: string };
+  image: { state: 'none' | 'stored' | 'expired' | 'deleted'; url?: string };
   steps: Step[];
   /** Only sent to the administrators. */
   remoteAddress?: string;

@@ -17,7 +17,7 @@ import {
   useContext,
 } from 'solid-js';
 import { ActivityChart } from '../../components/activity-chart';
-import { confirm, Dialog } from '../../components/dialog';
+import { Dialog } from '../../components/dialog';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -31,7 +31,14 @@ import {
   XIcon,
 } from '../../components/icon';
 import { NetworkChart } from '../../components/network-chart';
-import { ClassifierTimeline, KeyValues, RequestImage, VerdictCard } from '../../components/request';
+import {
+  ClassifierTimeline,
+  confirmImageDeletion,
+  confirmRequestDeletion,
+  KeyValues,
+  RequestImage,
+  VerdictCard,
+} from '../../components/request';
 import { Button, buttonClass, Chip, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
 import { VersionChart } from '../../components/version-chart';
 import { AdminContext } from '../../lib/admin';
@@ -271,7 +278,7 @@ const FILTER_FIELD =
 /** Past this many pages of new requests, a refresh reloads the list from the top. */
 const MAX_REFRESH_PAGES = 5;
 
-const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expired: 'Expired', purged: 'Purged' };
+const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expired: 'Expired', deleted: 'Deleted' };
 
 function RequestList(props: { slot: { from: number; to: number } | null }) {
   const admin = useContext(AdminContext);
@@ -555,36 +562,26 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     }
   }
 
-  async function purge(item: Request) {
-    const confirmed = await confirm({
-      title: `Purge the image of ${shortId(item.id)}?`,
-      body: 'The image is deleted immediately. The request stays as a tombstone with its verdict. This cannot be undone.',
-      action: 'Purge image',
-    });
-    if (!confirmed) return;
+  async function deleteImage(item: Request) {
+    if (!(await confirmImageDeletion(item))) return;
     await act(
       item,
       async () => {
-        replace(await call<Request>(`${requestPath(item.id)}/purge`, { method: 'POST' }));
-        return `Image of ${shortId(item.id)} purged.`;
+        replace(await call<Request>(`${requestPath(item.id)}/image`, { method: 'DELETE' }));
+        return `Image of ${shortId(item.id)} deleted.`;
       },
       (error) => {
         if (statusOf(error) === 404) {
           drop(item.id);
           return `Request ${shortId(item.id)} no longer exists.`;
         }
-        return describe(error, 'Purge failed', 'Could not reach the server, nothing was purged.');
+        return describe(error, 'Deletion failed', 'Could not reach the server, the image was not deleted.');
       },
     );
   }
 
   async function remove(item: Request) {
-    const confirmed = await confirm({
-      title: `Delete request ${shortId(item.id)}?`,
-      body: 'The request, its verdict and its image are removed for good and its link stops working. Statistics are not affected.',
-      action: 'Delete request',
-    });
-    if (!confirmed) return;
+    if (!(await confirmRequestDeletion(item))) return;
     const deleted = () => {
       drop(item.id);
       return `Request ${shortId(item.id)} deleted.`;
@@ -734,7 +731,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                   busy={list.busy[item.id] === true}
                   onReveal={(value) => setRevealed(item, value)}
                   onOpen={() => setViewing(index())}
-                  onPurge={() => purge(item)}
+                  onDeleteImage={() => deleteImage(item)}
                   onDelete={() => remove(item)}
                 />
               </li>
@@ -837,21 +834,21 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                       <ExternalLinkIcon />
                       Full page
                     </a>
-                    <Show when={value().item.image.state === 'stored'}>
-                      <Button
-                        variant="danger"
-                        busy={list.busy[value().item.id] === true}
-                        onClick={() => purge(value().item)}>
-                        <ImageOffIcon />
-                        Purge image
-                      </Button>
-                    </Show>
+                    <Button
+                      variant="danger"
+                      busy={list.busy[value().item.id] === true}
+                      disabled={value().item.image.state !== 'stored'}
+                      data-tooltip={imageTooltip(value().item)}
+                      onClick={() => deleteImage(value().item)}>
+                      <ImageOffIcon />
+                      Delete image
+                    </Button>
                     <Button
                       variant="solid-danger"
                       busy={list.busy[value().item.id] === true}
                       onClick={() => remove(value().item)}>
                       <TrashIcon />
-                      Delete
+                      Delete request
                     </Button>
                   </div>
                 </div>
@@ -888,13 +885,25 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   );
 }
 
+// The tooltips of the image deletion buttons, which explain why they are disabled
+const IMAGE_TOOLTIPS = {
+  none: 'No image kept',
+  stored: 'Delete image',
+  expired: 'Image expired',
+  deleted: 'Image already deleted',
+};
+
+function imageTooltip(request: Request): string {
+  return IMAGE_TOOLTIPS[request.image.state];
+}
+
 function RequestRow(props: {
   request: Request;
   revealed: boolean;
   busy: boolean;
   onReveal: (revealed: boolean) => void;
   onOpen: () => void;
-  onPurge: () => void;
+  onDeleteImage: () => void;
   onDelete: () => void;
 }) {
   const rating = () => bucket(props.request);
@@ -971,24 +980,21 @@ function RequestRow(props: {
         <span class="font-mono text-ink-3 text-xs">{duration(props.request.durationMillis)}</span>
       </div>
 
-      {/* As wide as both buttons, so the column does not move when a row has no image to purge */}
-      <div class="flex w-19 justify-end gap-1 pointer-coarse:w-23">
-        <Show when={props.request.image.state === 'stored'}>
-          <Button
-            size="icon"
-            variant="quiet"
-            aria-label="Purge image"
-            data-tooltip="Purge image"
-            disabled={props.busy}
-            onClick={() => props.onPurge()}>
-            <ImageOffIcon />
-          </Button>
-        </Show>
+      <div class="flex justify-end gap-1">
+        <Button
+          size="icon"
+          variant="quiet"
+          aria-label="Delete image"
+          data-tooltip={imageTooltip(props.request)}
+          disabled={props.busy || props.request.image.state !== 'stored'}
+          onClick={() => props.onDeleteImage()}>
+          <ImageOffIcon />
+        </Button>
         <Button
           size="icon"
           variant="quiet-danger"
-          aria-label="Delete the request"
-          data-tooltip="Delete the request"
+          aria-label="Delete request"
+          data-tooltip="Delete request"
           disabled={props.busy}
           onClick={() => props.onDelete()}>
           <TrashIcon />

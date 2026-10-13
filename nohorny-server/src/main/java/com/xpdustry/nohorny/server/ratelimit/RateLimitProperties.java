@@ -13,7 +13,7 @@ import org.springframework.validation.annotation.Validated;
 /// @param mindustry the classifications of a listed Mindustry network without an account, `0` requires one
 /// @param user the classifications of a new account, each account has its own limit set from the admin panel
 /// @param reads the reads of the request pages, the administrators are not limited
-/// @param purges the purges from the request pages, the administrators are not limited
+/// @param imageDeletions the image deletions from the request pages, the administrators are not limited
 @ConfigurationProperties("nohorny.rate-limit")
 @Validated
 public record RateLimitProperties(
@@ -21,4 +21,4 @@ public record RateLimitProperties(
         @DefaultValue("60") @Min(0) int mindustry,
         @DefaultValue("120") @Positive int user,
         @DefaultValue("60") @Positive int reads,
-        @DefaultValue("5") @Positive int purges) {}
+        @DefaultValue("5") @Positive int imageDeletions) {}

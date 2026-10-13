@@ -22,7 +22,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -64,10 +63,10 @@ public final class RequestController {
                 .body(content);
     }
 
-    @PostMapping(path = "/{id}/purge", produces = MediaType.APPLICATION_JSON_VALUE)
-    public RequestView onPurge(final @PathVariable String id, final @Nullable Authentication authentication) {
-        final var request = this.requests.purgeImage(id).orElseThrow(RequestController::notFound);
-        log.info("Purged the image of request {}", id);
+    @DeleteMapping(path = "/{id}/image", produces = MediaType.APPLICATION_JSON_VALUE)
+    public RequestView onDeleteImage(final @PathVariable String id, final @Nullable Authentication authentication) {
+        final var request = this.requests.deleteImage(id).orElseThrow(RequestController::notFound);
+        log.info("Deleted the image of request {}", id);
         return this.toView(request, SecurityConfiguration.isAdmin(authentication));
     }
 

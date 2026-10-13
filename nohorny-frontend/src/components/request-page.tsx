@@ -1,4 +1,4 @@
-// The page of one request at /requests/:id, with its verdict, its blurred image and the purge button.
+// The page of one request at /requests/:id, with its verdict, its blurred image and the button deleting it.
 // It renders in the browser only, so one prerendered shell serves every request identifier.
 
 import { Title } from '@solidjs/meta';
@@ -6,14 +6,22 @@ import { createMemo, createSignal, Errored, onSettled, refresh, Show } from 'sol
 import { api, describe, type Request, requestPath, statusOf } from '../lib/api';
 import { relativeTime, shortId } from '../lib/format';
 import { checkSession, isAdmin } from '../lib/session';
-import { confirm } from './dialog';
-import { ArrowLeftIcon, FlagIcon, ListIcon, LockIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
-import { Card, ChainCard, DetailsCard, KeyValues, RequestImage, VerdictCard } from './request';
+import { ArrowLeftIcon, ListIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
+import {
+  Card,
+  ChainCard,
+  confirmImageDeletion,
+  confirmRequestDeletion,
+  DetailsCard,
+  KeyValues,
+  RequestImage,
+  VerdictCard,
+} from './request';
 import { Button, buttonClass, Notice, State } from './ui';
 
 const CAPTIONS = {
-  expired: 'The image was deleted when its retention period ended. The verdict stays on record.',
-  purged: 'The image was deleted by hand. The verdict stays on record.',
+  expired: 'The image was deleted when its retention period ended.',
+  deleted: 'The image was deleted.',
 };
 
 export default function RequestPage(props: { id: string }) {
@@ -110,19 +118,14 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
     }
   }
 
-  /** Anyone can purge the image. The API rate limits the purges. */
-  async function purge() {
-    const confirmed = await confirm({
-      title: 'Report illegal content?',
-      body: 'This permanently deletes the image from NoHorny, for everyone including moderators. The verdict stays on record without the image. This cannot be undone.',
-      action: 'Delete image',
-    });
-    if (!confirmed) return;
+  /** Anyone can delete the image. The API rate limits the deletions. */
+  async function deleteImage() {
+    if (!(await confirmImageDeletion(props.request))) return;
     await act(
       async () => {
-        await api(`${path()}/purge`, { method: 'POST' });
+        await api(`${path()}/image`, { method: 'DELETE' });
         setRevealed(false);
-        setMessage({ tone: 'success', text: 'The image was deleted. Thank you for reporting it.' });
+        setMessage({ tone: 'success', text: 'The image was deleted.' });
         props.onChange();
       },
       (error) => {
@@ -130,10 +133,10 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
           props.onMissing();
           return;
         }
-        if (statusOf(error) === 429) return 'Too many reports from your address, try later.';
+        if (statusOf(error) === 429) return 'Too many deletions from your address, try later.';
         return describe(
           error,
-          'The report failed, reload the page and try again',
+          'The deletion failed, reload the page and try again',
           'Could not reach the server, the image was not deleted.',
         );
       },
@@ -141,12 +144,7 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
   }
 
   async function remove() {
-    const confirmed = await confirm({
-      title: 'Delete this request?',
-      body: 'The request, its verdict and its image are removed for good and this link stops working. Statistics are not affected.',
-      action: 'Delete request',
-    });
-    if (!confirmed) return;
+    if (!(await confirmRequestDeletion(props.request))) return;
     await act(
       async () => {
         await api(path(), { method: 'DELETE' });
@@ -194,21 +192,32 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
         )}
       </Show>
 
-      {/* The verdict follows the image on small screens, the report box comes after the details */}
-      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr] lg:grid-rows-[auto_1fr]">
+      {/* The verdict follows the image on small screens */}
+      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr]">
         <div class="flex flex-col gap-4">
           <RequestImage request={props.request} revealed={revealed()} onReveal={setRevealed} />
-          <Show when={CAPTIONS[props.request.image.state as keyof typeof CAPTIONS]}>
+          <Show
+            when={CAPTIONS[props.request.image.state as keyof typeof CAPTIONS]}
+            fallback={
+              <Show when={props.request.image.state === 'stored'}>
+                <Button variant="danger" class="self-start" busy={busy()} onClick={deleteImage}>
+                  <Show when={!busy()}>
+                    <TrashIcon />
+                  </Show>
+                  Delete image
+                </Button>
+              </Show>
+            }>
             {(caption) => (
               <p class="flex items-center gap-2 text-ink-3 text-sm">
-                <LockIcon />
+                <TrashIcon />
                 {caption()}
               </p>
             )}
           </Show>
         </div>
 
-        <div class="flex flex-col gap-4 lg:row-span-2">
+        <div class="flex flex-col gap-4">
           <VerdictCard request={props.request} />
           <ChainCard request={props.request} />
           <DetailsCard request={props.request} />
@@ -228,29 +237,6 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
             </Card>
           </Show>
         </div>
-
-        <Show when={props.request.image.state === 'stored'}>
-          <section class="card flex flex-col items-start gap-3 p-6 lg:col-start-1 lg:row-start-2">
-            <h2 class="flex items-center gap-2 text-xl">
-              <FlagIcon class="size-5 text-danger" />
-              Illegal content?
-            </h2>
-            <p class="text-ink-2">
-              Flagged images are kept for a{' '}
-              <a class="link" href="/privacy">
-                limited time
-              </a>{' '}
-              so moderators can review them. If this one shows illegal content, report it to delete it now. This cannot
-              be undone.
-            </p>
-            <Button variant="danger" busy={busy()} onClick={purge}>
-              <Show when={!busy()}>
-                <FlagIcon />
-              </Show>
-              Report and delete the image
-            </Button>
-          </section>
-        </Show>
       </div>
     </div>
   );

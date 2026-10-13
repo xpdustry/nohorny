@@ -54,15 +54,15 @@ public interface ClassificationRequestRepository extends Repository<Classificati
             """)
     List<String> findHashesStoredOnlyBefore(Instant before);
 
-    /// Marks the image as purged, whatever its state. The file is left to the caller, see [ImageStore].
+    /// Marks the image as deleted, whatever its state. The file is left to the caller, see [ImageStore].
     ///
     /// The bulk updates and deletes clear the persistence context, so an entity read earlier in the transaction is
     /// loaded again rather than served stale from the cache.
     ///
     /// @return `0` if the request does not exist
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE ClassificationRequest r SET r.imageState = PURGED WHERE r.id = :id")
-    int purgeImage(String id);
+    @Query("UPDATE ClassificationRequest r SET r.imageState = DELETED WHERE r.id = :id")
+    int deleteImage(String id);
 
     /// Marks the stored images of the requests created before the given instant as expired. The files are left to
     /// the caller, see [ImageStore].

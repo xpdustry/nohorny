@@ -11,8 +11,8 @@ public enum ImageState {
     STORED,
     /// The image retention elapsed, the file was deleted.
     EXPIRED,
-    /// The file was deleted by hand.
-    PURGED;
+    /// The file was deleted from the request page or the admin panel.
+    DELETED;
 
     /// @return the lowercase name used by the API
     public String key() {

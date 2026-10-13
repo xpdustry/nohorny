@@ -83,11 +83,11 @@ public class SecurityConfiguration {
         final var invalidCsrf = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "invalid csrf token");
         final var path = PathPatternRequestMatcher.withDefaults();
 
-        // Basic requests are not sent automatically by browsers, and the public POSTs need no session
+        // Basic requests are not sent automatically by browsers, and the public writes need no session
         final var csrfExempt = new OrRequestMatcher(
                 request -> request.getHeader(HttpHeaders.AUTHORIZATION) != null,
                 path.matcher(HttpMethod.POST, "/api/classify"),
-                path.matcher(HttpMethod.POST, "/api/requests/*/purge"));
+                path.matcher(HttpMethod.DELETE, "/api/requests/*/image"));
 
         return http.authorizeHttpRequests(authorize -> {
                     // The classifications are restricted by the RateLimitFilter, which can require an account

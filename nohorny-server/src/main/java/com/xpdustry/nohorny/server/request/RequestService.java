@@ -68,16 +68,16 @@ public class RequestService {
         return request.getImageState() == ImageState.STORED && hash != null ? this.images.find(hash) : Optional.empty();
     }
 
-    /// Deletes the image and marks it as purged, whatever its state.
+    /// Deletes the image and marks it as deleted, whatever its state.
     ///
-    /// @return the purged request, empty if it does not exist
+    /// @return the request without its image, empty if it does not exist
     @Transactional
-    public Optional<ClassificationRequest> purgeImage(final String id) {
+    public Optional<ClassificationRequest> deleteImage(final String id) {
         final var request = this.requests.findById(id);
         if (request.isEmpty()) {
             return Optional.empty();
         }
-        this.requests.purgeImage(id);
+        this.requests.deleteImage(id);
         this.deleteImageUnlessShared(request.get());
         return this.find(id);
     }

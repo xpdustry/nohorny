@@ -50,7 +50,7 @@ function Policy(props: { class: string; retention: Retention | null; reporting: 
       ),
     ],
     ['Who can see it?', () => 'Anyone with the request link, and the admins operating this NoHorny instance.'],
-    ['Can I delete an image?', () => 'Yes, with "Report and delete" on its page.'],
+    ['Can I delete an image?', () => 'Yes, with "Delete image" on its page.'],
     ['Cookies?', () => 'Session data for admins. Nothing else.'],
   ];
   const errorReports: [string, () => JSX.Element] = [

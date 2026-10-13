@@ -51,9 +51,9 @@ nohorny:
     mindustry: 60
     # Classifications of a new account, shared by its addresses. Each account has its own, set from the admin panel.
     user: 120
-    # Reads and purges of the request pages per address. Administrators are not limited.
+    # Reads and image deletions of the request pages per address. Administrators are not limited.
     reads: 60
-    purges: 5
+    image-deletions: 5
   mindustry:
     # How often the public Mindustry server list is refreshed to recognize the request origins.
     refresh-interval: 10m

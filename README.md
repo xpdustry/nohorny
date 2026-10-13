@@ -262,7 +262,7 @@ The plugin's `BEARER` option is for other APIs that accept tokens.
 | `/admin` | Request review and account management for admins. |
 | `/api` | Base path for the API. |
 
-Request pages are public to **anyone with the link**, including the option to purge the image.
+Request pages are public to **anyone with the link**, including the option to delete the image.
 The server stores submitted images for every rating, including `SAFE`.
 
 | Data | Setting | Default |

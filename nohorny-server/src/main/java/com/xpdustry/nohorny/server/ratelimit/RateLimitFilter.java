@@ -110,8 +110,8 @@ public final class RateLimitFilter extends OncePerRequestFilter {
         if (!path.startsWith(REQUESTS) || SecurityConfiguration.isAdmin(authentication)) {
             return null;
         }
-        if (HttpMethod.POST.matches(method) && path.endsWith("/purge")) {
-            return new Limit("purge", address, this.limits.purges());
+        if (HttpMethod.DELETE.matches(method) && path.endsWith("/image")) {
+            return new Limit("image-deletion", address, this.limits.imageDeletions());
         }
         if (HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method)) {
             return new Limit("read", address, this.limits.reads());
