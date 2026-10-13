@@ -2,6 +2,7 @@
 package com.xpdustry.nohorny.server.persistence;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -87,6 +88,39 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     @Query("DELETE FROM ClassificationRequest r WHERE r.createdAt < :before")
     int deleteCreatedBefore(Instant before);
 
+    /// @return the distinct addresses of the retained requests sent without an account, which a requester mapping can
+    ///     relabel
+    @Query(nativeQuery = true, value = "SELECT DISTINCT remote_address FROM request WHERE authenticated = 0")
+    List<String> findUnauthenticatedAddresses();
+
+    /// The retained requests of the given addresses that [#relabel] would change, counted per [DailyStat] key like
+    /// [DailyStatRepository#increment].
+    @Query(nativeQuery = true, value = """
+            SELECT date(created_at / 1000, 'unixepoch') AS day,
+                   outcome AS bucket,
+                   requester_type AS requesterType,
+                   CASE WHEN requester_type = 'MINDUSTRY_NETWORK' THEN coalesce(requester_name, '') ELSE '' END
+                       AS network,
+                   CASE WHEN length(version) BETWEEN 1 AND 32 THEN version ELSE '' END AS version,
+                   COUNT(*) AS total
+            FROM request
+            WHERE remote_address IN (:addresses) AND authenticated = 0
+              AND (requester_type <> :type OR requester_name IS NOT :name)
+            GROUP BY 1, 2, 3, 4, 5
+            """)
+    List<DailyCount> countRelabeled(Collection<String> addresses, String type, @Nullable String name);
+
+    /// Gives another requester to the retained requests of the given addresses sent without an account.
+    ///
+    /// @return the number of changed requests
+    @Modifying(clearAutomatically = true)
+    @Query(nativeQuery = true, value = """
+            UPDATE request SET requester_type = :type, requester_name = :name
+            WHERE remote_address IN (:addresses) AND authenticated = 0
+              AND (requester_type <> :type OR requester_name IS NOT :name)
+            """)
+    int relabel(Collection<String> addresses, String type, @Nullable String name);
+
     /// Native to pin the created_at index. Since the outcome index is ordered by the grouped column,
     /// SQLite would rather scan it whole than search the time window and sort.
     @Query(nativeQuery = true, value = """
@@ -126,13 +160,13 @@ public interface ClassificationRequestRepository extends Repository<Classificati
 
     @Query(nativeQuery = true, value = """
             SELECT COUNT(*) FROM request
-            WHERE created_at >= :since AND requester_type = 'LOCALHOST'
+            WHERE created_at >= :since AND requester_type = 'LOCAL'
             """)
-    long countLocalhostSince(long since);
+    long countLocalSince(long since);
 
-    /// @return the number of retained [RequesterType#LOCALHOST] requests created since the given instant
-    default long countLocalhostSince(final Instant since) {
-        return this.countLocalhostSince(since.toEpochMilli());
+    /// @return the number of retained [RequesterType#LOCAL] requests created since the given instant
+    default long countLocalSince(final Instant since) {
+        return this.countLocalSince(since.toEpochMilli());
     }
 
     @Query(nativeQuery = true, value = """

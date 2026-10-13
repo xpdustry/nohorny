@@ -43,17 +43,17 @@ public class StatisticsService {
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
     ///     over the same windows as [#history]
-    /// @return the requests per listed network and from the loopback interface, or empty for an unknown range
+    /// @return the requests per listed network and from the local addresses, or empty for an unknown range
     public Optional<Networks> networks(final String range) {
         return this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince)
-                .map(counts -> new Networks(range, counts.total(), counts.named(), this.localhost(range)));
+                .map(counts -> new Networks(range, counts.total(), counts.named(), this.local(range)));
     }
 
     /// @param range a known range, see [#networks]
-    private long localhost(final String range) {
+    private long local(final String range) {
         return range.equals("24h")
-                ? this.requests.countLocalhostSince(firstHour())
-                : this.dailyStats.countLocalhostSince(firstDay(days(range)).toString());
+                ? this.requests.countLocalSince(firstHour())
+                : this.dailyStats.countLocalSince(firstDay(days(range)).toString());
     }
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,

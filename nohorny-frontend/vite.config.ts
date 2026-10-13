@@ -30,6 +30,7 @@ export default defineConfig({
         '/privacy',
         '/admin',
         '/admin/users',
+        '/admin/settings',
         // The request page renders in the browser, so one shell serves every request identifier
         { path: '/requests/shell', filename: 'request.html' },
         // Spring Boot serves this page for unknown paths

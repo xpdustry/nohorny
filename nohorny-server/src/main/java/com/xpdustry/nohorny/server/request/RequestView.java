@@ -48,7 +48,7 @@ public record RequestView(
     /// @param type the name of the exception class
     public record FailureDetails(String type, String stackTrace) {}
 
-    /// @param type `user`, `mindustry-network` or `anonymous`
+    /// @param type `user`, `mindustry-network`, `local` or `anonymous`
     /// @param name the network of a listed Mindustry server if it has one,
     ///     the username of a user for the administrators only
     public record Requester(String type, @Nullable String name) {}

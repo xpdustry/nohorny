@@ -77,6 +77,7 @@ public final class ClassificationService {
                 outcome.outcome(),
                 truncate(submission.version()),
                 submission.requester(),
+                submission.authenticated(),
                 submission.remoteAddress(),
                 ImageState.STORED,
                 ImageStore.hash(bytes),
@@ -188,5 +189,7 @@ public final class ClassificationService {
 
     /// @param version the plugin version of the caller
     /// @param requester who sent the image, see [RequesterResolver]
-    public record Submission(@Nullable String version, Requester requester, String remoteAddress) {}
+    /// @param authenticated whether it was sent with an account
+    public record Submission(
+            @Nullable String version, Requester requester, boolean authenticated, String remoteAddress) {}
 }

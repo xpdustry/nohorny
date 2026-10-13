@@ -53,6 +53,8 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
 
     private @Nullable String requesterName;
 
+    private boolean authenticated;
+
     private String remoteAddress;
 
     @Enumerated(EnumType.STRING)
@@ -74,6 +76,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     /// @param outcome the final verdict, or the failure
     /// @param version the plugin version of the caller, if sent
     /// @param requester who sent the request
+    /// @param authenticated whether it was sent with an account, rather than given a requester by a mapping
     /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
     ///     [ImageState#STORED]
     public ClassificationRequest(
@@ -84,6 +87,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
             final Outcome outcome,
             final @Nullable String version,
             final Requester requester,
+            final boolean authenticated,
             final String remoteAddress,
             final ImageState imageState,
             final @Nullable String imageHash,
@@ -101,6 +105,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         this.version = version;
         this.requesterType = requester.type();
         this.requesterName = requester.name();
+        this.authenticated = authenticated;
         this.remoteAddress = remoteAddress;
         this.imageState = imageState;
         this.imageHash = imageHash;
@@ -134,6 +139,10 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
 
     public Requester getRequester() {
         return new Requester(this.requesterType, this.requesterName);
+    }
+
+    public boolean isAuthenticated() {
+        return this.authenticated;
     }
 
     public String getRemoteAddress() {

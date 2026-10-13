@@ -99,6 +99,8 @@ public class SecurityConfiguration {
                             .hasRole(ADMIN_ROLE)
                             .requestMatchers("/api/users", "/api/users/**")
                             .hasRole(ADMIN_ROLE)
+                            .requestMatchers("/api/mappings", "/api/mappings/**")
+                            .hasRole(ADMIN_ROLE)
                             .requestMatchers("/api/session")
                             .authenticated()
                             .anyRequest()

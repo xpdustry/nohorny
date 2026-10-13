@@ -18,6 +18,40 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
             """)
     void increment(String day, String bucket, String requesterType, String network, String version);
 
+    @Modifying
+    @Query(nativeQuery = true, value = """
+            INSERT INTO daily_stat (day, bucket, requester_type, network, version, count)
+            VALUES (:day, :bucket, :requesterType, :network, :version, :delta)
+            ON CONFLICT (day, bucket, requester_type, network, version) DO UPDATE SET count = count + :delta
+            """)
+    void add(String day, String bucket, String requesterType, String network, String version, long delta);
+
+    /// Moves counted requests to another requester, the rows left empty are deleted.
+    ///
+    /// @param counts the requests per key before the change, see `ClassificationRequestRepository#countRelabeled`
+    /// @param requester the requester they now have
+    default void move(final List<DailyCount> counts, final Requester requester) {
+        final var network = requester.type() == RequesterType.MINDUSTRY_NETWORK
+                ? Objects.requireNonNullElse(requester.name(), "")
+                : "";
+        for (final var count : counts) {
+            final var bucket = count.getBucket().name();
+            this.add(
+                    count.getDay(),
+                    bucket,
+                    count.getRequesterType(),
+                    count.getNetwork(),
+                    count.getVersion(),
+                    -count.getTotal());
+            this.add(count.getDay(), bucket, requester.type().name(), network, count.getVersion(), count.getTotal());
+        }
+        this.deleteEmpty();
+    }
+
+    @Modifying
+    @Query(nativeQuery = true, value = "DELETE FROM daily_stat WHERE count <= 0")
+    void deleteEmpty();
+
     /// Counts a request in the statistics of its day.
     default void increment(final ClassificationRequest request) {
         final var requester = request.getRequester();
@@ -55,12 +89,12 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
     List<NamedCount> countByNetworkSince(String from);
 
     /// @param from the first ISO-8601 day, included
-    /// @return the number of requests from the loopback interface since the given day, deleted requests included
+    /// @return the number of requests from the local addresses since the given day, deleted requests included
     @Query("""
             SELECT COALESCE(SUM(d.count), 0) FROM DailyStat d
-            WHERE d.id.day >= :from AND d.id.requesterType = 'LOCALHOST'
+            WHERE d.id.day >= :from AND d.id.requesterType = 'LOCAL'
             """)
-    long countLocalhostSince(String from);
+    long countLocalSince(String from);
 
     /// @param from the first ISO-8601 day, included
     /// @return the number of requests per plugin version since the given day, deleted requests included

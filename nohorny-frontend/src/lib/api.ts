@@ -22,14 +22,14 @@ export interface History {
 }
 
 /**
- * The requests per listed Mindustry network and from the loopback interface without an account. The rest of `total`
+ * The requests per listed Mindustry network and from the local addresses without an account. The rest of `total`
  * comes from users, unnamed listed servers and anonymous clients.
  */
 export interface Networks {
   range: HistoryRange;
   total: number;
   networks: { name: string; count: number }[];
-  localhost: number;
+  local: number;
 }
 
 /** The requests per plugin version, the most used first. The rest of `total` comes from the clients sending none. */
@@ -60,8 +60,10 @@ export interface FailureDetails {
   stackTrace: string;
 }
 
+export type RequesterType = 'user' | 'mindustry-network' | 'local' | 'anonymous';
+
 export interface Requester {
-  type: 'user' | 'mindustry-network' | 'localhost' | 'anonymous';
+  type: RequesterType;
   /** The network of a listed Mindustry server if it has one, the username of a user for the administrators only. */
   name: string | null;
 }
@@ -102,6 +104,17 @@ export interface User {
   rateLimit: number;
   createdAt: string;
   bootstrap: boolean;
+}
+
+/** Gives the clients of an address range another requester when they send no account. The most specific range wins. */
+export interface Mapping {
+  id: string;
+  /** The normalized CIDR notation, such as `172.16.0.0/12`. */
+  range: string;
+  type: RequesterType;
+  /** The username of a user or the network name, null for the other types. */
+  name: string | null;
+  createdAt: string;
 }
 
 /** Thrown by api() for a non 2xx response. `status` is 0 when the request did not reach the server. */
@@ -196,3 +209,4 @@ export async function probeSession(): Promise<Session | null> {
 
 export const requestPath = (id: string) => `/api/requests/${encodeURIComponent(id)}`;
 export const userPath = (username: string) => `/api/users/${encodeURIComponent(username)}`;
+export const mappingPath = (id: string) => `/api/mappings/${encodeURIComponent(id)}`;
