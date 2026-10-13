@@ -38,6 +38,7 @@ final class DisplayTracker implements LifecycleListener {
         this.collector = new GroupCollector<>(
                 this.displays,
                 classifier,
+                events.builders(),
                 block -> block instanceof LogicBlock || block instanceof LogicDisplay,
                 DisplayTracker::isEligible,
                 _ -> true,

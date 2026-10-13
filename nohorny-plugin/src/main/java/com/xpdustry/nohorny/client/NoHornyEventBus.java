@@ -21,6 +21,7 @@ final class NoHornyEventBus implements AutoCloseable {
 
     private final List<ArcSubscription<?>> subscriptions = new ArrayList<>();
     private final List<BuildingDispatch<?>> buildingDispatches = new ArrayList<>();
+    private final BuilderActivity builders = new BuilderActivity();
     private int preChangePos = -1;
     private @Nullable Building preChangeBuild = null;
 
@@ -98,6 +99,10 @@ final class NoHornyEventBus implements AutoCloseable {
                 dispatch.replace(previous, event.tile.build, event.tile.x, event.tile.y);
             }
         });
+    }
+
+    public BuilderActivity builders() {
+        return this.builders;
     }
 
     public <E> Subscription subscribe(final Class<E> event, final Subscriber<E> subscriber) {
