@@ -23,6 +23,8 @@ import org.jspecify.annotations.Nullable;
 final class GroupCollector<T extends MindustryImage> {
 
     private static final int MAX_GROUP_STEPS = 50;
+    // Bounds the cost of a tick when a lot of separate buildings are waiting
+    private static final int MAX_REGION_CHECKS = 16;
     // Buildings of the same image can be this far apart, large blocks included
     private static final int REGION_MARGIN = 8;
     // Plans this close to a region are considered part of its build
@@ -40,6 +42,7 @@ final class GroupCollector<T extends MindustryImage> {
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
     private final int maxGroupRange;
     private final List<Region> regions = new ArrayList<>();
+    private int cursor = 0;
     private VirtualBuildingIndex<T>.@Nullable IncrementalGrouper grouper = null;
 
     GroupCollector(
@@ -68,18 +71,26 @@ final class GroupCollector<T extends MindustryImage> {
         final int y = GeometryUtils.y(packed);
         final long now = now();
         Region region = null;
+        boolean merged = false;
         for (final var candidate : this.regions) {
             if (!candidate.isNear(x, y, REGION_MARGIN)) {
                 continue;
             }
             if (region == null) {
                 region = candidate;
-            } else {
-                region.merge(candidate);
-                candidate.anchors.clear();
+                continue;
             }
+            // Always move the smaller one, so merging stays cheap
+            final var larger = region.anchors.size() >= candidate.anchors.size() ? region : candidate;
+            final var smaller = larger == region ? candidate : region;
+            larger.merge(smaller);
+            smaller.anchors.clear();
+            region = larger;
+            merged = true;
         }
-        this.regions.removeIf(candidate -> candidate.anchors.isEmpty());
+        if (merged) {
+            this.regions.removeIf(candidate -> candidate.anchors.isEmpty());
+        }
         if (region == null) {
             region = new Region(now);
             this.regions.add(region);
@@ -107,20 +118,27 @@ final class GroupCollector<T extends MindustryImage> {
 
         final long now = now();
         this.activity.refresh(now);
-        for (final var region : List.copyOf(this.regions)) {
+        final int size = this.regions.size();
+        final int checks = Math.min(size, MAX_REGION_CHECKS);
+        for (int i = 0; i < checks; i++) {
+            final int index = Math.floorMod(this.cursor + i, size);
+            final var region = this.regions.get(index);
             if (!this.isSettled(region, now)) {
                 continue;
             }
+            this.cursor = index;
             final var anchor = this.selectAnchor(region);
             if (anchor == null) {
-                this.regions.remove(region);
-                continue;
+                this.regions.remove(index);
+                return;
             }
             this.grouper = this.index.selectGroupWithinRangeIncremental(
                     anchor.x(), anchor.y(), this.maxGroupRange, MAX_GROUP_STEPS);
             this.continueGrouping(this.grouper);
             return;
         }
+        // The regions are checked in turns, so that none is starved by the others
+        this.cursor = Math.floorMod(this.cursor + checks, size);
     }
 
     private boolean isSettled(final Region region, final long now) {
