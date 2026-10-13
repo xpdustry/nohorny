@@ -18,7 +18,7 @@ final class BuilderActivity {
 
     private static final int REFRESH_INTERVAL = 10;
     // A builder that makes no progress for that long is considered gone (out of range, out of resources, afk)
-    private static final long STALL_TICKS = 20 * 60L;
+    private static final long STALL_TICKS = 10 * 60L;
 
     private final Map<String, Builder> builders = new HashMap<>();
     private long refreshedAt = -1;
@@ -37,15 +37,10 @@ final class BuilderActivity {
         this.builders.values().removeIf(builder -> !builder.seen);
     }
 
-    // Whether a player that still makes progress has a plan for a matching block within the (inclusive) tile area
-    public boolean isBuildingWithin(
-            final int x1, final int y1, final int x2, final int y2, final Predicate<Block> blocks, final long now) {
-        for (final var builder : this.builders.values()) {
-            if (builder.isActive(now) && builder.hasPlanWithin(x1, y1, x2, y2, blocks)) {
-                return true;
-            }
-        }
-        return false;
+    // Whether the player still makes progress on a plan for a matching block
+    public boolean isBuilding(final String uuid, final Predicate<Block> blocks, final long now) {
+        final var builder = this.builders.get(uuid);
+        return builder != null && builder.isActive(now) && builder.hasPlan(blocks);
     }
 
     private static final class Builder {
@@ -91,17 +86,11 @@ final class BuilderActivity {
             return unit != null && !unit.dead && !unit.plans.isEmpty() && now - this.lastProgress <= STALL_TICKS;
         }
 
-        boolean hasPlanWithin(
-                final int x1, final int y1, final int x2, final int y2, final Predicate<Block> predicate) {
+        boolean hasPlan(final Predicate<Block> predicate) {
             final var plans = this.player.unit().plans;
             for (int i = 0; i < plans.size; i++) {
                 final var plan = plans.get(i);
-                if (!plan.breaking
-                        && x1 <= plan.x
-                        && plan.x <= x2
-                        && y1 <= plan.y
-                        && plan.y <= y2
-                        && predicate.test(plan.block)) {
+                if (!plan.breaking && predicate.test(plan.block)) {
                     return true;
                 }
             }

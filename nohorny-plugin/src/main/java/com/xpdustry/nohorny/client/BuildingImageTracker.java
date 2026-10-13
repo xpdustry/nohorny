@@ -80,7 +80,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
         final var y = MindustryUtils.anchorTileY(building);
         final var added = this.index.upsert(x, y, building.block.size, this.data(building, author));
         if (queue) {
-            this.collector.enqueue(added.packed());
+            this.collector.enqueue(added.packed(), author);
         }
     }
 }

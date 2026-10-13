@@ -137,7 +137,7 @@ The plugin waits until the players building near the art are done with it, so on
 The API returns a rating and score. The plugin then fires a [`ClassificationEvent`](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java), which the moderator and Discord alerts use.
 Rendering and API requests run on background threads. The event fires on **Mindustry's main thread**, where another plugin can handle the result.
 
-The wait (about two seconds after the last building, up to ten minutes for a build that never ends) and the API request mean moderation takes time. Art can be visible before NoHorny removes it.
+The wait (about two seconds after the last building, up to fifteen seconds for a build that never ends) and the API request mean moderation takes time. Art can be visible before NoHorny removes it.
 Sorter and illuminator groups are ignored unless they span at least 8 tiles in both dimensions.
 
 The code is split into these modules:
