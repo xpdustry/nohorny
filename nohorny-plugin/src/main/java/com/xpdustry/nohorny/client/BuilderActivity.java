@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
-import arc.struct.Seq;
 import com.xpdustry.nohorny.common.GeometryUtils;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -15,7 +13,7 @@ import mindustry.world.Block;
 import mindustry.world.blocks.ConstructBlock;
 
 // Tracks what the players are building right now, to know when a build is over.
-// The server only sees the first plans of a unit queue, the preview plans extend the view when the client sends them.
+// The server only sees the first plans of a unit queue, which is enough to tell that a builder is still at it.
 final class BuilderActivity {
 
     private static final int REFRESH_INTERVAL = 10;
@@ -32,7 +30,9 @@ final class BuilderActivity {
         this.refreshedAt = now;
         this.builders.values().forEach(builder -> builder.seen = false);
         for (final var player : Groups.player) {
-            this.builders.computeIfAbsent(player.uuid(), _ -> new Builder()).update(player, now);
+            this.builders
+                    .computeIfAbsent(player.uuid(), _ -> new Builder(player))
+                    .update(player, now);
         }
         this.builders.values().removeIf(builder -> !builder.seen);
     }
@@ -51,41 +51,29 @@ final class BuilderActivity {
     private static final class Builder {
 
         private boolean seen = false;
-        private boolean active = false;
+        private Player player;
         private long lastProgress = 0;
-        private double lastPlanProgress = Double.NaN;
         private int lastPlan = -1;
-        private int[] positions = new int[0];
-        private Block[] blocks = new Block[0];
-        private int size = 0;
+        private double lastPlanProgress = Double.NaN;
+
+        private Builder(final Player player) {
+            this.player = player;
+        }
 
         void update(final Player player, final long now) {
             this.seen = true;
+            this.player = player;
             final var unit = player.unit();
             if (unit == null || unit.dead || unit.plans.isEmpty()) {
-                this.active = false;
-                this.size = 0;
                 this.lastProgress = now;
                 this.lastPlan = -1;
                 return;
-            }
-            this.active = true;
-            this.size = 0;
-            for (final var plan : unit.plans) {
-                this.add(plan);
-            }
-            final Seq<BuildPlan> preview = player.getPreviewPlans();
-            for (final var plan : preview) {
-                this.add(plan);
             }
             this.trackProgress(unit.buildPlan(), now);
         }
 
         // Plans do not change while a block is under construction, so the progress of the block tells it moves
         private void trackProgress(final BuildPlan plan, final long now) {
-            if (plan == null) {
-                return;
-            }
             final var tile = Vars.world.tile(plan.x, plan.y);
             final double progress = tile != null && tile.build instanceof ConstructBlock.ConstructBuild construct
                     ? construct.progress
@@ -98,30 +86,22 @@ final class BuilderActivity {
             this.lastPlanProgress = progress;
         }
 
-        private void add(final BuildPlan plan) {
-            if (plan.breaking || plan.block == null) {
-                return;
-            }
-            if (this.size == this.positions.length) {
-                final int capacity = Math.max(32, this.size * 2);
-                this.positions = Arrays.copyOf(this.positions, capacity);
-                this.blocks = Arrays.copyOf(this.blocks, capacity);
-            }
-            this.positions[this.size] = GeometryUtils.pack(plan.x, plan.y);
-            this.blocks[this.size] = plan.block;
-            this.size++;
-        }
-
         boolean isActive(final long now) {
-            return this.active && now - this.lastProgress <= STALL_TICKS;
+            final var unit = this.player.unit();
+            return unit != null && !unit.dead && !unit.plans.isEmpty() && now - this.lastProgress <= STALL_TICKS;
         }
 
         boolean hasPlanWithin(
                 final int x1, final int y1, final int x2, final int y2, final Predicate<Block> predicate) {
-            for (int i = 0; i < this.size; i++) {
-                final int x = GeometryUtils.x(this.positions[i]);
-                final int y = GeometryUtils.y(this.positions[i]);
-                if (x1 <= x && x <= x2 && y1 <= y && y <= y2 && predicate.test(this.blocks[i])) {
+            final var plans = this.player.unit().plans;
+            for (int i = 0; i < plans.size; i++) {
+                final var plan = plans.get(i);
+                if (!plan.breaking
+                        && x1 <= plan.x
+                        && plan.x <= x2
+                        && y1 <= plan.y
+                        && plan.y <= y2
+                        && predicate.test(plan.block)) {
                     return true;
                 }
             }
