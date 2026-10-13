@@ -13,7 +13,12 @@ export default defineConfig({
   // The server bundles dist/client and answers each path with its page, see NoHornyConfiguration.
   plugins: [
     // `extensions` makes the plugin also compile the `?pick=` route modules fileRoutes emits
-    solid({ start: true, ssr: true, extensions: ['.jsx', '.tsx'], diagnostics: true }),
+    solid({
+      start: { middleware: './src/middleware.ts' },
+      ssr: true,
+      extensions: ['.jsx', '.tsx'],
+      diagnostics: true,
+    }),
     fileRoutes({ types: true }),
     tailwindcss(),
     prerender({
