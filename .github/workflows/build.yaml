@@ -55,9 +55,12 @@ jobs:
       - name: "Setup Gradle"
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
-      # A release must be tagged with the project version, anything else must not reuse an existing tag
+      # A release must be tagged with the project version, a draft must not reuse an existing tag.
+      # Other builds only warn, commits predating the version bump of a release still have to build
       - name: "Get And Validate Version"
         id: version
+        env:
+          IS_DRAFT: ${{ inputs.release }}
         run: |
           version="$(java .github/scripts/Version.java get)"
           if [ "$GITHUB_EVENT_NAME" = "release" ]; then
@@ -66,8 +69,11 @@ jobs:
               exit 1
             fi
           elif [ -n "$(git tag -l "v$version")" ]; then
-            echo "::error::'v$version' already exists as a git tag"
-            exit 1
+            if [ "$IS_DRAFT" = "true" ]; then
+              echo "::error::'v$version' already exists as a git tag"
+              exit 1
+            fi
+            echo "::warning::'v$version' already exists as a git tag, the version needs a bump before the next release"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -293,8 +299,8 @@ jobs:
             IS_RELEASE=${{ github.event_name == 'release' }}
             PREBUILT_NATIVES=prebuilt-natives
 
-  release:
-    name: "Release"
+  post-release:
+    name: "Post Release"
     needs: [ plugin, server ]
     # The natives job is skipped when the natives are cached, which would skip this one too
     if: ${{ !cancelled() && !failure() && github.event_name == 'release' }}
