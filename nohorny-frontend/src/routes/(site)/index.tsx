@@ -120,13 +120,13 @@ export default function Landing() {
             server.
           </h1>
           <p class="max-w-xl text-lg text-ink-2">
-            NoHorny <strong class="font-normal text-accent-ink">detects</strong> NSFW logic displays, canvases, sorters
-            and illuminators on your{' '}
+            NoHorny automatically <strong class="font-normal text-accent-ink">detects</strong> NSFW art in player
+            buildings on your{' '}
             <a class="link" href={MINDUSTRY} {...EXTERNAL}>
               Mindustry
             </a>{' '}
-            server the moment they are built, <strong class="font-normal text-accent-ink">deletes</strong> them and{' '}
-            <strong class="font-normal text-accent-ink">bans</strong> their author.
+            server. They are <strong class="font-normal text-accent-ink">removed</strong> and the author is{' '}
+            <strong class="font-normal text-accent-ink">banned</strong>.
           </p>
           <p class="text-ink-2">
             Enjoy this family friendly factory building game as the{' '}
@@ -142,7 +142,7 @@ export default function Landing() {
             </a>
             <a class={buttonClass()} href={GITHUB} {...EXTERNAL}>
               <GitHubIcon />
-              Source code
+              View on GitHub
             </a>
           </div>
         </div>
@@ -179,16 +179,16 @@ export default function Landing() {
         </h2>
         <ol class="steps grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Step step="watch" icon={<ScanSearchIcon />} title="Watch" art={<PixelArt scanned />}>
-            Spots pixel art on logic displays, canvases, sorters and illuminators.
+            Tracks art on logic displays, canvases, sorters and illuminators.
           </Step>
           <Step step="render" icon={<ImageIcon />} title="Render" art={<Rendering />}>
-            Turns it into an image, off the main thread.
+            Turns player builds into images for classification.
           </Step>
           <Step step="classify" icon={<EyeIcon />} title="Classify" art={<Verdicts />}>
-            The NoHorny server rates it safe, warn or NSFW.
+            Rates each image SAFE, WARN or NSFW.
           </Step>
-          <Step step="act" icon={<GavelIcon />} title="Act" art={<PixelArt banned />}>
-            Deletes the build and bans its author.
+          <Step step="act" icon={<GavelIcon />} title="Moderate" art={<PixelArt banned />}>
+            Applies your chosen policy, including removal, bans and Discord alerts.
           </Step>
         </ol>
       </section>
@@ -221,7 +221,7 @@ export default function Landing() {
                 <code class="rounded-md border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[0.85em] text-ink">
                   config/mods
                 </code>
-                , and no more porn.
+                , no additional setup needed.
               </p>
             </div>
             <ul
@@ -252,7 +252,7 @@ export default function Landing() {
         <div class="card flex flex-col justify-between gap-8 p-6 sm:p-12 md:flex-row md:items-center">
           <div class="max-w-xl">
             <h2 id="install-title" class="text-4xl">
-              What are you waiting for?
+              Get NoHorny today
             </h2>
             <p class="mt-3 text-ink-2">
               You only need{' '}

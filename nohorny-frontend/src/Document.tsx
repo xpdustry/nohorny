@@ -17,7 +17,7 @@ export default function Document(props: ParentProps) {
         <meta name="referrer" content="same-origin" />
         <meta
           name="description"
-          content="NoHorny detects NSFW logic displays, canvases, sorter and illuminator pixel art on Mindustry servers, deletes it and bans the author."
+          content="NoHorny detects NSFW logic displays, canvases, sorter and illuminator pixel art on Mindustry servers, removes it and bans the author."
         />
         <meta property="og:title" content="NoHorny" />
         <meta property="og:description" content="Autonomous NSFW moderation for Mindustry servers." />
