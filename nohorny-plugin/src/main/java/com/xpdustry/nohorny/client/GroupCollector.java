@@ -60,16 +60,8 @@ final class GroupCollector<T extends MindustryImage> {
     }
 
     public void enqueue(final int packed) {
-        final var grouper = this.grouper;
-        if (grouper != null) {
-            if (!grouper.isCompleted()) {
-                if (grouper.isVisited(packed)) {
-                    return;
-                }
-            } else {
-                // The group is waiting for the classifier, it is outdated by this building
-                this.grouper = null;
-            }
+        if (this.grouper != null && this.grouper.isVisited(packed)) {
+            return;
         }
 
         final int x = GeometryUtils.x(packed);
@@ -171,14 +163,14 @@ final class GroupCollector<T extends MindustryImage> {
             if (!grouper.isCompleted()) {
                 return;
             }
-        }
-        final var group = grouper.create();
-        if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group)) {
             // Visited buildings cannot be enqueued while grouping, so the regions only need to be cleaned once
             this.regions.removeIf(region -> {
                 grouper.removeVisited(region.anchors);
                 return region.anchors.isEmpty();
             });
+        }
+        final var group = grouper.create();
+        if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group)) {
             this.grouper = null;
         }
     }
