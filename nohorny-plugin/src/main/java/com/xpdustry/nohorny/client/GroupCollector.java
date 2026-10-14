@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.SequencedSet;
 import java.util.function.Predicate;
 import mindustry.Vars;
+import mindustry.gen.Groups;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
 
@@ -19,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 // Queued buildings are batched per author, a batch is only grouped once its author is done building,
 // so a build is classified once, whole, instead of once per finished building.
 //
-// A malicious player can still delay the scan of its own art by keeping a builder busy.
+// A player that keeps building, or just keeps a plan it never gets to finish, delays the scan of its own art.
 // The wait is capped, so the art is sent at most MAX_WAIT_TICKS after its first building.
 final class GroupCollector<T extends MindustryImage> {
 
@@ -33,7 +34,6 @@ final class GroupCollector<T extends MindustryImage> {
 
     private final VirtualBuildingIndex<T> index;
     private final GroupClassifier classifier;
-    private final BuilderActivity activity = new BuilderActivity();
     private final Predicate<Block> blocks;
     private final Predicate<VirtualBuilding<T>> isEligibleAnchor;
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
@@ -86,7 +86,6 @@ final class GroupCollector<T extends MindustryImage> {
         }
 
         final long now = now();
-        this.activity.refresh(now);
         final var iterator = this.batches.entrySet().iterator();
         while (iterator.hasNext()) {
             final var entry = iterator.next();
@@ -116,7 +115,23 @@ final class GroupCollector<T extends MindustryImage> {
         if (now - batch.createdAt >= MAX_WAIT_TICKS) {
             return true;
         }
-        return now - batch.touchedAt >= QUIET_TICKS && !this.activity.isBuilding(author, this.blocks, now);
+        return now - batch.touchedAt >= QUIET_TICKS && !this.isBuilding(author);
+    }
+
+    // The server only sees the first plans of a unit queue, which is enough to tell that the player is still at it
+    private boolean isBuilding(final String author) {
+        final var player = Groups.player.find(candidate -> candidate.uuid().equals(author));
+        final var unit = player == null ? null : player.unit();
+        if (unit == null || unit.dead) {
+            return false;
+        }
+        for (int i = 0; i < unit.plans.size; i++) {
+            final var plan = unit.plans.get(i);
+            if (!plan.breaking && this.blocks.test(plan.block)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private @Nullable VirtualBuilding<T> selectAnchor(final Batch batch) {
