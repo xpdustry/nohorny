@@ -6,9 +6,8 @@ import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.SequencedSet;
+import java.util.SequencedMap;
 import java.util.function.Predicate;
 import mindustry.Vars;
 import mindustry.gen.Groups;
@@ -63,12 +62,12 @@ final class GroupCollector<T extends MindustryImage> {
         final var key = author == null ? UNKNOWN_AUTHOR : author.uuid();
         final long now = now();
         final var batch = this.batches.computeIfAbsent(key, _ -> new Batch(now));
-        batch.anchors.add(packed);
+        batch.anchors.putIfAbsent(packed, now);
         batch.touchedAt = now;
     }
 
     public void dequeue(final int packed) {
-        this.batches.values().removeIf(batch -> batch.anchors.remove(packed) && batch.anchors.isEmpty());
+        this.batches.values().removeIf(batch -> batch.anchors.remove(packed) != null && batch.anchors.isEmpty());
     }
 
     public void clear() {
@@ -97,8 +96,6 @@ final class GroupCollector<T extends MindustryImage> {
                 iterator.remove();
                 continue;
             }
-            // What is built from now on is a new wait
-            entry.getValue().createdAt = now;
             this.grouper = this.index.selectGroupWithinRangeIncremental(
                     anchor.x(), anchor.y(), this.maxGroupRange, MAX_GROUP_STEPS);
             this.continueGrouping(this.grouper);
@@ -107,12 +104,14 @@ final class GroupCollector<T extends MindustryImage> {
     }
 
     private boolean isSettled(final String author, final Batch batch, final long now) {
-        if (now < batch.createdAt) {
+        // The anchors are in the order they were queued, the first one has waited the longest
+        final long oldest = batch.anchors.firstEntry().getValue();
+        if (now < oldest) {
             // The clock was reset
-            batch.createdAt = now;
+            batch.anchors.replaceAll((_, _) -> now);
             batch.touchedAt = now;
         }
-        if (now - batch.createdAt >= MAX_WAIT_TICKS) {
+        if (now - oldest >= MAX_WAIT_TICKS) {
             return true;
         }
         return now - batch.touchedAt >= QUIET_TICKS && !this.isBuilding(author);
@@ -135,7 +134,7 @@ final class GroupCollector<T extends MindustryImage> {
     }
 
     private @Nullable VirtualBuilding<T> selectAnchor(final Batch batch) {
-        final var iterator = batch.anchors.iterator();
+        final var iterator = batch.anchors.keySet().iterator();
         while (iterator.hasNext()) {
             final int point = iterator.next();
             final var anchor = this.index.select(GeometryUtils.x(point), GeometryUtils.y(point));
@@ -155,7 +154,7 @@ final class GroupCollector<T extends MindustryImage> {
             }
             // Visited buildings cannot be enqueued while grouping, so the batches only need to be cleaned once
             this.batches.values().removeIf(batch -> {
-                grouper.removeVisited(batch.anchors);
+                grouper.removeVisited(batch.anchors.keySet());
                 return batch.anchors.isEmpty();
             });
         }
@@ -171,12 +170,11 @@ final class GroupCollector<T extends MindustryImage> {
 
     private static final class Batch {
 
-        private final SequencedSet<Integer> anchors = new LinkedHashSet<>();
-        private long createdAt;
+        // Queued buildings with the tick they were queued at
+        private final SequencedMap<Integer, Long> anchors = new LinkedHashMap<>();
         private long touchedAt;
 
         private Batch(final long now) {
-            this.createdAt = now;
             this.touchedAt = now;
         }
     }
