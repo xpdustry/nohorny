@@ -33,7 +33,7 @@ final class GroupCollector<T extends MindustryImage> {
 
     private final VirtualBuildingIndex<T> index;
     private final GroupClassifier classifier;
-    private final BuilderActivity activity;
+    private final BuilderActivity activity = new BuilderActivity();
     private final Predicate<Block> blocks;
     private final Predicate<VirtualBuilding<T>> isEligibleAnchor;
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
@@ -44,14 +44,12 @@ final class GroupCollector<T extends MindustryImage> {
     GroupCollector(
             final VirtualBuildingIndex<T> index,
             final GroupClassifier classifier,
-            final BuilderActivity activity,
             final Predicate<Block> blocks,
             final Predicate<VirtualBuilding<T>> isEligibleAnchor,
             final Predicate<VirtualBuilding.Group<T>> isEligibleGroup,
             final int maxGroupRange) {
         this.index = index;
         this.classifier = classifier;
-        this.activity = activity;
         this.blocks = blocks;
         this.isEligibleAnchor = isEligibleAnchor;
         this.isEligibleGroup = isEligibleGroup;
