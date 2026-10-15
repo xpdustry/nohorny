@@ -58,7 +58,7 @@ public class NoHornyConfiguration implements WebMvcConfigurer {
     /// pages without a mapping. The request pages share one shell because they render in the browser.
     @Override
     public void addViewControllers(final ViewControllerRegistry registry) {
-        for (final var path : List.of("/privacy", "/admin", "/admin/users")) {
+        for (final var path : List.of("/privacy", "/admin", "/admin/users", "/admin/settings")) {
             registry.addViewController(path).setViewName("forward:" + path + "/index.html");
         }
         registry.addViewController("/requests/{id}").setViewName("forward:/request.html");

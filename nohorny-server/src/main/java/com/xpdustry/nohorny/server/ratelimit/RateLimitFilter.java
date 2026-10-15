@@ -102,9 +102,9 @@ public final class RateLimitFilter extends OncePerRequestFilter {
                 // A listed server without a network name is limited on its own
                 case MINDUSTRY_NETWORK ->
                     new Limit("classify-mindustry", name == null ? address : name, this.limits.mindustry());
-                // The loopback interface is limited like the anonymous clients, a reverse proxy would make every
+                // The local addresses are limited like the anonymous clients, a reverse proxy would make every
                 // client look local
-                case LOCALHOST, ANONYMOUS -> new Limit("classify-anonymous", address, this.limits.anonymous());
+                case LOCAL, ANONYMOUS -> new Limit("classify-anonymous", address, this.limits.anonymous());
             };
         }
         if (!path.startsWith(REQUESTS) || SecurityConfiguration.isAdmin(authentication)) {

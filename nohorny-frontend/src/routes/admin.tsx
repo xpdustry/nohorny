@@ -4,7 +4,15 @@ import { Meta, Title } from '@solidjs/meta';
 import { type RouteSectionProps, useIsRouting } from '@solidjs/router';
 import type { JSX } from '@solidjs/web';
 import { createMemo, createSignal, Loading, Match, Show, Switch } from 'solid-js';
-import { ListIcon, LockIcon, LogOutIcon, ShieldIcon, TriangleAlertIcon, UsersIcon } from '../components/icon';
+import {
+  ListIcon,
+  LockIcon,
+  LogOutIcon,
+  SettingsIcon,
+  ShieldIcon,
+  TriangleAlertIcon,
+  UsersIcon,
+} from '../components/icon';
 import { Brand, Button, buttonClass, Field, LoadingSpinner, Notice, State } from '../components/ui';
 import { AdminContext, createAdmin } from '../lib/admin';
 import { checkSession, login, logout, session } from '../lib/session';
@@ -175,6 +183,10 @@ function AdminShell(props: { children: JSX.Element }) {
               <a href="/admin/users" class={TAB}>
                 <UsersIcon />
                 <span class="max-sm:sr-only">Users</span>
+              </a>
+              <a href="/admin/settings" class={TAB}>
+                <SettingsIcon />
+                <span class="max-sm:sr-only">Settings</span>
               </a>
             </nav>
             <span class="flex-1" />

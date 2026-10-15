@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 
-/// Identifies the origin of a classification request from its remote address: the loopback interface, a known public
+/// Identifies the origin of a classification request from its remote address: a local address, a known public
 /// Mindustry server, or an unknown host. The Mindustry server list is refreshed periodically from the official sources.
 ///
 /// The list groups the servers by network, the network names are normalized with [#normalize].
@@ -81,16 +82,9 @@ public final class MindustryClientDirectory {
         this.addresses = Map.copyOf(copy);
     }
 
-    public ClientInfo whois(final String remoteAddress) {
-        final InetAddress address;
-        try {
-            // Remote addresses are IP literals, no lookup happens
-            address = InetAddress.getByName(remoteAddress);
-        } catch (final UnknownHostException exception) {
-            return new ClientInfo(ClientInfo.UNKNOWN, null);
-        }
-        if (address.isLoopbackAddress()) {
-            return new ClientInfo(ClientInfo.LOCALHOST, null);
+    public ClientInfo whois(final InetAddress address) {
+        if (isLocal(address)) {
+            return new ClientInfo(ClientInfo.LOCAL, null);
         }
         final var names = this.addresses.get(address);
         if (names != null) {
@@ -98,6 +92,16 @@ public final class MindustryClientDirectory {
                     ClientInfo.MINDUSTRY_SERVER, names.isEmpty() ? null : String.join(", ", new TreeSet<>(names)));
         }
         return new ClientInfo(ClientInfo.UNKNOWN, null);
+    }
+
+    /// @return whether the address is loopback, link-local or private, like a Docker bridge gateway. The IPv6 unique
+    ///     local addresses (`fc00::/7`) are checked apart, [InetAddress#isSiteLocalAddress] only knows `fec0::/10`
+    static boolean isLocal(final InetAddress address) {
+        return address.isLoopbackAddress()
+                || address.isAnyLocalAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
+                || (address instanceof Inet6Address && (address.getAddress()[0] & 0xFE) == 0xFC);
     }
 
     /// @return the network name without its markup, see [MindustryText#plain], `null` if nothing is left
@@ -127,12 +131,12 @@ public final class MindustryClientDirectory {
         return address;
     }
 
-    /// @param type `mindustry-server`, `localhost` or `unknown`
+    /// @param type `mindustry-server`, `local` or `unknown`
     /// @param network the normalized network names of a listed server, joined by commas, `null` for the other types
     ///     or when the listing has no usable name
     public record ClientInfo(String type, @Nullable String network) {
         public static final String MINDUSTRY_SERVER = "mindustry-server";
-        public static final String LOCALHOST = "localhost";
+        public static final String LOCAL = "local";
         public static final String UNKNOWN = "unknown";
     }
 }

@@ -75,6 +75,7 @@ public final class NoHornyController {
                 new ClassificationService.Submission(
                         version,
                         this.requesters.resolve(authentication, request.getRemoteAddr()),
+                        SecurityConfiguration.isAuthenticated(authentication),
                         request.getRemoteAddr()));
     }
 

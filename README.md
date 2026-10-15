@@ -259,7 +259,7 @@ The plugin's `BEARER` option is for other APIs that accept tokens.
 | `/` | Live classification counters. |
 | `/requests/{id}` | Result details and an image that stays blurred until revealed. |
 | `/privacy` | Data collection and retention information. |
-| `/admin` | Request review and account management for admins. |
+| `/admin` | Request review, account management and requester mappings for admins. |
 | `/api` | Base path for the API. |
 
 Request pages are public to **anyone with the link**, including the option to delete the image.
@@ -289,7 +289,9 @@ The API's default limits are configured under `nohorny.rate-limit`:
 | Account | 120 for new accounts | All addresses that use the account | `user` |
 
 `user` sets the default for new accounts. Change an existing account's limit in the admin panel.
-Localhost uses the anonymous limit unless it authenticates with an account.
+Local addresses (loopback, private and link-local, such as a Docker network) use the anonymous limit unless they authenticate with an account.
+Open **Settings** in the admin panel to map address ranges to a Mindustry network, an account, Local or Anonymous, such as `172.18.0.0/16` to your own network.
+A mapping applies to requests without an account, the most specific range wins, and **Apply** relabels the retained requests of its range.
 Set `anonymous` or `mindustry` to `0` to require an account for those callers.
 When rate-limited, the plugin waits and retries, up to three attempts per classification.
 

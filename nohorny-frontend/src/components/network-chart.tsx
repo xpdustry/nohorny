@@ -1,17 +1,17 @@
-// The requests per Mindustry network and from localhost, as a donut and a legend listing every network, from
+// The requests per Mindustry network and from the local addresses, as a donut and a legend listing every network, from
 // GET /api/stats/networks.
 
 import { createMemo, createSignal, For, Show } from 'solid-js';
 import type { Networks } from '../lib/api';
 import { number, share } from '../lib/format';
 
-/** The networks drawn in their own colour, the others share the "Other networks" slice. Localhost always has its own. */
+/** The networks drawn in their own colour, the others share the "Other networks" slice. The local addresses always have their own. */
 const COLORED = 3;
 
 /** The colours of the slices, App.css validates the categorical ones for colour blindness against the card. */
 const COLORS = ['var(--network-1)', 'var(--network-2)', 'var(--network-3)'];
 const OTHER_COLOR = 'var(--ink-3)';
-const LOCALHOST_COLOR = 'var(--accent)';
+const LOCAL_COLOR = 'var(--accent)';
 const UNLISTED_COLOR = 'var(--line-strong)';
 
 /** The gap between two slices, in hundredths of the circumference. */
@@ -24,7 +24,7 @@ interface Slice {
   color: string;
 }
 
-/** A row of the legend, a network or localhost, with the key of the slice it is drawn in. */
+/** A row of the legend, a network or the local addresses, with the key of the slice it is drawn in. */
 interface Row extends Slice {
   slice: string;
 }
@@ -32,20 +32,20 @@ interface Row extends Slice {
 export function NetworkChart(props: { networks: Networks }) {
   const [hovered, setHovered] = createSignal<string | null>(null);
 
-  /** The networks and localhost, the most active first. */
+  /** The networks and the local addresses, the most active first. */
   const rows = createMemo(() => {
-    const { networks, localhost } = props.networks;
+    const { networks, local } = props.networks;
     const entries = networks.map((network) => ({
       key: `network:${network.name}`,
       label: network.name,
       count: network.count,
     }));
-    if (localhost > 0) entries.push({ key: 'localhost', label: 'Localhost', count: localhost });
+    if (local > 0) entries.push({ key: 'local', label: 'Local', count: local });
     // Stable, so the networks keep their order by name on a tie
     entries.sort((a, b) => b.count - a.count);
     let colored = 0;
     return entries.map((entry): Row => {
-      if (entry.key === 'localhost') return { ...entry, color: LOCALHOST_COLOR, slice: entry.key };
+      if (entry.key === 'local') return { ...entry, color: LOCAL_COLOR, slice: entry.key };
       const index = colored++;
       return index < COLORED
         ? { ...entry, color: COLORS[index], slice: entry.key }

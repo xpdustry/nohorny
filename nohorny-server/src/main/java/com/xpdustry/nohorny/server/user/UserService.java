@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.user;
 
+import com.xpdustry.nohorny.server.mapping.RequesterMappingService;
 import com.xpdustry.nohorny.server.persistence.UserAccount;
 import com.xpdustry.nohorny.server.persistence.UserAccountRepository;
 import com.xpdustry.nohorny.server.ratelimit.RateLimitProperties;
@@ -28,16 +29,19 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserAccountRepository users;
+    private final RequesterMappingService mappings;
     private final PasswordEncoder passwordEncoder;
     private final ApiSecurityProperties.Admin bootstrap;
     private final int defaultRateLimit;
 
     public UserService(
             final UserAccountRepository users,
+            final RequesterMappingService mappings,
             final PasswordEncoder passwordEncoder,
             final ApiSecurityProperties properties,
             final RateLimitProperties limits) {
         this.users = users;
+        this.mappings = mappings;
         this.passwordEncoder = passwordEncoder;
         this.bootstrap = properties.admin();
         this.defaultRateLimit = limits.user();
@@ -138,6 +142,8 @@ public class UserService {
         log.info("Set admin={} for user {}", admin, username);
     }
 
+    /// Deletes the requester mappings to the user with it.
+    ///
     /// @param caller the user doing the deletion, cannot delete itself
     @Transactional
     public void delete(final String username, final String caller) {
@@ -148,6 +154,7 @@ public class UserService {
         if (username.equals(caller)) {
             throw conflict("cannot delete your own account");
         }
+        this.mappings.deleteForUser(username);
         this.users.delete(account);
         log.info("Deleted user {}", username);
     }

@@ -6,14 +6,14 @@ import org.jspecify.annotations.Nullable;
 /// Who sent a classification request.
 ///
 /// @param name the username of a [RequesterType#USER], the network of a [RequesterType#MINDUSTRY_NETWORK] if listed
-///     with one, always `null` for a [RequesterType#LOCALHOST] or [RequesterType#ANONYMOUS] requester
+///     with one, always `null` for a [RequesterType#LOCAL] or [RequesterType#ANONYMOUS] requester
 public record Requester(RequesterType type, @Nullable String name) {
 
     public Requester {
         if (type == RequesterType.USER && name == null) {
             throw new IllegalArgumentException("A user requester is named");
         }
-        if ((type == RequesterType.LOCALHOST || type == RequesterType.ANONYMOUS) && name != null) {
+        if ((type == RequesterType.LOCAL || type == RequesterType.ANONYMOUS) && name != null) {
             throw new IllegalArgumentException("A " + type.key() + " requester is not named");
         }
     }
@@ -26,8 +26,8 @@ public record Requester(RequesterType type, @Nullable String name) {
         return new Requester(RequesterType.MINDUSTRY_NETWORK, network);
     }
 
-    public static Requester localhost() {
-        return new Requester(RequesterType.LOCALHOST, null);
+    public static Requester local() {
+        return new Requester(RequesterType.LOCAL, null);
     }
 
     public static Requester anonymous() {
