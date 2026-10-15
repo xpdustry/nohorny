@@ -132,7 +132,7 @@ final class DisplayTracker implements LifecycleListener {
                 final var added = DisplayTracker.this.displays.upsert(
                         x, y, size, new MindustryDisplay(resolution, processors, tiled));
                 if (queue) {
-                    DisplayTracker.this.collector.enqueue(added.packed());
+                    DisplayTracker.this.collector.enqueue(added.packed(), author);
                 }
             }
 
@@ -239,7 +239,8 @@ final class DisplayTracker implements LifecycleListener {
                             processors,
                             display.data().tiled()));
             if (queue) {
-                this.collector.enqueue(display.packed());
+                this.collector.enqueue(
+                        display.packed(), processor.data().processor().author());
             }
         }
     }
