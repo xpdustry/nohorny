@@ -133,11 +133,11 @@ The Mindustry plugin tracks building placement and configuration changes, then g
 Logic displays are rendered from their processors' draw instructions, canvases from their pixel data, and sorter or illuminator art from the blocks' colors.
 NoHorny renders these images on the server without taking screenshots of the game.
 
-The plugin waits until the players building near the art are done with it, so one build gives one image, then it renders the group and sends it as a JPEG to the classification API.
+After a short wait for construction to finish, the plugin renders a group and sends it as a JPEG to the classification API.
 The API returns a rating and score. The plugin then fires a [`ClassificationEvent`](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/ClassificationEvent.java), which the moderator and Discord alerts use.
 Rendering and API requests run on background threads. The event fires on **Mindustry's main thread**, where another plugin can handle the result.
 
-The wait (about two seconds after the last building, up to fifteen seconds for a build that never ends) and the API request mean moderation takes time. Art can be visible before NoHorny removes it.
+The wait and the API request mean moderation takes time. Art can be visible before NoHorny removes it.
 Sorter and illuminator groups are ignored unless they span at least 8 tiles in both dimensions.
 
 The code is split into these modules:
