@@ -17,9 +17,31 @@ import { number } from '../../lib/format';
 import { EXTERNAL, GITHUB, MINDUSTRY, RELEASE } from '../../lib/links';
 import { createLiveStats } from '../../lib/stats';
 
-/** The 8 by 6 heart drawn in the steps, in the colours of the logo: `p` for pink, `d` for deep pink, `.` for empty. */
-const ART = '.pp..pp.ppppppdppppppddp.ppppdd...ppdd.....dd...';
-const ART_COLORS: Record<string, string> = { '.': 'var(--surface-3)', p: 'var(--brand)', d: 'var(--brand-deep)' };
+/**
+ * The heart drawn in the steps, on the 12 by 12 pixels of a Mindustry canvas. Lit from the top left in the colours of
+ * the logo: `h` for the highlight, `p` for pink, `d` for deep pink in the shadow, `.` for empty.
+ */
+const ART = [
+  '............',
+  '..ppp..ppd..',
+  '.phhppppppd.',
+  'pphppppppppd',
+  'pppppppppppd',
+  'ppppppppppdd',
+  '.ppppppppdd.',
+  '..ppppppdd..',
+  '...ppppdd...',
+  '....ppdd....',
+  '.....pd.....',
+  '............',
+].join('');
+const ART_SIZE = 12;
+const ART_COLORS: Record<string, string> = {
+  '.': 'var(--surface-3)',
+  h: 'color-mix(in oklab, var(--brand), white 45%)',
+  p: 'var(--brand)',
+  d: 'var(--brand-deep)',
+};
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -292,12 +314,12 @@ function Step(props: { step: string; icon: JSX.Element; title: string; art: JSX.
 /** The heart, `scanned` adds the scanner of the watch step and `banned` shows it wiped. */
 function PixelArt(props: { scanned?: boolean; banned?: boolean }) {
   return (
-    <span class="pixels relative grid grid-cols-8 gap-0.5">
+    <span class="pixels relative grid grid-cols-12 gap-px">
       <For each={[...ART]} keyed={false}>
         {(cell, index) => (
           <i
-            class={['size-2.5 rounded-[2px]', props.banned ? 'bg-surface-3' : 'bg-(--c)', { lit: cell() !== '.' }]}
-            style={{ '--x': index % 8, '--y': Math.floor(index / 8), '--c': ART_COLORS[cell()] }}
+            class={['size-[7px] rounded-[1px]', props.banned ? 'bg-surface-3' : 'bg-(--c)', { lit: cell() !== '.' }]}
+            style={{ '--x': index % ART_SIZE, '--y': Math.floor(index / ART_SIZE), '--c': ART_COLORS[cell()] }}
           />
         )}
       </For>
@@ -315,8 +337,8 @@ function PixelArt(props: { scanned?: boolean; banned?: boolean }) {
 
 function Rendering() {
   return (
-    <span class="flex flex-col items-center gap-4">
-      <span class="rounded-lg border border-line-strong bg-surface-2 p-3">
+    <span class="flex flex-col items-center gap-3">
+      <span class="rounded-lg border border-line-strong bg-surface-2 p-2">
         <PixelArt />
       </span>
       <span class="h-1 w-22 overflow-hidden rounded-full bg-surface-3">

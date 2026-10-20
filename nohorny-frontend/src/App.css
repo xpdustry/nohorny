@@ -409,7 +409,8 @@
     animation: scan-line var(--loop) infinite;
   }
   [data-step="watch"] .lit {
-    animation: spot var(--loop) calc(0.09s + var(--x) * 0.18s) ease-out infinite;
+    /* As the line crosses the middle of the column, 1.44 s over the 12 columns */
+    animation: spot var(--loop) calc(0.06s + var(--x) * 0.12s) ease-out infinite;
   }
   [data-step="render"] .pixels {
     animation: develop var(--loop) var(--d) infinite;
@@ -433,7 +434,7 @@
     animation: thud var(--loop) var(--d) infinite;
   }
   [data-step="act"] .pixels i {
-    animation: wipe var(--loop) calc(var(--d) + (var(--x) + var(--y)) * 0.04s) infinite;
+    animation: wipe var(--loop) calc(var(--d) + (var(--x) + var(--y)) * 0.027s) infinite;
   }
   [data-step="act"] .stamp {
     animation: stamp var(--loop) var(--d) var(--ease-snap) infinite;
