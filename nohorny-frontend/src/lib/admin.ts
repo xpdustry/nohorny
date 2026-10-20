@@ -27,7 +27,7 @@ export function createAdmin(): Admin {
   const [status, setStatus] = createSignal<Status | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
   return {
-    stats: createLiveStats(30, () => call<Stats>('/api/stats')),
+    stats: createLiveStats(60, () => call<Stats>('/api/stats')),
     status,
     notify: (text, tone = 'success') => {
       clearTimeout(timer);

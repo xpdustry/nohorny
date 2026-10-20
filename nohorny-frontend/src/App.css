@@ -257,6 +257,37 @@
   @apply h-10 w-full rounded-xl border border-line-strong bg-bg-2 px-3 text-ink transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-11;
 }
 
+/* The sliders of the forms: a thin track filled up to the thumb, `--fill` being the filled share from 0% to 100% */
+@utility range {
+  @apply h-5 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none;
+  &::-webkit-slider-runnable-track {
+    @apply h-1.5 rounded-full;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-3) var(--fill));
+  }
+  &::-moz-range-track {
+    @apply h-1.5 rounded-full;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-3) var(--fill));
+  }
+  &::-webkit-slider-thumb {
+    @apply -mt-1.5 size-[1.125rem] appearance-none rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+  }
+  &::-moz-range-thumb {
+    @apply size-[1.125rem] rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+  }
+  &:active::-webkit-slider-thumb {
+    scale: 1.15;
+  }
+  &:active::-moz-range-thumb {
+    scale: 1.15;
+  }
+  &:focus-visible::-webkit-slider-thumb {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+  &:focus-visible::-moz-range-thumb {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+}
+
 /* Slides a notice in when it appears */
 @utility pop-in {
   transition:

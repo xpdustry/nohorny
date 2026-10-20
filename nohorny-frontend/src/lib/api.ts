@@ -29,7 +29,11 @@ export interface Networks {
   range: HistoryRange;
   total: number;
   networks: { name: string; count: number }[];
-  local: number;
+  /**
+   * The requests not from a listed network, by requester type. `mindustry-network` counts the listed servers without
+   * a network, an empty type the requests counted before the requesters were recorded.
+   */
+  requesters: { name: RequesterType | ''; count: number }[];
 }
 
 /** The requests per plugin version, the most used first. The rest of `total` comes from the clients sending none. */
@@ -61,6 +65,22 @@ export interface FailureDetails {
 }
 
 export type RequesterType = 'user' | 'mindustry-network' | 'local' | 'anonymous';
+
+/**
+ * Lists the requests of one requester. `name` is null for any name, empty for the requesters without one, like the
+ * listed servers without a network, or the name itself. `label` describes it in the filters.
+ */
+export interface RequesterFilter {
+  type: RequesterType;
+  name: string | null;
+  label: string;
+}
+
+/** Lists the requests of one plugin version, or of the clients sending none when `value` is empty. */
+export interface VersionFilter {
+  value: string;
+  label: string;
+}
 
 export interface Requester {
   type: RequesterType;

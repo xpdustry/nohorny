@@ -6,6 +6,7 @@ import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
 import com.xpdustry.nohorny.server.persistence.NamedCount;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.RequesterType;
 import com.xpdustry.nohorny.server.persistence.SlotCount;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,17 +44,26 @@ public class StatisticsService {
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
     ///     over the same windows as [#history]
-    /// @return the requests per listed network and from the local addresses, or empty for an unknown range
+    /// @return the requests per listed network and per other requester, or empty for an unknown range
     public Optional<Networks> networks(final String range) {
         return this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince)
-                .map(counts -> new Networks(range, counts.total(), counts.named(), this.local(range)));
+                .map(counts -> new Networks(range, counts.total(), counts.named(), this.requesters(range)));
     }
 
     /// @param range a known range, see [#networks]
-    private long local(final String range) {
-        return range.equals("24h")
-                ? this.requests.countLocalSince(firstHour())
-                : this.dailyStats.countLocalSince(firstDay(days(range)).toString());
+    /// @return the requests not from a named network, per requester type key, empty for the migrated counts
+    private List<Count> requesters(final String range) {
+        final var counts = range.equals("24h")
+                ? this.requests.countByUnnamedRequesterSince(firstHour())
+                : this.dailyStats.countByUnnamedRequesterSince(
+                        firstDay(days(range)).toString());
+        return Counts.of(counts, 0).named().stream()
+                .map(count -> new Count(
+                        RequesterType.fromName(count.name())
+                                .map(RequesterType::key)
+                                .orElse(""),
+                        count.count()))
+                .toList();
     }
 
     /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,

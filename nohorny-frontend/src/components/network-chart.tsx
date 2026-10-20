@@ -1,8 +1,9 @@
 // The requests per Mindustry network and from the local addresses, as a donut and a legend listing every network, from
-// GET /api/stats/networks.
+// GET /api/stats/networks. The other requesters share a slice, and the legend lists them under the networks. A click on
+// a network, the local addresses or another requester lists its requests.
 
 import { createMemo, createSignal, For, Show } from 'solid-js';
-import type { Networks } from '../lib/api';
+import type { Networks, RequesterFilter, RequesterType } from '../lib/api';
 import { number, share } from '../lib/format';
 
 /** The networks drawn in their own colour, the others share the "Other networks" slice. The local addresses always have their own. */
@@ -14,6 +15,14 @@ const OTHER_COLOR = 'var(--ink-3)';
 const LOCAL_COLOR = 'var(--accent)';
 const UNLISTED_COLOR = 'var(--line-strong)';
 
+/** The requesters without a network, an empty type for the requests counted before the requesters were recorded. */
+const UNLISTED_LABELS: Record<Exclude<RequesterType, 'local'> | '', string> = {
+  user: 'Accounts',
+  'mindustry-network': 'Servers without network',
+  anonymous: 'Anonymous clients',
+  '': 'Unknown requester',
+};
+
 /** The gap between two slices, in hundredths of the circumference. */
 const GAP = 0.6;
 
@@ -24,32 +33,80 @@ interface Slice {
   color: string;
 }
 
-/** A row of the legend, a network or the local addresses, with the key of the slice it is drawn in. */
+/** A row of the legend, with the key of the slice it is drawn in and the filter of its requests, if it has one. */
 interface Row extends Slice {
   slice: string;
+  filter?: RequesterFilter;
 }
 
-export function NetworkChart(props: { networks: Networks }) {
+/** The filters of the requesters without a network. The unknown requests are gone, they have none. */
+const UNLISTED_FILTERS: Partial<Record<RequesterType | '', Omit<RequesterFilter, 'label'>>> = {
+  user: { type: 'user', name: null },
+  'mindustry-network': { type: 'mindustry-network', name: '' },
+  anonymous: { type: 'anonymous', name: null },
+};
+
+export function NetworkChart(props: { networks: Networks; onSelect?: (filter: RequesterFilter) => void }) {
+  /** The slice under the pointer, or the slice of the row under it. */
   const [hovered, setHovered] = createSignal<string | null>(null);
+  /**
+   * The row under the pointer, or the row of the slice under it. A shared slice, like "Other networks", highlights
+   * none of its rows, and a row of a shared slice highlights only itself.
+   */
+  const [hoveredRow, setHoveredRow] = createSignal<string | null>(null);
+  const hover = (slice: string | null, row: string | null) => {
+    setHovered(slice);
+    setHoveredRow(row);
+  };
+
+  const local = () => props.networks.requesters.find((requester) => requester.name === 'local')?.count ?? 0;
 
   /** The networks and the local addresses, the most active first. */
   const rows = createMemo(() => {
-    const { networks, local } = props.networks;
-    const entries = networks.map((network) => ({
+    const entries = props.networks.networks.map((network) => ({
       key: `network:${network.name}`,
       label: network.name,
       count: network.count,
     }));
-    if (local > 0) entries.push({ key: 'local', label: 'Local', count: local });
+    if (local() > 0) entries.push({ key: 'local', label: 'Local', count: local() });
     // Stable, so the networks keep their order by name on a tie
     entries.sort((a, b) => b.count - a.count);
     let colored = 0;
     return entries.map((entry): Row => {
-      if (entry.key === 'local') return { ...entry, color: LOCAL_COLOR, slice: entry.key };
+      if (entry.key === 'local')
+        return {
+          ...entry,
+          color: LOCAL_COLOR,
+          slice: entry.key,
+          filter: { type: 'local', name: null, label: entry.label },
+        };
+      const filter: RequesterFilter = { type: 'mindustry-network', name: entry.label, label: entry.label };
       const index = colored++;
       return index < COLORED
-        ? { ...entry, color: COLORS[index], slice: entry.key }
-        : { ...entry, color: OTHER_COLOR, slice: 'other' };
+        ? { ...entry, color: COLORS[index], slice: entry.key, filter }
+        : { ...entry, color: OTHER_COLOR, slice: 'other', filter };
+    });
+  });
+
+  /** The requesters without a network, sharing the unlisted slice, the most active first then the unknown one. */
+  const unlisted = createMemo(() => {
+    const named = props.networks.requesters.filter(
+      (requester) => requester.name !== 'local' && requester.name !== '' && requester.count > 0,
+    );
+    // Whatever the networks and the known requesters leave, the requests counted before the requesters were recorded
+    const unknown = props.networks.total - [...rows(), ...named].reduce((sum, entry) => sum + entry.count, 0);
+    const entries = unknown > 0 ? [...named, { name: '' as const, count: unknown }] : named;
+    return entries.map((entry): Row => {
+      const label = UNLISTED_LABELS[entry.name as keyof typeof UNLISTED_LABELS];
+      const filter = UNLISTED_FILTERS[entry.name];
+      return {
+        key: `requester:${entry.name}`,
+        label,
+        count: entry.count,
+        color: UNLISTED_COLOR,
+        slice: 'unlisted',
+        filter: filter && { ...filter, label },
+      };
     });
   });
 
@@ -63,7 +120,7 @@ export function NetworkChart(props: { networks: Networks }) {
     if (props.networks.total > listed)
       slices.push({
         key: 'unlisted',
-        label: 'Not a listed server',
+        label: 'No network',
         count: props.networks.total - listed,
         color: UNLISTED_COLOR,
       });
@@ -83,6 +140,11 @@ export function NetworkChart(props: { networks: Networks }) {
   });
 
   const focus = () => slices().find((slice) => slice.key === hovered());
+  /** The filter of a slice drawn for a single row, the shared ones have none. */
+  const sliceFilter = (key: string) => rows().find((row) => row.key === key)?.filter;
+  /** Lists the requests of a row, when it has a filter and the chart is clickable. */
+  const select = (filter: RequesterFilter | undefined) =>
+    filter && props.onSelect ? () => props.onSelect?.(filter) : undefined;
 
   return (
     <Show
@@ -94,10 +156,10 @@ export function NetworkChart(props: { networks: Networks }) {
             viewBox="0 0 100 100"
             class="size-full -rotate-90"
             aria-hidden="true"
-            onMouseLeave={() => setHovered(null)}>
+            onMouseLeave={() => hover(null, null)}>
             <For each={arcs()} keyed={(arc) => arc.slice.key}>
               {(arc) => (
-                // biome-ignore lint/a11y/noStaticElementInteractions: the legend next to the donut lists the same counts
+                // biome-ignore lint/a11y/noStaticElementInteractions: the legend next to the donut has the same counts and buttons
                 <circle
                   cx="50"
                   cy="50"
@@ -111,8 +173,13 @@ export function NetworkChart(props: { networks: Networks }) {
                   class={[
                     'transition-[opacity,stroke-width] duration-200',
                     { 'opacity-35': hovered() !== null && hovered() !== arc().slice.key },
+                    { 'cursor-pointer': props.onSelect !== undefined && sliceFilter(arc().slice.key) !== undefined },
                   ]}
-                  onMouseEnter={() => setHovered(arc().slice.key)}
+                  onMouseEnter={() => hover(arc().slice.key, arc().slice.key)}
+                  onClick={() => {
+                    const filter = sliceFilter(arc().slice.key);
+                    if (filter) props.onSelect?.(filter);
+                  }}
                 />
               )}
             </For>
@@ -146,24 +213,26 @@ export function NetworkChart(props: { networks: Networks }) {
                 count={row().count}
                 total={props.networks.total}
                 color={row().color}
-                active={hovered() === row().slice}
-                onHover={(on) => setHovered(on ? row().slice : null)}
+                active={hoveredRow() === row().key}
+                onHover={(on) => (on ? hover(row().slice, row().key) : hover(null, null))}
+                onSelect={select(row().filter)}
               />
             )}
           </For>
-          <Show when={slices().find((slice) => slice.key === 'unlisted')}>
-            {(slice) => (
+          <For each={unlisted()} keyed={(row) => row.key}>
+            {(row, index) => (
               <LegendRow
-                label={slice().label}
-                count={slice().count}
+                label={row().label}
+                count={row().count}
                 total={props.networks.total}
-                color={UNLISTED_COLOR}
-                active={hovered() === 'unlisted'}
-                onHover={(on) => setHovered(on ? 'unlisted' : null)}
-                class="mt-1 border-line border-t pt-1 text-ink-3"
+                color={row().color}
+                active={hoveredRow() === row().key}
+                onHover={(on) => (on ? hover(row().slice, row().key) : hover(null, null))}
+                onSelect={select(row().filter)}
+                class={['text-ink-3', { 'mt-1 border-line border-t pt-1': index() === 0 }]}
               />
             )}
-          </Show>
+          </For>
         </ul>
       </div>
     </Show>
@@ -177,23 +246,28 @@ function LegendRow(props: {
   color: string;
   active: boolean;
   onHover: (on: boolean) => void;
-  class?: string;
+  /** Lists the requests of the row. Without it, the row is not clickable. */
+  onSelect?: () => void;
+  class?: string | (string | Record<string, boolean>)[];
 }) {
   return (
-    <li
-      class={[
-        'flex items-center gap-3 rounded-lg px-2 py-1.5 transition',
-        { 'bg-surface-2': props.active },
-        props.class,
-      ]}
-      onMouseEnter={() => props.onHover(true)}
-      onMouseLeave={() => props.onHover(false)}>
-      <span aria-hidden="true" class="size-2.5 shrink-0 rounded-sm" style={{ background: props.color }} />
-      <span class="min-w-0 flex-1 truncate" data-tooltip={props.label} data-tooltip-overflow>
-        {props.label}
-      </span>
-      <span class="font-mono text-ink-2 text-xs tabular-nums">{number(props.count)}</span>
-      <span class="w-12 text-right font-mono text-ink-3 text-xs tabular-nums">{share(props.count, props.total)}</span>
+    <li class={props.class} onMouseEnter={() => props.onHover(true)} onMouseLeave={() => props.onHover(false)}>
+      {/* A button even when not clickable, so every row lines up the same */}
+      <button
+        type="button"
+        disabled={!props.onSelect}
+        class={[
+          'flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition enabled:cursor-pointer',
+          { 'bg-surface-2': props.active },
+        ]}
+        onClick={() => props.onSelect?.()}>
+        <span aria-hidden="true" class="size-2.5 shrink-0 rounded-sm" style={{ background: props.color }} />
+        <span class="min-w-0 flex-1 truncate" data-tooltip={props.label} data-tooltip-overflow>
+          {props.label}
+        </span>
+        <span class="font-mono text-ink-2 text-xs tabular-nums">{number(props.count)}</span>
+        <span class="w-12 text-right font-mono text-ink-3 text-xs tabular-nums">{share(props.count, props.total)}</span>
+      </button>
     </li>
   );
 }

@@ -3,8 +3,9 @@
 import { Meta, Title } from '@solidjs/meta';
 import { type RouteSectionProps, useIsRouting } from '@solidjs/router';
 import type { JSX } from '@solidjs/web';
-import { createMemo, createSignal, Loading, Match, Show, Switch } from 'solid-js';
+import { createMemo, createSignal, Loading, Match, onSettled, Show, Switch } from 'solid-js';
 import {
+  ArrowUpIcon,
   ListIcon,
   LockIcon,
   LogOutIcon,
@@ -207,18 +208,54 @@ function AdminShell(props: { children: JSX.Element }) {
           {props.children}
         </main>
         {/* Floats over the page, so the outcome of an action shows wherever the row was */}
-        <div class="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center sm:left-auto sm:w-md">
+        <div class="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex items-end justify-end gap-2">
           <Show when={admin.status()}>
             {(status) => (
-              <div class="pop-in pointer-events-auto w-full rounded-xl shadow-float">
+              <div class="pop-in pointer-events-auto w-full rounded-xl shadow-float sm:w-md">
                 <Notice tone={status().tone} onDismiss={() => admin.notify(null)}>
                   {status().text}
                 </Notice>
               </div>
             )}
           </Show>
+          <BackToTop />
         </div>
       </div>
     </AdminContext>
+  );
+}
+
+/** How far the page scrolls, in heights of the window, before the button shows. */
+const BACK_TO_TOP_SCREENS = 1;
+
+/** Fades in once the page is scrolled down, back to its top. */
+function BackToTop() {
+  const [shown, setShown] = createSignal(false);
+  onSettled(() => {
+    const update = () => setShown(window.scrollY > window.innerHeight * BACK_TO_TOP_SCREENS);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  });
+  // Stays in the page while hidden, so it fades out as well as in. The visibility flips after the fade, and keeps the
+  // hidden button out of the focus order and the accessibility tree
+  return (
+    <button
+      type="button"
+      class={[
+        'grid size-10 shrink-0 place-items-center rounded-full border border-line-strong bg-surface/60 text-ink shadow-float backdrop-blur-md hover:bg-surface-2/80 pointer-coarse:size-11 [&_svg]:size-4',
+        'transition-[opacity,translate,visibility,background-color] duration-200 ease-out motion-reduce:translate-y-0',
+        shown() ? 'pointer-events-auto' : 'invisible translate-y-2 opacity-0',
+      ]}
+      aria-label="Back to the top"
+      data-tooltip="Back to the top"
+      onClick={() =>
+        window.scrollTo({
+          top: 0,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        })
+      }>
+      <ArrowUpIcon />
+    </button>
   );
 }

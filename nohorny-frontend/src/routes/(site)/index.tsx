@@ -1,4 +1,4 @@
-// The landing page, with the live counter.
+// The landing page, with the classification counter.
 
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, For, onSettled, Show } from 'solid-js';
@@ -11,7 +11,7 @@ import {
   ImageIcon,
   ScanSearchIcon,
 } from '../../components/icon';
-import { buttonClass, LiveIndicator, RATING_TEXT } from '../../components/ui';
+import { buttonClass, RATING_TEXT } from '../../components/ui';
 import type { Bucket } from '../../lib/api';
 import { number } from '../../lib/format';
 import { EXTERNAL, GITHUB, MINDUSTRY, RELEASE } from '../../lib/links';
@@ -82,7 +82,7 @@ function createCountUp(target: () => number | undefined) {
 }
 
 export default function Landing() {
-  const stats = createLiveStats(15);
+  const stats = createLiveStats(60);
   const total = createCountUp(() => stats.data()?.total);
   const processed = () => stats.data()?.last24Hours.total ?? null;
   const flagged = () => {
@@ -148,12 +148,9 @@ export default function Landing() {
         </div>
 
         <section class="card relative flex flex-col gap-6 overflow-hidden p-6 sm:p-8" aria-labelledby="live">
-          <div class="flex items-center justify-between">
-            <h2 id="live" class="text-ink-2">
-              Images classified
-            </h2>
-            <LiveIndicator connection={stats.connection()} label={stats.label()} />
-          </div>
+          <h2 id="live" class="text-ink-2">
+            Images classified
+          </h2>
           <p aria-hidden="true" class="text-7xl tabular-nums sm:text-8xl">
             {number(total())}
           </p>
@@ -199,16 +196,12 @@ export default function Landing() {
         </h2>
         <div class="grid gap-4 md:grid-cols-2">
           <article class="card flex flex-col gap-6 p-6 sm:p-8">
-            <div>
-              <h3 class="text-3xl">Incredibly fast</h3>
-              <p class="mt-2 text-ink-2">Go on, spam the canvases: we tested that too.</p>
-            </div>
-            <div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+            <h3 class="text-3xl">Incredibly fast</h3>
+            <div class="my-auto flex flex-col items-start gap-6 sm:flex-row sm:items-center">
               <TickRing />
-              <p class="text-ink-2">
-                <strong class="block font-normal text-2xl text-ink">That sliver is NoHorny.</strong>
-                The rest of the tick is all yours, even at{' '}
-                <strong class="font-normal text-accent-ink">600 block changes</strong> a second.
+              <p class="text-ink-2 text-xl">
+                Even at <strong class="font-normal text-accent-ink">600 block changes</strong> a second, NoHorny uses
+                less than <strong class="font-normal text-ink">1% of a tick</strong>.
               </p>
             </div>
           </article>

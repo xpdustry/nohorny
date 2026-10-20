@@ -170,6 +170,29 @@ export function GaugeIcon(props: IconProps) {
   );
 }
 
+// Source: https://lucide.dev/icons/hat-glasses
+export function HatGlassesIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <path d="M14 18a2 2 0 0 0-4 0" />
+      <path d="m19 11-2.11-6.657a2 2 0 0 0-2.752-1.148l-1.276.61A2 2 0 0 1 12 4H8.5a2 2 0 0 0-1.925 1.456L5 11" />
+      <path d="M2 11h20" />
+      <circle cx="17" cy="18" r="3" />
+      <circle cx="7" cy="18" r="3" />
+    </svg>
+  );
+}
+
+// Source: https://lucide.dev/icons/house
+export function HouseIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    </svg>
+  );
+}
+
 // Source: https://lucide.dev/icons/image
 export function ImageIcon(props: IconProps) {
   return (
@@ -319,6 +342,18 @@ export function SearchXIcon(props: IconProps) {
   );
 }
 
+// Source: https://lucide.dev/icons/server
+export function ServerIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+      <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+      <line x1="6" x2="6.01" y1="6" y2="6" />
+      <line x1="6" x2="6.01" y1="18" y2="18" />
+    </svg>
+  );
+}
+
 // Source: https://lucide.dev/icons/settings
 export function SettingsIcon(props: IconProps) {
   return (
@@ -379,6 +414,16 @@ export function TriangleAlertIcon(props: IconProps) {
       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
       <path d="M12 9v4" />
       <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+// Source: https://lucide.dev/icons/user
+export function UserIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }
