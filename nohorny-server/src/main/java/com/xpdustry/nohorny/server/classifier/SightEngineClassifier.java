@@ -37,9 +37,10 @@ public final class SightEngineClassifier implements Classifier {
         this.jsonMapper = jsonMapper;
     }
 
+    /// The model is part of the name, so each request records the model that rated it.
     @Override
     public String name() {
-        return "sight-engine";
+        return "sight-engine/" + MODELS;
     }
 
     @Override

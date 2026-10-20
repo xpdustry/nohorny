@@ -113,10 +113,11 @@ export function ActivityChart(props: {
               )}
             </For>
           </div>
+          {/* Sized to its content, the room right of its anchor would otherwise wrap it towards the end of the chart */}
           <Show when={hovered() !== null && props.history.slots[hovered() ?? 0]}>
             {(slot) => (
               <div
-                class="pointer-events-none absolute top-0 z-10 min-w-40 rounded-xl border border-line-strong bg-surface-2 p-3 text-sm shadow-float"
+                class="pointer-events-none absolute top-0 z-10 w-max min-w-40 rounded-xl border border-line-strong bg-surface-2 p-3 text-sm shadow-float"
                 style={{
                   left: `${(((hovered() ?? 0) + 0.5) / props.history.slots.length) * 100}%`,
                   transform: `translateX(${(hovered() ?? 0) > props.history.slots.length / 2 ? 'calc(-100% - 0.75rem)' : '0.75rem'})`,

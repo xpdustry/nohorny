@@ -89,12 +89,14 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
     List<NamedCount> countByNetworkSince(String from);
 
     /// @param from the first ISO-8601 day, included
-    /// @return the number of requests from the local addresses since the given day, deleted requests included
+    /// @return the number of requests per [RequesterType] name since the given day, the named Mindustry networks
+    ///     excluded, deleted requests included. The name is empty for the counts migrated without their requests
     @Query("""
-            SELECT COALESCE(SUM(d.count), 0) FROM DailyStat d
-            WHERE d.id.day >= :from AND d.id.requesterType = 'LOCAL'
+            SELECT d.id.requesterType AS name, SUM(d.count) AS total FROM DailyStat d
+            WHERE d.id.day >= :from AND d.id.network = ''
+            GROUP BY d.id.requesterType
             """)
-    long countLocalSince(String from);
+    List<NamedCount> countByUnnamedRequesterSince(String from);
 
     /// @param from the first ISO-8601 day, included
     /// @return the number of requests per plugin version since the given day, deleted requests included

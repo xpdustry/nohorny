@@ -2,6 +2,7 @@ import momoLatin from '@fontsource/momo-trust-display/files/momo-trust-display-l
 import martianLatin from '@fontsource-variable/martian-mono/files/martian-mono-latin-wght-normal.woff2?url';
 import { HydrationScript } from '@solidjs/web';
 import type { ParentProps } from 'solid-js';
+import { installDither } from './lib/dither';
 
 // The <html> around every page. vite build prerenders it with each page listed in vite.config.ts.
 export default function Document(props: ParentProps) {
@@ -30,7 +31,13 @@ export default function Document(props: ParentProps) {
         <script src="/config.js" />
         <HydrationScript />
       </head>
-      <body>{props.children}</body>
+      <body>
+        {/* The dithered background, painted as soon as the page is parsed rather than after the hydration. Without
+            fallback content, screen readers skip the canvas */}
+        <canvas id="dither" class="pointer-events-none fixed inset-0 -z-10 size-full [image-rendering:pixelated]" />
+        <script innerHTML={`(${installDither})()`} />
+        {props.children}
+      </body>
     </html>
   );
 }

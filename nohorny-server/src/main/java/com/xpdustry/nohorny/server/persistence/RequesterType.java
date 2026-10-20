@@ -22,6 +22,16 @@ public enum RequesterType {
         return this.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
+    /// @return the type of the given enum name, as stored in the database
+    public static Optional<RequesterType> fromName(final String name) {
+        for (final var type : values()) {
+            if (type.name().equals(name)) {
+                return Optional.of(type);
+            }
+        }
+        return Optional.empty();
+    }
+
     public static Optional<RequesterType> fromKey(final String key) {
         for (final var type : values()) {
             if (type.key().equals(key)) {

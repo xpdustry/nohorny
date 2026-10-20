@@ -1,7 +1,17 @@
 // The users page of the admin panel, which manages the accounts, their roles, passwords and rate limits.
 
 import { Meta, Title } from '@solidjs/meta';
-import { createMemo, createSignal, createStore, Errored, For, refresh, Show, useContext } from 'solid-js';
+import {
+  createMemo,
+  createSignal,
+  createStore,
+  createUniqueId,
+  Errored,
+  For,
+  refresh,
+  Show,
+  useContext,
+} from 'solid-js';
 import { confirm, Dialog } from '../../components/dialog';
 import { GaugeIcon, KeyIcon, PlusIcon, ShieldMinusIcon, ShieldPlusIcon, TrashIcon } from '../../components/icon';
 import { Button, Chip, Field, State } from '../../components/ui';
@@ -30,6 +40,104 @@ function rateLimitProblem(value: string, optional: boolean): string | null {
   return Number.isInteger(limit) && limit >= 1 && limit <= MAX_RATE_LIMIT
     ? null
     : `Use a whole number from 1 to ${MAX_RATE_LIMIT.toLocaleString('en')}`;
+}
+
+/** The values the rate limit slider snaps to, up to 1k. Exact values, up to MAX_RATE_LIMIT, are typed in the field. */
+const RATE_LIMIT_STOPS = [10, 30, 60, 120, 300, 600, 1_000];
+
+const compact = new Intl.NumberFormat('en', { notation: 'compact' });
+
+/**
+ * The rate limit as a slider snapping to RATE_LIMIT_STOPS, with a field for an exact value. `value` is the text of the
+ * field. With `optional`, the first stop is the server default, an empty value.
+ */
+function RateLimitField(props: {
+  value: string;
+  optional?: boolean;
+  hint?: string;
+  error: string | null;
+  autofocus?: boolean;
+  onInput: (value: string) => void;
+  onBlur?: () => void;
+  ref?: (input: HTMLInputElement) => void;
+}) {
+  const id = createUniqueId();
+  const stops = (): (number | null)[] => (props.optional ? [null, ...RATE_LIMIT_STOPS] : RATE_LIMIT_STOPS);
+  const last = () => stops().length - 1;
+  /** The stop closest to the value on a log scale, as a typed value can fall between two. */
+  const index = () => {
+    const value = Number(props.value);
+    if (!props.value.trim() || !Number.isFinite(value) || value < 1) return 0;
+    const distance = (stop: number | null) => (stop === null ? Infinity : Math.abs(Math.log(stop / value)));
+    return stops().reduce<number>(
+      (closest, stop, at) => (distance(stop) < distance(stops()[closest]) ? at : closest),
+      0,
+    );
+  };
+  const note = () => props.error || props.hint;
+  return (
+    <div class="flex flex-col gap-1.5">
+      <label for={id} class="text-ink-2 text-sm">
+        Rate limit
+      </label>
+      <div class="flex items-start gap-4">
+        <div class="flex min-w-0 flex-1 flex-col gap-1 pt-2.5">
+          <input
+            type="range"
+            class="range"
+            min={0}
+            max={last()}
+            step={1}
+            value={index()}
+            style={{ '--fill': `${(index() / last()) * 100}%` }}
+            aria-label="Rate limit"
+            aria-valuetext={props.value.trim() ? `${props.value} per minute` : 'Server default'}
+            onInput={(event) => {
+              const stop = stops()[event.currentTarget.valueAsNumber];
+              props.onInput(stop === null ? '' : String(stop));
+            }}
+          />
+          {/* The stops, under the positions of the thumb, whose centre stays 0.5625rem inside the ends of the track */}
+          <div aria-hidden="true" class="relative mx-[0.5625rem] h-5 font-mono text-[0.6rem] text-ink-3">
+            <For each={stops()}>
+              {(stop, at) => (
+                <span
+                  class="absolute top-0 flex -translate-x-1/2 flex-col items-center gap-0.5"
+                  style={{ left: `${(at() / last()) * 100}%` }}>
+                  <i class={['h-1 w-px', at() <= index() ? 'bg-accent' : 'bg-line-strong']} />
+                  {/* The field already reads Default at the first stop of an optional limit */}
+                  <Show when={stop}>
+                    {(value) => <span class={{ 'text-ink': at() === index() }}>{compact.format(value())}</span>}
+                  </Show>
+                </span>
+              )}
+            </For>
+          </div>
+        </div>
+        <input
+          ref={props.ref}
+          id={id}
+          type="number"
+          inputmode="numeric"
+          min={1}
+          max={MAX_RATE_LIMIT}
+          placeholder={props.optional ? 'Default' : undefined}
+          class="field w-28 text-right tabular-nums"
+          value={props.value}
+          autofocus={props.autofocus}
+          aria-invalid={props.error ? 'true' : undefined}
+          aria-describedby={note() ? `${id}-note` : undefined}
+          onInput={(event) => props.onInput(event.currentTarget.value)}
+          onBlur={() => props.onBlur?.()}
+        />
+      </div>
+      <Show when={note()}>
+        <p id={`${id}-note`} class={['text-xs', props.error ? 'text-danger' : 'text-ink-3']}>
+          {note()}
+        </p>
+      </Show>
+    </div>
+  );
 }
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -339,23 +447,18 @@ function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
         }
         onBlur={(event) => event.currentTarget.value && touch('password')}
       />
-      <Field
-        ref={rateLimitInput}
-        label="Rate limit"
-        type="number"
-        inputmode="numeric"
-        min={1}
-        max={MAX_RATE_LIMIT}
-        placeholder="Server default"
+      <RateLimitField
+        ref={(input) => (rateLimitInput = input)}
+        optional
         hint={`${RATE_LIMIT_HINT}, blank for the server default`}
         error={touched.rateLimit ? rateLimitProblem(form.rateLimit, true) : null}
         value={form.rateLimit}
-        onInput={(event) =>
+        onInput={(value) =>
           setForm((draft) => {
-            draft.rateLimit = event.currentTarget.value;
+            draft.rateLimit = value;
           })
         }
-        onBlur={(event) => event.currentTarget.value && touch('rateLimit')}
+        onBlur={() => form.rateLimit && touch('rateLimit')}
       />
       <label class="flex items-start gap-3 text-sm">
         <input
@@ -484,8 +587,12 @@ function RateLimitDialog(props: { account: User | null; onClose: () => void; onC
   const [busy, setBusy] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+  /** The edited limit, null until changed so each opening starts from the limit of the account. */
+  const [edited, setEdited] = createSignal<string | null>(null);
+  let input!: HTMLInputElement;
 
   function close() {
+    setEdited(null);
     setError(null);
     setProblem(null);
     props.onClose();
@@ -493,12 +600,11 @@ function RateLimitDialog(props: { account: User | null; onClose: () => void; onC
 
   async function submit(event: SubmitEvent, account: User) {
     event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement;
-    const value = String(new FormData(form).get('rateLimit'));
+    const value = edited() ?? String(account.rateLimit);
     const invalid = rateLimitProblem(value, false);
     if (invalid) {
       setProblem(invalid);
-      form.rateLimit.focus();
+      input.focus();
       return;
     }
     setBusy(true);
@@ -532,20 +638,17 @@ function RateLimitDialog(props: { account: User | null; onClose: () => void; onC
           <form class="flex flex-col gap-4 p-6" novalidate onSubmit={(event) => submit(event, account())}>
             <div class="flex flex-col gap-1">
               <h2 class="text-xl [overflow-wrap:anywhere]">Rate limit of {account().username}</h2>
-              <p class="text-ink-2 text-sm">Applies from their next classification, their sessions are kept.</p>
+              <p class="text-ink-2 text-sm">{RATE_LIMIT_HINT}.</p>
             </div>
-            <Field
-              label="Rate limit"
-              name="rateLimit"
-              type="number"
-              inputmode="numeric"
-              min={1}
-              max={MAX_RATE_LIMIT}
-              hint={RATE_LIMIT_HINT}
+            <RateLimitField
+              ref={(element) => (input = element)}
               error={problem()}
-              value={account().rateLimit}
+              value={edited() ?? String(account().rateLimit)}
               autofocus
-              onInput={() => setProblem(null)}
+              onInput={(value) => {
+                setEdited(value);
+                setProblem(null);
+              }}
             />
             <Show when={error()}>
               <p role="alert" class="text-danger text-sm">

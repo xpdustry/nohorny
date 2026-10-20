@@ -5,7 +5,6 @@ import { createUniqueId, omit, Show } from 'solid-js';
 import logo from '../assets/logo.svg';
 import type { Bucket } from '../lib/api';
 import { percent, ratingLabel } from '../lib/format';
-import type { Connection } from '../lib/stats';
 import { CheckIcon, TriangleAlertIcon } from './icon';
 
 type Variant = 'primary' | 'default' | 'danger' | 'solid-danger' | 'quiet' | 'quiet-danger';
@@ -171,7 +170,7 @@ export function TimelineItem(props: { marker: JSX.Element; children: JSX.Element
     <li class="group relative flex gap-3 pb-5 last:pb-0">
       <span
         aria-hidden="true"
-        class="absolute top-7 bottom-1 left-3 w-0.5 -translate-x-1/2 rounded-full bg-accent group-last:hidden"
+        class="absolute top-7 bottom-1 left-3 w-0.5 -translate-x-1/2 rounded-full bg-ink-3 group-last:hidden"
       />
       <span class="flex size-6 shrink-0 items-center justify-center">{props.marker}</span>
       <div class="flex min-w-0 flex-1 flex-col gap-2">{props.children}</div>
@@ -209,22 +208,6 @@ export function Chip(props: { children: JSX.Element; class?: string; tooltip?: s
         props.class,
       ]}>
       {props.children}
-    </span>
-  );
-}
-
-const CONNECTION_DOT: Record<Connection, string> = {
-  live: 'bg-accent motion-safe:animate-pulse',
-  connecting: 'bg-warn',
-  polling: 'bg-ink-3',
-  offline: 'bg-danger',
-};
-
-export function LiveIndicator(props: { connection: Connection; label: string }) {
-  return (
-    <span class="inline-flex items-center gap-2 text-sm text-ink-3">
-      <span aria-hidden="true" class={['size-2 rounded-full', CONNECTION_DOT[props.connection]]} />
-      {props.label}
     </span>
   );
 }

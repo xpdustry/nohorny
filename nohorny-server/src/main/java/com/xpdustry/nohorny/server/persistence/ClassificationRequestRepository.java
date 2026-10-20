@@ -27,13 +27,42 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     @Query("SELECT r FROM ClassificationRequest r WHERE r.bucket = :bucket AND r.id < :before ORDER BY r.id DESC")
     List<ClassificationRequest> findByBucketBefore(RatingBucket bucket, String before, Limit limit);
 
-    /// @param bucket only return the requests of this bucket, or all if `null`
+    @Query("""
+            SELECT r FROM ClassificationRequest r
+            WHERE r.id < :before
+                AND (:bucket IS NULL OR r.bucket = :bucket)
+                AND (:type IS NULL OR r.requesterType = :type)
+                AND (:name IS NULL OR r.requesterName = :name OR (:name = '' AND r.requesterName IS NULL))
+                AND (:version IS NULL OR r.version = :version
+                    OR (:version = '' AND (r.version IS NULL OR LENGTH(r.version) NOT BETWEEN 1 AND 32)))
+            ORDER BY r.id DESC
+            """)
+    List<ClassificationRequest> findFilteredBefore(
+            @Nullable RatingBucket bucket,
+            @Nullable RequesterType type,
+            @Nullable String name,
+            @Nullable String version,
+            String before,
+            Limit limit);
+
     /// @param before only return the requests with an identifier lower than this one, thus older
-    /// @return the newest requests matching the filters
+    /// @return the newest requests matching the filter
     default List<ClassificationRequest> findPage(
-            final @Nullable RatingBucket bucket, final @Nullable String before, final int limit) {
+            final RequestFilter filter, final @Nullable String before, final int limit) {
         final var cursor = before == null ? NO_CURSOR : before;
         final var max = Limit.of(limit);
+        final var requester = filter.requester();
+        if (requester != null || filter.version() != null) {
+            return this.findFilteredBefore(
+                    filter.bucket(),
+                    requester == null ? null : requester.type(),
+                    requester == null ? null : requester.name(),
+                    filter.version(),
+                    cursor,
+                    max);
+        }
+        // The common lists keep their own queries, which use the indexes
+        final var bucket = filter.bucket();
         return bucket == null ? this.findBefore(cursor, max) : this.findByBucketBefore(bucket, cursor, max);
     }
 
@@ -159,14 +188,17 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     }
 
     @Query(nativeQuery = true, value = """
-            SELECT COUNT(*) FROM request
-            WHERE created_at >= :since AND requester_type = 'LOCAL'
+            SELECT requester_type AS name, COUNT(*) AS total
+            FROM request
+            WHERE created_at >= :since AND NOT (requester_type = 'MINDUSTRY_NETWORK' AND requester_name IS NOT NULL)
+            GROUP BY requester_type
             """)
-    long countLocalSince(long since);
+    List<NamedCount> countByUnnamedRequesterSince(long since);
 
-    /// @return the number of retained [RequesterType#LOCAL] requests created since the given instant
-    default long countLocalSince(final Instant since) {
-        return this.countLocalSince(since.toEpochMilli());
+    /// @return the number of retained requests per [RequesterType] name created since the given instant, the named
+    ///     Mindustry networks excluded
+    default List<NamedCount> countByUnnamedRequesterSince(final Instant since) {
+        return this.countByUnnamedRequesterSince(since.toEpochMilli());
     }
 
     @Query(nativeQuery = true, value = """

@@ -2,19 +2,26 @@
 
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
-import type { FailureDetails as FailureDetailsData, Request } from '../lib/api';
-import {
-  bucket,
-  classifierLabel,
-  duration,
-  formatTime,
-  percent,
-  requesterLabel,
-  shortId,
-  stepBucket,
-} from '../lib/format';
+import type {
+  FailureDetails as FailureDetailsData,
+  Request,
+  Requester as RequesterData,
+  RequesterType,
+} from '../lib/api';
+import { bucket, classifierInfo, duration, formatTime, percent, shortId, stepBucket } from '../lib/format';
+import { EXTERNAL } from '../lib/links';
 import { confirm, Dialog } from './dialog';
-import { CheckIcon, CopyIcon, EyeOffIcon, ImageOffIcon, XIcon } from './icon';
+import {
+  CheckIcon,
+  CopyIcon,
+  EyeOffIcon,
+  HatGlassesIcon,
+  HouseIcon,
+  ImageOffIcon,
+  ServerIcon,
+  UserIcon,
+  XIcon,
+} from './icon';
 import {
   Button,
   Chip,
@@ -55,7 +62,7 @@ export function confirmRequestDeletion(request: Request): Promise<boolean> {
   });
 }
 
-/** The image of a request. Flagged images stay blurred until `revealed`. */
+/** The image of a request. Flagged images stay blurred until `revealed`, a click toggles them. */
 export function RequestImage(props: {
   request: Request;
   revealed: boolean;
@@ -101,13 +108,17 @@ export function RequestImage(props: {
               when={blurred()}
               fallback={
                 <Show when={sensitive()}>
-                  <Button
-                    size="sm"
-                    class="absolute top-3 right-3 bg-surface hover:bg-surface-2"
+                  {/* The whole image blurs it back, with a hint on hover */}
+                  <button
+                    type="button"
+                    aria-label="Blur the image"
+                    class="group absolute inset-0 flex cursor-pointer items-end justify-center p-3"
                     onClick={() => props.onReveal(false)}>
-                    <EyeOffIcon />
-                    Hide
-                  </Button>
+                    <span class="flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-ink-2 text-sm opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 [&_svg]:size-4">
+                      <EyeOffIcon />
+                      Click to blur
+                    </span>
+                  </button>
                 </Show>
               }>
               <button
@@ -152,7 +163,8 @@ export function VerdictCard(props: { request: Request }) {
           </span>
         </div>
       </Show>
-      <Show when={props.request.classifier}>
+      {/* The classifier chain names the deciding step, this only shows for a request recorded without its steps */}
+      <Show when={props.request.steps.length === 0 && props.request.classifier}>
         <p class="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-ink-2 text-sm">
           {rating() === 'failed' ? 'Failed in' : 'Decided by'} <Classifier id={props.request.classifier ?? ''} />
           <Show when={props.request.error}>
@@ -306,19 +318,60 @@ function FailureDetails(props: { details: FailureDetailsData }) {
   );
 }
 
-/** The short name of a classifier, the full identifier with the model repository and revision in its tooltip. */
+/** The short name of a classifier, its model in the tooltip, linking to the page of the model. */
 function Classifier(props: { id: string; class?: string }) {
-  const label = () => classifierLabel(props.id);
+  const info = () => classifierInfo(props.id);
   return (
-    <code
-      class={[
-        'text-ink',
-        { 'cursor-help underline decoration-dotted underline-offset-4': label() !== props.id },
-        props.class,
-      ]}
-      data-tooltip={label() !== props.id ? props.id : undefined}>
-      {label()}
-    </code>
+    <Show
+      when={info().href}
+      fallback={
+        <code
+          class={[
+            'text-ink',
+            { 'cursor-help underline decoration-dotted underline-offset-4': info().details !== undefined },
+            props.class,
+          ]}
+          data-tooltip={info().details}>
+          {info().label}
+        </code>
+      }>
+      {(href) => (
+        <a
+          class={['link-quiet font-mono text-[0.84em]', props.class]}
+          href={href()}
+          data-tooltip={info().details}
+          {...EXTERNAL}>
+          {info().label}
+        </a>
+      )}
+    </Show>
+  );
+}
+
+/** The icon, the kind and the fallback name of each requester type. */
+const REQUESTERS: Record<
+  RequesterType,
+  { icon: (props: { class?: string }) => JSX.Element; kind: string; unnamed: string }
+> = {
+  'mindustry-network': { icon: ServerIcon, kind: 'Mindustry network', unnamed: 'Unnamed server' },
+  user: { icon: UserIcon, kind: 'Account', unnamed: 'Account' },
+  local: { icon: HouseIcon, kind: 'Local address', unnamed: 'Local' },
+  anonymous: { icon: HatGlassesIcon, kind: 'Anonymous client', unnamed: 'Anonymous' },
+};
+
+/** Who sent a request: an icon for its type, named in the tooltip and for screen readers, then its name. */
+export function Requester(props: { requester: RequesterData; class?: string }) {
+  const info = () => REQUESTERS[props.requester.type];
+  return (
+    <span class={['inline-flex min-w-0 items-center gap-1.5', props.class]}>
+      <span class="shrink-0 text-ink-3 [&_svg]:size-3.5" data-tooltip={info().kind}>
+        {info().icon({})}
+      </span>
+      <span class="sr-only">{info().kind}</span>
+      <span class="truncate" data-tooltip={props.requester.name ?? undefined} data-tooltip-overflow>
+        {props.requester.name ?? info().unnamed}
+      </span>
+    </span>
   );
 }
 
@@ -331,7 +384,7 @@ export function DetailsCard(props: { request: Request }) {
       </time>,
     ],
     ['Duration', duration(props.request.durationMillis)],
-    ['Requester', <span class="break-all">{requesterLabel(props.request.requester)}</span>],
+    ['Requester', <Requester requester={props.request.requester} />],
     ['Plugin', <code>{props.request.version ? `v${props.request.version}` : 'unknown'}</code>],
     ['Request ID', <CopyCode text={props.request.id} label="request ID" />],
   ];

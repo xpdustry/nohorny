@@ -24,6 +24,10 @@
   /* The page, the wells and inputs sunk into it, then the cards and what sits on them */
   --bg: oklch(0.18 0.012 340);
   --bg-2: oklch(0.16 0.011 340);
+  /* The glow of the pages, dithered over --bg toward the pink of the logo, see components/dither.tsx */
+  --dither-1: oklch(0.2 0.025 345);
+  --dither-2: oklch(0.225 0.04 348);
+  --dither-3: oklch(0.255 0.055 350);
   --surface: oklch(0.215 0.013 340);
   --surface-2: oklch(0.255 0.014 340);
   --surface-3: oklch(0.3 0.015 340);
@@ -68,6 +72,9 @@
     color-scheme: light;
     --bg: oklch(0.985 0.003 340);
     --bg-2: oklch(0.965 0.004 340);
+    --dither-1: oklch(0.97 0.012 345);
+    --dither-2: oklch(0.955 0.022 348);
+    --dither-3: oklch(0.935 0.035 350);
     --surface: #fff;
     --surface-2: oklch(0.965 0.004 340);
     --surface-3: oklch(0.925 0.006 340);
@@ -257,6 +264,37 @@
   @apply h-10 w-full rounded-xl border border-line-strong bg-bg-2 px-3 text-ink transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-11;
 }
 
+/* The sliders of the forms: a thin track filled up to the thumb, `--fill` being the filled share from 0% to 100% */
+@utility range {
+  @apply h-5 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline-none;
+  &::-webkit-slider-runnable-track {
+    @apply h-1.5 rounded-full;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-3) var(--fill));
+  }
+  &::-moz-range-track {
+    @apply h-1.5 rounded-full;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-3) var(--fill));
+  }
+  &::-webkit-slider-thumb {
+    @apply -mt-1.5 size-[1.125rem] appearance-none rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+  }
+  &::-moz-range-thumb {
+    @apply size-[1.125rem] rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+  }
+  &:active::-webkit-slider-thumb {
+    scale: 1.15;
+  }
+  &:active::-moz-range-thumb {
+    scale: 1.15;
+  }
+  &:focus-visible::-webkit-slider-thumb {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+  &:focus-visible::-moz-range-thumb {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+}
+
 /* Slides a notice in when it appears */
 @utility pop-in {
   transition:
@@ -378,7 +416,8 @@
     animation: scan-line var(--loop) infinite;
   }
   [data-step="watch"] .lit {
-    animation: spot var(--loop) calc(0.09s + var(--x) * 0.18s) ease-out infinite;
+    /* As the line crosses the middle of the column, 1.44 s over the 12 columns */
+    animation: spot var(--loop) calc(0.06s + var(--x) * 0.12s) ease-out infinite;
   }
   [data-step="render"] .pixels {
     animation: develop var(--loop) var(--d) infinite;
@@ -402,7 +441,7 @@
     animation: thud var(--loop) var(--d) infinite;
   }
   [data-step="act"] .pixels i {
-    animation: wipe var(--loop) calc(var(--d) + (var(--x) + var(--y)) * 0.04s) infinite;
+    animation: wipe var(--loop) calc(var(--d) + (var(--x) + var(--y)) * 0.027s) infinite;
   }
   [data-step="act"] .stamp {
     animation: stamp var(--loop) var(--d) var(--ease-snap) infinite;

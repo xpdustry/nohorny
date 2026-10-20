@@ -6,6 +6,8 @@ import com.xpdustry.nohorny.server.persistence.ClassificationStep;
 import com.xpdustry.nohorny.server.persistence.Failure;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.RequestFilter;
+import com.xpdustry.nohorny.server.persistence.RequesterFilter;
 import com.xpdustry.nohorny.server.persistence.RequesterType;
 import com.xpdustry.nohorny.server.persistence.Verdict;
 import com.xpdustry.nohorny.server.security.SecurityConfiguration;
@@ -70,19 +72,32 @@ public final class RequestController {
         return this.toView(request, SecurityConfiguration.isAdmin(authentication));
     }
 
+    /// @param requester a requester type key, such as `mindustry-network`, to only list its requests
+    /// @param network with `requester`, only list the requests of this name, or the unnamed ones when empty
+    /// @param version only list the requests of this plugin version, or of the clients sending none when empty
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public RequestPage onList(
             final @RequestParam(required = false) @Nullable String rating,
+            final @RequestParam(required = false) @Nullable String requester,
+            final @RequestParam(required = false) @Nullable String network,
+            final @RequestParam(required = false) @Nullable String version,
             final @RequestParam(required = false) @Nullable String before,
             final @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int limit) {
         final var bucket = rating == null || rating.isEmpty()
                 ? null
                 : RatingBucket.fromKey(rating)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid rating"));
+        final var filter = requester == null || requester.isEmpty()
+                ? null
+                : new RequesterFilter(
+                        RequesterType.fromKey(requester)
+                                .orElseThrow(
+                                        () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid requester")),
+                        network);
         final var cursor = before == null || before.isEmpty() ? null : parseIdentifier(before);
         final var size = Math.clamp(limit, 1, MAX_PAGE_SIZE);
         // One more to know whether there is a next page
-        final var found = this.requests.findPage(bucket, cursor, size + 1);
+        final var found = this.requests.findPage(new RequestFilter(bucket, filter, version), cursor, size + 1);
         final var items = found.subList(0, Math.min(found.size(), size));
         return new RequestPage(
                 items.stream().map(request -> this.toView(request, true)).toList(),

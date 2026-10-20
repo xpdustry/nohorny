@@ -6,7 +6,7 @@ import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
 import com.xpdustry.nohorny.server.persistence.ImageState;
 import com.xpdustry.nohorny.server.persistence.ImageStore;
-import com.xpdustry.nohorny.server.persistence.RatingBucket;
+import com.xpdustry.nohorny.server.persistence.RequestFilter;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -54,12 +54,11 @@ public class RequestService {
         return this.requests.findById(id);
     }
 
-    /// @param bucket only return the requests of this bucket, or all if `null`
     /// @param before only return the requests with an identifier lower than this one, thus older
-    /// @return the newest requests matching the filters
+    /// @return the newest requests matching the filter
     public List<ClassificationRequest> findPage(
-            final @Nullable RatingBucket bucket, final @Nullable String before, final int limit) {
-        return this.requests.findPage(bucket, before, limit);
+            final RequestFilter filter, final @Nullable String before, final int limit) {
+        return this.requests.findPage(filter, before, limit);
     }
 
     /// @return the JPEG image file of the request, empty if it is not stored or its file is missing

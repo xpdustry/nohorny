@@ -36,6 +36,7 @@ import {
   confirmImageDeletion,
   confirmRequestDeletion,
   KeyValues,
+  Requester,
   RequestImage,
   VerdictCard,
 } from '../../components/request';
@@ -51,33 +52,26 @@ import {
   type Networks,
   type Page,
   type Request,
+  type RequesterFilter,
   requestPath,
   statusOf,
+  type VersionFilter,
   type Versions,
 } from '../../lib/api';
 import { cursorAt, parsePrefix, toLocalInput } from '../../lib/cursor';
-import {
-  bucket,
-  duration,
-  formatTime,
-  number,
-  ratingLabel,
-  relativeTime,
-  requesterLabel,
-  share,
-  shortId,
-} from '../../lib/format';
+import { bucket, duration, formatTime, number, ratingLabel, relativeTime, share, shortId } from '../../lib/format';
 import { call, SessionExpired } from '../../lib/session';
 
 export default function Requests() {
-  // A click on a bar of the chart lists the requests of its slot
-  const [slot, setSlot] = createSignal<{ from: number; to: number } | null>(null);
+  // A click on a bar of the chart, a network or a version narrows the list to its requests
+  const [pick, setPick] = createSignal<Pick | null>(null);
   return (
     <>
       <Title>Requests · NoHorny admin</Title>
       <Meta name="robots" content="noindex, nofollow" />
-      <Overview onSelect={(from, to) => setSlot({ from, to })} />
-      <RequestList slot={slot()} />
+      {/* A new object per click, so clicking the same bar, network or version again still applies it */}
+      <Overview onPick={(filters) => setPick({ ...filters })} />
+      <RequestList pick={pick()} />
     </>
   );
 }
@@ -96,7 +90,7 @@ const SEGMENTED = 'flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-full bo
 const SEGMENT =
   'shrink-0 rounded-full border border-transparent px-3 py-1 font-mono text-xs text-ink-2 transition-colors hover:text-ink aria-pressed:border-accent-edge aria-pressed:bg-accent-soft aria-pressed:text-on-accent-soft pointer-coarse:py-2';
 
-function Overview(props: { onSelect: (from: number, to: number) => void }) {
+function Overview(props: { onPick: (filters: Pick) => void }) {
   const admin = useContext(AdminContext);
   const [range, setRange] = createSignal<HistoryRange>('30d');
   const [shown, setShown] = createStore<Record<Bucket, boolean>>({ safe: true, warn: true, nsfw: true, failed: true });
@@ -202,7 +196,7 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
               )}
             </For>
           </div>
-          <ActivityChart history={history()} shown={shown} onSelect={props.onSelect} />
+          <ActivityChart history={history()} shown={shown} onSelect={(from, to) => props.onPick({ from, to })} />
           <p class="sr-only">
             Classified requests over the range:{' '}
             {BUCKETS.map((key) => `${number(totals()[key])} ${ratingLabel(key)}`).join(', ')}.
@@ -212,10 +206,10 @@ function Overview(props: { onSelect: (from: number, to: number) => void }) {
 
       <div class="grid gap-8 border-line border-t pt-6 lg:grid-cols-[3fr_2fr]">
         <Breakdown id="networks" title="Networks" data={networks}>
-          {(data) => <NetworkChart networks={data()} />}
+          {(data) => <NetworkChart networks={data()} onSelect={(requester) => props.onPick({ requester })} />}
         </Breakdown>
         <Breakdown id="versions" title="Client versions" data={versions}>
-          {(data) => <VersionChart versions={data()} />}
+          {(data) => <VersionChart versions={data()} onSelect={(version) => props.onPick({ version })} />}
         </Breakdown>
       </div>
     </section>
@@ -256,6 +250,8 @@ const PAGE_SIZE = 20;
 /** The filters of the list. `id` is an identifier or its beginning, `from` and `to` are milliseconds, `to` excluded. */
 interface Query {
   rating: Bucket | null;
+  requester: RequesterFilter | null;
+  version: VersionFilter | null;
   id: string;
   from: number | null;
   to: number | null;
@@ -270,7 +266,10 @@ function openPicker(event: MouseEvent & { currentTarget: HTMLInputElement }) {
   }
 }
 
-const NO_QUERY: Query = { rating: null, id: '', from: null, to: null };
+const NO_QUERY: Query = { rating: null, requester: null, version: null, id: '', from: null, to: null };
+
+/** Filters set from the charts, replacing the same ones of the list and keeping the others. */
+type Pick = Partial<Omit<Query, 'rating' | 'id'>>;
 
 const FILTER_FIELD =
   'h-9 rounded-full border border-line-strong bg-bg-2 px-3 font-mono text-ink text-xs transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-10';
@@ -280,7 +279,7 @@ const MAX_REFRESH_PAGES = 5;
 
 const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expired: 'Expired', deleted: 'Deleted' };
 
-function RequestList(props: { slot: { from: number; to: number } | null }) {
+function RequestList(props: { pick: Pick | null }) {
   const admin = useContext(AdminContext);
   const [query, setQuery] = createSignal<Query>(NO_QUERY);
   /** The text of the identifier field, applied when it changes and is valid. */
@@ -293,7 +292,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     loading: false,
     exhausted: false,
     error: null as string | null,
-    /** The images revealed one by one and the rows with a running action, by request identifier. */
+    /** The images revealed or blurred one by one, over revealAll, and the rows with a running action, by request identifier. */
     revealed: {} as Record<string, boolean>,
     busy: {} as Record<string, boolean>,
   });
@@ -329,10 +328,15 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     return current.from === null || Date.parse(item.createdAt) >= current.from;
   }
 
-  const filtered = () => query().id !== '' || query().from !== null || query().to !== null;
+  const filtered = () =>
+    query().requester !== null ||
+    query().version !== null ||
+    query().id !== '' ||
+    query().from !== null ||
+    query().to !== null;
   const idInvalid = () => idText().trim() !== '' && !parsePrefix(idText());
 
-  /** Clears the identifier and the time range, the rating filter stays. */
+  /** Clears the requester, the version, the identifier and the time range, the rating filter stays. */
   const clearFilters = () => reset({ ...NO_QUERY, rating: current.rating });
 
   /** Loads the list of `next` filters. The current requests stay, dimmed, until its first page replaces them. */
@@ -360,6 +364,11 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   function pageUrl(before: string | null): string {
     const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
     if (current.rating) params.set('rating', current.rating);
+    if (current.requester) {
+      params.set('requester', current.requester.type);
+      if (current.requester.name !== null) params.set('network', current.requester.name);
+    }
+    if (current.version) params.set('version', current.version.value);
     if (before) params.set('before', before);
     return `/api/requests?${params}`;
   }
@@ -442,10 +451,10 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
   });
 
   createEffect(
-    () => props.slot,
-    (slot) => {
-      if (!slot) return;
-      reset({ ...current, from: slot.from, to: slot.to });
+    () => props.pick,
+    (pick) => {
+      if (!pick) return;
+      reset({ ...current, ...pick });
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     { defer: true },
@@ -540,7 +549,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
     });
   }
 
-  const revealed = (item: Request) => revealAll() || list.revealed[item.id] === true;
+  const revealed = (item: Request) => list.revealed[item.id] ?? revealAll();
   const setRevealed = (item: Request, value: boolean) =>
     setList((draft) => {
       draft.revealed[item.id] = value;
@@ -641,7 +650,13 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
             size="sm"
             aria-pressed={revealAll() ? 'true' : 'false'}
             data-tooltip={revealAll() ? 'Blur flagged images' : 'Reveal all images'}
-            onClick={() => setRevealAll(!revealAll())}>
+            onClick={() => {
+              // Applies to every image, the ones revealed or blurred one by one included
+              setRevealAll(!revealAll());
+              setList((draft) => {
+                draft.revealed = {};
+              });
+            }}>
             <Show when={revealAll()} fallback={<EyeIcon />}>
               <EyeOffIcon />
             </Show>
@@ -704,6 +719,20 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
             />
           </label>
         </div>
+        <Show when={query().requester}>
+          {(requester) => (
+            <FilterChip label={requester().label} onRemove={() => reset({ ...current, requester: null })} />
+          )}
+        </Show>
+        <Show when={query().version}>
+          {(version) => (
+            <FilterChip
+              label={version().label}
+              mono={version().value !== ''}
+              onRemove={() => reset({ ...current, version: null })}
+            />
+          )}
+        </Show>
         <Show when={filtered()}>
           <Button size="sm" variant="quiet" onClick={clearFilters}>
             <XIcon />
@@ -871,7 +900,7 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
                         ],
                         ['Plugin', <code>{value().item.version ? `v${value().item.version}` : 'unknown'}</code>],
                         ['Address', <code class="break-all">{value().item.remoteAddress ?? '–'}</code>],
-                        ['Requester', requesterLabel(value().item.requester)],
+                        ['Requester', <Requester requester={value().item.requester} />],
                       ]}
                     />
                   </section>
@@ -882,6 +911,25 @@ function RequestList(props: { slot: { from: number; to: number } | null }) {
         </Show>
       </Dialog>
     </section>
+  );
+}
+
+/** A filter set from the charts, removed with its button. */
+function FilterChip(props: { label: string; mono?: boolean; onRemove: () => void }) {
+  return (
+    <span class="inline-flex h-9 items-center gap-1 rounded-full border border-accent-edge bg-accent-soft pr-1 pl-3 text-on-accent-soft text-xs pointer-coarse:h-10">
+      <span class={['max-w-48 truncate', { 'font-mono': props.mono }]} data-tooltip={props.label} data-tooltip-overflow>
+        {props.label}
+      </span>
+      <button
+        type="button"
+        class="grid size-7 place-items-center rounded-full hover:bg-accent/20 [&_svg]:size-3.5"
+        aria-label={`Stop filtering by ${props.label}`}
+        data-tooltip="Remove this filter"
+        onClick={() => props.onRemove()}>
+        <XIcon />
+      </button>
+    </span>
   );
 }
 
@@ -968,7 +1016,7 @@ function RequestRow(props: {
             {shortId(props.request.id)}
           </a>
           <Chip>{props.request.version ? `v${props.request.version}` : 'unknown'}</Chip>
-          <span class="truncate text-sm">{requesterLabel(props.request.requester)}</span>
+          <Requester requester={props.request.requester} class="text-sm" />
         </span>
         <span class="truncate font-mono text-ink-3 text-xs">{props.request.remoteAddress}</span>
       </div>

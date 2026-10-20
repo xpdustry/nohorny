@@ -27,7 +27,6 @@ import javax.imageio.ImageIO;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -42,17 +41,12 @@ public final class ClassificationService {
     private final ClassifierChain classifiers;
     private final RequestService requests;
     private final NoHornyProperties properties;
-    private final ApplicationEventPublisher events;
 
     public ClassificationService(
-            final ClassifierChain classifiers,
-            final RequestService requests,
-            final NoHornyProperties properties,
-            final ApplicationEventPublisher events) {
+            final ClassifierChain classifiers, final RequestService requests, final NoHornyProperties properties) {
         this.classifiers = classifiers;
         this.requests = requests;
         this.properties = properties;
-        this.events = events;
     }
 
     /// @param bytes the JPEG image as received, stored as is when kept
@@ -132,11 +126,6 @@ public final class ClassificationService {
         } catch (final RuntimeException exception) {
             log.error("Failed to record classification request {}", request.getId(), exception);
             return false;
-        }
-        try {
-            this.events.publishEvent(new ClassificationRecordedEvent(request.getId()));
-        } catch (final RuntimeException exception) {
-            log.error("Failed to publish classification request {}", request.getId(), exception);
         }
         return true;
     }
