@@ -20,7 +20,8 @@ export default function SiteLayout(props: RouteSectionProps) {
         class="fixed top-2 left-2 z-50 -translate-y-20 rounded-full bg-accent px-4 py-2 text-on-accent focus:translate-y-0">
         Skip to content
       </a>
-      <header class="sticky top-0 z-40 border-line border-b bg-bg">
+      {/* Translucent and blurred, so the dithered background and the page scrolling under it show through softly */}
+      <header class="sticky top-0 z-40 border-line border-b bg-bg/70 backdrop-blur-lg">
         <div class="wrap flex h-16 items-center gap-1">
           <Brand />
           <nav aria-label="Main" class="ml-4 hidden items-center gap-1 sm:flex">
@@ -54,7 +55,7 @@ export default function SiteLayout(props: RouteSectionProps) {
         {props.children}
       </main>
 
-      <footer class="mt-24 border-line border-t">
+      <footer class="mt-24 border-line border-t bg-bg/70 backdrop-blur-lg">
         <div class="wrap flex flex-wrap items-center gap-x-6 gap-y-3 py-8 text-sm">
           <Brand />
           <nav aria-label="Footer" class="flex flex-wrap gap-4 text-ink-2 [&_a:hover]:text-ink">

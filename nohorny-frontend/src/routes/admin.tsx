@@ -171,7 +171,7 @@ function AdminShell(props: { children: JSX.Element }) {
   return (
     <AdminContext value={admin}>
       <div class="reveal flex min-h-dvh flex-col">
-        <header class="sticky top-0 z-40 border-line border-b bg-bg">
+        <header class="sticky top-0 z-40 border-line border-b bg-bg/70 backdrop-blur-lg">
           {/* The previous page stays until the next one is ready, the bar tells that the click was heard */}
           <span aria-hidden="true" class={['progress-bar', { active: routing() }]} />
           <div class="wrap flex h-16 items-center gap-3">
