@@ -7,7 +7,7 @@ ARG PREBUILT_NATIVES
 ARG NATIVES_STAGE=${PREBUILT_NATIVES:+prebuilt}
 
 
-FROM docker.io/eclipse-temurin:26-jdk@sha256:84edabdaa446fcae091de3df12b15e2b6b7fd5b7df78c4a9dd58d8c95ed3fcad AS gradle
+FROM docker.io/eclipse-temurin:26-jdk@sha256:5fa7cdf9a7dc28f66fc2932a5db067f8c4bbde3916e45ef2ace491f466eff691 AS gradle
 
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
@@ -62,7 +62,7 @@ COPY ${PREBUILT_NATIVES}/ /natives/
 FROM natives-${NATIVES_STAGE:-compile} AS natives
 
 
-FROM ghcr.io/pnpm/pnpm:12.9.1@sha256:77123fd40a39db0eb8be6bddfcf0cea15e000122b9221ccce2e4415be29050f2 AS frontend
+FROM ghcr.io/pnpm/pnpm:12.14.0@sha256:71202ae73719148f6b6e129ca1e9fa3ceabbc9a037dc34800715606f2b5290a1 AS frontend
 
 RUN pnpm runtime set node 24 -g
 
@@ -101,7 +101,7 @@ RUN --mount=type=cache,target=/cache/.gradle \
     gradle :nohorny-server:build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
 
 
-FROM docker.io/eclipse-temurin:26-jre@sha256:4a9c6bc048bbe4782482fe376bb5f753a3ac6d91381bc133cfd1ae367b33d8a9 AS runtime
+FROM docker.io/eclipse-temurin:26-jre@sha256:c7c9e2d412999f6a99d3cd987ed95ce55d9d52e2dcaf8577a9b495077d825c78 AS runtime
 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
