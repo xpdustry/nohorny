@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@12.9.1",
+  "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=22"
   },
@@ -19,22 +19,22 @@
   "dependencies": {
     "@fontsource-variable/martian-mono": "5.3.0",
     "@fontsource/momo-trust-display": "5.3.0",
-    "@sentry/browser": "11.6.0",
+    "@sentry/browser": "11.8.0",
     "@solidjs/meta": "1.0.0-next.2",
-    "@solidjs/router": "2.0.0-next.35",
-    "@solidjs/web": "2.0.0-rc.13",
-    "solid-js": "2.0.0-rc.13"
+    "@solidjs/router": "2.0.0-next.41",
+    "@solidjs/web": "2.0.0-rc.16",
+    "solid-js": "2.0.0-rc.16"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@solidjs/diagnostics": "2.0.0-rc.13",
-    "@solidjs/vite-plugin": "3.0.0-next.47",
+    "@solidjs/diagnostics": "2.0.0-rc.16",
+    "@solidjs/vite-plugin": "3.0.0-next.50",
     "@tailwindcss/vite": "4.3.3",
-    "@types/node": "24.19.1",
+    "@types/node": "24.19.2",
     "filesystem-routing": "0.4.0",
     "prerender-crawler": "0.2.0",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vite": "8.3.2"
+    "vite": "8.3.4"
   }
 }
