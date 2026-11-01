@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
@@ -33,7 +35,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public final class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final String REQUESTS = "/api/requests/";
+    // Matched like Spring MVC routes, on the decoded path segments, so an encoded spelling such as /api/cl%61ssify
+    // cannot reach a handler unlimited
+    private static final PathPatternRequestMatcher.Builder PATH = PathPatternRequestMatcher.withDefaults();
+    private static final RequestMatcher CLASSIFY = PATH.matcher(HttpMethod.POST, "/api/classify");
+    private static final RequestMatcher REQUESTS = PATH.matcher("/api/requests/**");
+    private static final RequestMatcher IMAGE_DELETION = PATH.matcher(HttpMethod.DELETE, "/api/requests/*/image");
 
     private final RateLimiter limiter;
     private final RateLimitProperties limits;
@@ -82,11 +89,9 @@ public final class RateLimitFilter extends OncePerRequestFilter {
 
     /// @return the limit of the request, `null` if it is not limited
     private @Nullable Limit limitOf(final HttpServletRequest request, final @Nullable Authentication authentication) {
-        final var path =
-                request.getRequestURI().substring(request.getContextPath().length());
         final var method = request.getMethod();
         final var address = request.getRemoteAddr();
-        if (HttpMethod.POST.matches(method) && path.equals("/api/classify")) {
+        if (CLASSIFY.matches(request)) {
             final var requester = this.requesters.resolve(authentication, address);
             final var name = requester.name();
             return switch (requester.type()) {
@@ -107,10 +112,10 @@ public final class RateLimitFilter extends OncePerRequestFilter {
                 case LOCAL, ANONYMOUS -> new Limit("classify-anonymous", address, this.limits.anonymous());
             };
         }
-        if (!path.startsWith(REQUESTS) || SecurityConfiguration.isAdmin(authentication)) {
+        if (!REQUESTS.matches(request) || SecurityConfiguration.isAdmin(authentication)) {
             return null;
         }
-        if (HttpMethod.DELETE.matches(method) && path.endsWith("/image")) {
+        if (IMAGE_DELETION.matches(request)) {
             return new Limit("image-deletion", address, this.limits.imageDeletions());
         }
         if (HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method)) {

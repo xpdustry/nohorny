@@ -27,6 +27,8 @@ if (dsn) {
       urlQueryParams: false,
     },
     integrations: [
+      // The clicks and inputs are described with the labels of their element, which name accounts and addresses
+      Sentry.breadcrumbsIntegration({ dom: false }),
       // The generated error boundary of @solidjs/vite-plugin catches the render errors and only logs them
       Sentry.captureConsoleIntegration({ levels: ['error'] }),
     ],

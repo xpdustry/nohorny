@@ -90,10 +90,10 @@ public class SecurityConfiguration {
                 path.matcher(HttpMethod.DELETE, "/api/requests/*/image"));
 
         return http.authorizeHttpRequests(authorize -> {
-                    // The classifications are restricted by the RateLimitFilter, which can require an account
+                    // The classifications are restricted by the RateLimitFilter, which can require an account.
+                    // The reads are restricted whatever the method, Spring MVC also answers HEAD with the GET handlers.
                     authorize
-                            .requestMatchers(
-                                    HttpMethod.GET, "/api/requests", "/api/stats/networks", "/api/stats/versions")
+                            .requestMatchers("/api/requests", "/api/stats/networks", "/api/stats/versions")
                             .hasRole(ADMIN_ROLE)
                             .requestMatchers(HttpMethod.DELETE, "/api/requests/*")
                             .hasRole(ADMIN_ROLE)

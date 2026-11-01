@@ -3,17 +3,17 @@ package com.xpdustry.nohorny.client;
 
 import arc.struct.IntMap;
 import arc.struct.IntSeq;
+import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
-import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.Rating;
-import com.xpdustry.nohorny.common.VirtualBuilding;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.game.Team;
+import mindustry.gen.Building;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.io.JsonIO;
@@ -47,7 +47,7 @@ final class AutoModerator implements LifecycleListener {
         switch (policy) {
             case BAN_NSFW -> {
                 if (event.response().rating().isWorseOrEqualThan(Rating.NSFW)) {
-                    this.delete(event.group());
+                    this.delete(event);
                     if (event.author() != null) {
                         this.ban(
                                 event.author(), event.group().x(), event.group().y());
@@ -56,12 +56,12 @@ final class AutoModerator implements LifecycleListener {
             }
             case DELETE_WARN -> {
                 if (event.response().rating().isWorseOrEqualThan(Rating.WARN)) {
-                    this.delete(event.group());
+                    this.delete(event);
                 }
             }
             case DELETE_NSFW -> {
                 if (event.response().rating().isWorseOrEqualThan(Rating.NSFW)) {
-                    this.delete(event.group());
+                    this.delete(event);
                 }
             }
             case DISABLED -> {}
@@ -88,7 +88,10 @@ final class AutoModerator implements LifecycleListener {
         }
     }
 
-    private void delete(final VirtualBuilding.Group<? extends MindustryImage> group) {
+    // TODO The classification is asynchronous, meanwhile the buildings can be edited or replaced, or the world
+    //  reloaded, and the matching blocks at the positions of the group are deleted anyway. Unlikely enough for now.
+    private void delete(final ClassificationEvent event) {
+        final var group = event.group();
         log.info(
                 "Building group within ({}, {}) and ({}, {}) is unsafe, deleting",
                 group.x(),
@@ -98,40 +101,39 @@ final class AutoModerator implements LifecycleListener {
 
         final var refunds = new IntMap<ItemSeq>();
         final var positions = new IntSeq();
+        final var seen = new IntSet();
         var actualGroupSize = 0;
         for (final var element : group.elements()) {
-            actualGroupSize++;
+            actualGroupSize += 1
+                    + (element.data() instanceof MindustryDisplay data
+                            ? data.processors().size()
+                            : 0);
             switch (element.data()) {
                 case MindustryCanvas _ -> {
                     if (!(Vars.world.build(element.x(), element.y()) instanceof CanvasBlock.CanvasBuild canvas)) {
                         continue;
                     }
-                    positions.add(canvas.pos());
-                    refunds.get(canvas.team().id, ItemSeq::new).add(canvas.block.requirements);
+                    collect(canvas, positions, seen, refunds);
                 }
                 case MindustryPixel _ -> {
                     final var building = Vars.world.build(element.x(), element.y());
                     if (!(building instanceof Sorter.SorterBuild || building instanceof LightBlock.LightBuild)) {
                         continue;
                     }
-                    positions.add(building.pos());
-                    refunds.get(building.team().id, ItemSeq::new).add(building.block.requirements);
+                    collect(building, positions, seen, refunds);
                 }
                 case MindustryDisplay data -> {
-                    actualGroupSize += data.processors().size();
                     if (!(Vars.world.build(element.x(), element.y())
                             instanceof LogicDisplay.LogicDisplayBuild display)) {
                         continue;
                     }
-                    positions.add(display.pos());
-                    refunds.get(display.team().id, ItemSeq::new).add(display.block.requirements);
+                    collect(display, positions, seen, refunds);
                     for (final var link : data.processors().keySet()) {
                         if (!(Vars.world.build(element.x() + GeometryUtils.x(link), element.y() + GeometryUtils.y(link))
                                 instanceof LogicBlock.LogicBuild processor)) {
                             continue;
                         }
-                        positions.add(processor.pos());
-                        refunds.get(processor.team().id, ItemSeq::new).add(processor.block.requirements);
+                        collect(processor, positions, seen, refunds);
                     }
                 }
             }
@@ -149,6 +151,14 @@ final class AutoModerator implements LifecycleListener {
                 team.items().add(entry.value);
                 log.info("Refunded team {} for deleted buildings: {}", team.name, JsonIO.write(entry.value));
             }
+        }
+    }
+
+    private static void collect(
+            final Building building, final IntSeq positions, final IntSet seen, final IntMap<ItemSeq> refunds) {
+        if (seen.add(building.pos())) {
+            positions.add(building.pos());
+            refunds.get(building.team().id, ItemSeq::new).add(building.block.requirements);
         }
     }
 }

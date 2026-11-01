@@ -3,6 +3,7 @@ package com.xpdustry.nohorny.server;
 
 import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.ClassificationResponse;
+import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
 import com.xpdustry.nohorny.server.classifier.ClassifierChain;
@@ -144,7 +145,10 @@ public final class ClassificationService {
 
     /// Decodes with the JPEG reader rather than probing the format, so the images stored are always JPEGs.
     ///
-    /// @return `null` if the bytes are not a JPEG image
+    /// The dimensions are read from the header first, a small but highly compressed image could decode into a huge
+    /// one. The plugin never renders larger than [MindustryImage#MAX_RENDER_SIZE].
+    ///
+    /// @return `null` if the bytes are not a JPEG image, or a too large one
     private static @Nullable BufferedImage readJpeg(final byte[] bytes) {
         final var readers = ImageIO.getImageReadersByFormatName("jpeg");
         if (!readers.hasNext()) {
@@ -153,6 +157,10 @@ public final class ClassificationService {
         final var reader = readers.next();
         try (final var input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             reader.setInput(input, true, true);
+            if (reader.getWidth(0) > MindustryImage.MAX_RENDER_SIZE
+                    || reader.getHeight(0) > MindustryImage.MAX_RENDER_SIZE) {
+                return null;
+            }
             return reader.read(0);
         } catch (final IOException | RuntimeException exception) {
             return null;
