@@ -192,8 +192,8 @@ importers:
         specifier: 2.5.15
         version: 2.5.15
       '@solidjs/diagnostics':
-        specifier: 2.0.0-rc.16
-        version: 2.0.0-rc.16(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)
+        specifier: 2.0.0-rc.20
+        version: 2.0.0-rc.20(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)
       '@solidjs/vite-plugin':
         specifier: 3.0.0-next.50
         version: 3.0.0-next.50(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)(vite@8.3.4(@types/node@24.19.2)(jiti@2.7.0))
@@ -725,11 +725,11 @@ packages:
   '@solidjs/compiler@2.0.0-rc.16':
     resolution: {integrity: sha512-WRnqxb3LHvR8XiQuETxI++BVdLZOPougnN50kZhwiHLODIc4orUFFlx6hC0Jt2aurO5LZCjSxStGEHVHeo7maQ==}
 
-  '@solidjs/diagnostics@2.0.0-rc.16':
-    resolution: {integrity: sha512-XZQuXhXov+BeNs1xQyG1ffsDWN9qB0AV45nmH+M448HGiQ8T0T/e2ep2uSyditgF0oy7BTl4AQYEK1VdiSG31w==}
+  '@solidjs/diagnostics@2.0.0-rc.20':
+    resolution: {integrity: sha512-EOg7uL+sGirYPrf3L7gtoUs0pnseW2yPSAYm/efdBCYZJyFIGf+tHJp5+Ri0iUKfTEzf3H65nSCqiTXtUG6d8A==}
     peerDependencies:
-      '@solidjs/web': ^2.0.0-rc.16
-      solid-js: ^2.0.0-rc.16
+      '@solidjs/web': ^2.0.0-rc.20
+      solid-js: ^2.0.0-rc.20
       vitest: '>=2.0.0'
     peerDependenciesMeta:
       vitest:
@@ -753,6 +753,10 @@ packages:
 
   '@solidjs/signals@2.0.0-rc.16':
     resolution: {integrity: sha512-WPMb8FuAVKyzF6sIgZn/c89V69VS3R4DtCnOoaS1ZXy5Uos9K/8yrclyQkG6kqkN3ubtPiPnaPfdjt/jfsi4qQ==}
+    engines: {node: '>=22.12.0'}
+
+  '@solidjs/signals@2.0.0-rc.20':
+    resolution: {integrity: sha512-BIL5dKm0dAtPGsCEuLSNw60spDbmYG5QFK+aHUxPIgPLweA8IeJKd62DiqqqU/jqX0x39ty31GoP1n+ZINkrcg==}
     engines: {node: '>=22.12.0'}
 
   '@solidjs/vite-plugin@3.0.0-next.50':
@@ -1911,9 +1915,9 @@ snapshots:
       '@solidjs/compiler-wasm32-wasi': 2.0.0-rc.16
       '@solidjs/compiler-win32-x64-msvc': 2.0.0-rc.16
 
-  '@solidjs/diagnostics@2.0.0-rc.16(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)':
+  '@solidjs/diagnostics@2.0.0-rc.20(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)':
     dependencies:
-      '@solidjs/signals': 2.0.0-rc.16
+      '@solidjs/signals': 2.0.0-rc.20
       '@solidjs/web': 2.0.0-rc.16(solid-js@2.0.0-rc.16)
       solid-js: 2.0.0-rc.16
 
@@ -1930,6 +1934,8 @@ snapshots:
       filesystem-routing: 0.4.0(vite@8.3.4(@types/node@24.19.2)(jiti@2.7.0))
 
   '@solidjs/signals@2.0.0-rc.16': {}
+
+  '@solidjs/signals@2.0.0-rc.20': {}
 
   '@solidjs/vite-plugin@3.0.0-next.50(@solidjs/web@2.0.0-rc.16(solid-js@2.0.0-rc.16))(solid-js@2.0.0-rc.16)(vite@8.3.4(@types/node@24.19.2)(jiti@2.7.0))':
     dependencies:
