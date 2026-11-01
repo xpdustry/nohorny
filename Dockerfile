@@ -7,7 +7,7 @@ ARG PREBUILT_NATIVES
 ARG NATIVES_STAGE=${PREBUILT_NATIVES:+prebuilt}
 
 
-FROM docker.io/eclipse-temurin:26-jdk@sha256:5fa7cdf9a7dc28f66fc2932a5db067f8c4bbde3916e45ef2ace491f466eff691 AS gradle
+FROM docker.io/eclipse-temurin:26-jdk@sha256:a45ef8c9f6304700665c5a5ac7250122e951831593bfa95859c295aea67f7d16 AS gradle
 
 ENV GRADLE_HOME=/opt/gradle \
     GRADLE_USER_HOME=/cache/.gradle \
