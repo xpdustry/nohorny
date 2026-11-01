@@ -53,7 +53,7 @@ jobs:
           distribution: "temurin"
 
       - name: "Setup Gradle"
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
       # A release must be tagged with the project version, a draft must not reuse an existing tag.
       # Other builds only warn, commits predating the version bump of a release still have to build
@@ -175,11 +175,11 @@ jobs:
           distribution: "temurin"
 
       - name: "Setup Gradle"
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
       # Gradle builds the pages with pnpm. The action reads the pnpm version from nohorny-frontend/package.json
       - name: "Setup pnpm"
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           package_json_file: "nohorny-frontend/package.json"
 
@@ -270,7 +270,7 @@ jobs:
           cache-key: xpdustry/nohorny-server
 
       - name: "Login to GitHub Container Registry"
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
         with:
           registry: "${{ env.REGISTRY }}"
           username: "${{ github.actor }}"
