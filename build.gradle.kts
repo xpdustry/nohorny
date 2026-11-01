@@ -72,7 +72,7 @@ configure(subprojects - project(":nohorny-native") - project(":nohorny-frontend"
 
     dependencies {
         "errorprone"("com.google.errorprone:error_prone_core:2.50.0")
-        "errorprone"("com.uber.nullaway:nullaway:0.14.2")
+        "errorprone"("com.uber.nullaway:nullaway:0.14.3")
         "compileOnlyApi"("org.jspecify:jspecify:1.0.1")
         "testImplementation"("org.junit.jupiter:junit-jupiter:6.1.3")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
