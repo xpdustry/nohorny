@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 
@@ -8,5 +9,5 @@ import com.xpdustry.nohorny.common.VirtualBuilding;
 interface GroupClassifier {
 
     // Queues the group for classification, returns false if the classifier is busy
-    boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group);
+    boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group, final ArtKind kind);
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryImage;
 import com.xpdustry.nohorny.common.VirtualBuilding;
@@ -20,6 +21,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
     protected BuildingImageTracker(
             final NoHornyEventBus events,
             final GroupClassifier classifier,
+            final ArtKind kind,
             final Class<B> buildingType,
             final Class<? extends Block> blockType,
             final int maxGroupRange,
@@ -28,7 +30,7 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
         this.buildingType = buildingType;
         this.minGroupSize = minGroupSize;
         this.collector = new GroupCollector<>(
-                this.index, classifier, blockType::isInstance, this::isEligible, this::isEligible, maxGroupRange);
+                this.index, classifier, kind, blockType::isInstance, this::isEligible, this::isEligible, maxGroupRange);
     }
 
     protected abstract T data(final B building, final @Nullable MindustryAuthor author);

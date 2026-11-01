@@ -88,6 +88,16 @@ export interface Requester {
   name: string | null;
 }
 
+/** The kind of buildings an image was made with, see ArtKind in nohorny-common. */
+export type ArtKind = 'logic-display' | 'canvas' | 'sorter' | 'illuminator';
+
+export const ART_KINDS: Record<ArtKind, string> = {
+  'logic-display': 'Logic display',
+  canvas: 'Canvas',
+  sorter: 'Sorter',
+  illuminator: 'Illuminator',
+};
+
 export interface Request {
   id: string;
   createdAt: string;
@@ -97,6 +107,8 @@ export interface Request {
   confidence: number | null;
   classifier: string | null;
   version: string | null;
+  /** The kind of buildings the image was made with, `null` for the older plugins. */
+  kind: ArtKind | null;
   requester: Requester;
   image: { state: 'none' | 'stored' | 'expired' | 'deleted'; url?: string };
   steps: Step[];

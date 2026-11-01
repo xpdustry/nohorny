@@ -2,6 +2,7 @@
 package com.xpdustry.nohorny.client;
 
 import arc.graphics.Color;
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryPixel;
 import java.util.function.ToIntFunction;
@@ -22,10 +23,11 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
     private PixelTracker(
             final NoHornyEventBus events,
             final GroupClassifier classifier,
+            final ArtKind kind,
             final Class<B> buildingType,
             final Class<? extends Block> blockType,
             final ToIntFunction<B> color) {
-        super(events, classifier, buildingType, blockType, MAX_GROUP_RANGE, MIN_PIXEL_GROUP_SIZE);
+        super(events, classifier, kind, buildingType, blockType, MAX_GROUP_RANGE, MIN_PIXEL_GROUP_SIZE);
         this.color = color;
     }
 
@@ -35,6 +37,7 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
         return new PixelTracker<>(
                 events,
                 classifier,
+                ArtKind.SORTER,
                 Sorter.SorterBuild.class,
                 Sorter.class,
                 building -> building.sortItem == null ? Color.blackRgba : building.sortItem.color.rgba());
@@ -44,7 +47,12 @@ final class PixelTracker<B extends Building> extends BuildingImageTracker<B, Min
             final NoHornyEventBus events, final GroupClassifier classifier) {
         // Uses the raw color, so the illuminator sprite does not tint the image
         return new PixelTracker<>(
-                events, classifier, LightBlock.LightBuild.class, LightBlock.class, building -> building.color | 0xFF);
+                events,
+                classifier,
+                ArtKind.ILLUMINATOR,
+                LightBlock.LightBuild.class,
+                LightBlock.class,
+                building -> building.color | 0xFF);
     }
 
     @Override

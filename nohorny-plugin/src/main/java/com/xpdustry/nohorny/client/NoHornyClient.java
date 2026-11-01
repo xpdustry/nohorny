@@ -3,6 +3,7 @@ package com.xpdustry.nohorny.client;
 
 import arc.Core;
 import arc.util.serialization.Jval;
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryCanvas;
@@ -23,6 +24,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -97,7 +99,7 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
     }
 
     @Override
-    public boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group) {
+    public boolean tryAccept(final VirtualBuilding.Group<? extends MindustryImage> group, final ArtKind kind) {
         if (!this.classificationPermits.tryAcquire()) {
             return false;
         }
@@ -105,7 +107,7 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
             this.executor.execute(() -> {
                 this.imageBuffer.lock();
                 try {
-                    this.classify(group);
+                    this.classify(group, kind);
                 } catch (final ConnectException e) {
                     log.error(
                             "Failed to rate group at ({}, {}): The NoHorny server is not reachable",
@@ -125,9 +127,11 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
         }
     }
 
-    private void classify(final VirtualBuilding.Group<? extends MindustryImage> group) throws Exception {
+    private void classify(final VirtualBuilding.Group<? extends MindustryImage> group, final ArtKind kind)
+            throws Exception {
         final var request = this.request("classify", Duration.ofSeconds(15))
                 .header("Content-Type", "image/jpeg")
+                .header(ArtKind.HEADER, kind.key())
                 .POST(this.imageBuffer.encodeJpeg(MindustryImageRenderer.render(group)))
                 .build();
 
@@ -158,7 +162,8 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
                 classification.rating().isWorseOrEqualThan(Rating.WARN)
                         ? MiniLogger.Level.INFO
                         : MiniLogger.Level.DEBUG,
-                "Received classification response for group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={}{})",
+                "Received classification response for {} group at ({}, {}) by {}: {} rating at {}% confidence from {} (trace-id={}{})",
+                kind.label().toLowerCase(Locale.ROOT),
                 group.x(),
                 group.y(),
                 author == null ? "unknown" : author.uuid() + "/" + author.ip(),
@@ -167,7 +172,7 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
                 classification.classifier(),
                 classification.identifier(),
                 classification.url() == null ? "" : ", url=" + classification.url());
-        Core.app.post(() -> this.events.publish(new ClassificationEvent(group, author, classification)));
+        Core.app.post(() -> this.events.publish(new ClassificationEvent(group, kind, author, classification)));
     }
 
     /// Sends the request, waiting out the rate limit of the server between the attempts.

@@ -118,6 +118,7 @@ public final class RequestController {
         final var name = admin || requester.type() != RequesterType.USER ? requester.name() : null;
         final var verdict = request.getOutcome() instanceof Verdict value ? value : null;
         final var failure = request.getOutcome() instanceof Failure value ? value : null;
+        final var kind = request.getArtKind();
         return new RequestView(
                 request.getId(),
                 request.getCreatedAt(),
@@ -127,6 +128,7 @@ public final class RequestController {
                 verdict == null ? null : verdict.confidence(),
                 request.getClassifier(),
                 request.getVersion(),
+                kind == null ? null : kind.key(),
                 new RequestView.Requester(requester.type().key(), name),
                 new RequestView.Image(
                         request.getImageState().key(),

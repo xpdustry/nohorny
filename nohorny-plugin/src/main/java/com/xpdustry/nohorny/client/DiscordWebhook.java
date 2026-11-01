@@ -237,6 +237,7 @@ final class DiscordWebhook implements LifecycleListener {
             message.append("- Author UUID: **`").append(author.uuid()).append("`**\n");
             message.append("- Author IP: **`").append(author.ip()).append("`**\n");
         }
+        message.append("- Type: **").append(event.kind().label()).append("**\n");
         message.append("- Coordinates: **(")
                 .append(event.group().x())
                 .append(", ")

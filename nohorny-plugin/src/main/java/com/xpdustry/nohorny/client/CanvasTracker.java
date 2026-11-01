@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.ImmutableByteArray;
 import com.xpdustry.nohorny.common.ImmutableIntArray;
 import com.xpdustry.nohorny.common.MindustryAuthor;
@@ -18,6 +19,7 @@ final class CanvasTracker extends BuildingImageTracker<CanvasBlock.CanvasBuild, 
         super(
                 events,
                 classifier,
+                ArtKind.CANVAS,
                 CanvasBlock.CanvasBuild.class,
                 CanvasBlock.class,
                 MAX_GROUP_RANGE,
