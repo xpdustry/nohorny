@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@solidjs/diagnostics": "2.0.0-rc.16",
+    "@solidjs/diagnostics": "2.0.0-rc.20",
     "@solidjs/vite-plugin": "3.0.0-next.50",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "24.19.2",
