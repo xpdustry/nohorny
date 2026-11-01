@@ -101,7 +101,7 @@ RUN --mount=type=cache,target=/cache/.gradle \
     gradle :nohorny-server:build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
 
 
-FROM docker.io/eclipse-temurin:26-jre@sha256:c7c9e2d412999f6a99d3cd987ed95ce55d9d52e2dcaf8577a9b495077d825c78 AS runtime
+FROM docker.io/eclipse-temurin:26-jre@sha256:0dbf52b3861a84e2a19c503245504e5a71a5f071ccb9c48997efd4a3454a52b7 AS runtime
 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -d /app -s /bin/false appuser && \
