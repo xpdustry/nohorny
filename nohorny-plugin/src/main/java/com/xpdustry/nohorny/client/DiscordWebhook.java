@@ -124,12 +124,11 @@ final class DiscordWebhook implements LifecycleListener {
         if (webhook == null) {
             return;
         }
-        final var attachImage =
-                switch (getImagePolicy()) {
-                    case AUTO -> event.response().url() == null;
-                    case ALWAYS -> true;
-                    case NEVER -> false;
-                };
+        final var attachImage = switch (getImagePolicy()) {
+            case AUTO -> event.response().url() == null;
+            case ALWAYS -> true;
+            case NEVER -> false;
+        };
         this.executor.execute(() -> {
             if (attachImage) {
                 this.imageBuffer.lock();

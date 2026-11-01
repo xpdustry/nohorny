@@ -77,12 +77,11 @@ sealed interface MiniLogger {
 
         @Override
         public void log(final Level level, final String message, @Nullable Object... args) {
-            final var arcLevel =
-                    switch (level) {
-                        case DEBUG -> Log.LogLevel.debug;
-                        case INFO -> Log.LogLevel.info;
-                        case ERROR -> Log.LogLevel.err;
-                    };
+            final var arcLevel = switch (level) {
+                case DEBUG -> Log.LogLevel.debug;
+                case INFO -> Log.LogLevel.info;
+                case ERROR -> Log.LogLevel.err;
+            };
             Throwable error = null;
             if (args.length != 0 && args[args.length - 1] instanceof Throwable throwable) {
                 args = Arrays.copyOf(args, args.length - 1);
