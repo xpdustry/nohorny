@@ -1,0 +1,44 @@
+name: "Natives Cache"
+
+# Branches only share the cache entries of the default branch, which are evicted after 7 days without access
+# https://github.com/actions/cache/blob/main/tips-and-workarounds.md#use-cache-across-feature-branches
+on:
+  schedule:
+    - cron: "0 3 */3 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}"
+  cancel-in-progress: false
+
+jobs:
+
+  plan:
+    name: "Plan"
+    if: ${{ github.repository == 'xpdustry/nohorny' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      key: ${{ steps.lookup.outputs.key }}
+      cached: ${{ steps.lookup.outputs.cached }}
+    steps:
+
+      - name: "Checkout Repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Lookup Natives"
+        id: lookup
+        uses: ./.github/actions/natives-lookup
+
+  natives:
+    name: "Natives"
+    needs: plan
+    if: ${{ needs.plan.outputs.cached != 'true' }}
+    uses: ./.github/workflows/natives.yaml
+    with:
+      key: ${{ needs.plan.outputs.key }}
+    permissions:
+      contents: read
+

@@ -1,8 +1,11 @@
 name: "Natives"
 
-# Called by the build workflow when the natives are not cached
 on:
   workflow_call:
+    inputs:
+      key:
+        type: string
+        required: true
 
 jobs:
 
@@ -61,3 +64,25 @@ jobs:
           name: natives-${{ matrix.platform }}
           path: nohorny-native/build/generated/native/
           if-no-files-found: error
+
+  save:
+    name: "Save"
+    needs: build
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+
+      - name: "Download Natives"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: natives-*
+          path: prebuilt-natives
+          merge-multiple: true
+
+      - name: "Save Natives"
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: prebuilt-natives
+          key: ${{ inputs.key }}

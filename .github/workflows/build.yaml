@@ -121,26 +121,16 @@ jobs:
     permissions:
       contents: read
     outputs:
-      key: ${{ steps.key.outputs.key }}
-      cached: ${{ steps.lookup.outputs.cache-hit == 'true' }}
+      key: ${{ steps.lookup.outputs.key }}
+      cached: ${{ steps.lookup.outputs.cached }}
     steps:
 
       - name: "Checkout Repository"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: "Compute Natives Key"
-        id: key
-        env:
-          HASH: ${{ hashFiles('nohorny-native/CMakeLists.txt', 'nohorny-native/cmake/**', 'nohorny-native/src/**') }}
-        run: echo "key=prebuilt-natives-$HASH" >> "$GITHUB_OUTPUT"
-
       - name: "Lookup Natives"
         id: lookup
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: prebuilt-natives
-          key: ${{ steps.key.outputs.key }}
-          lookup-only: true
+        uses: ./.github/actions/natives-lookup
 
   # A reusable workflow, since a skipped matrix job shows its name with the matrix expressions unexpanded
   natives:
@@ -148,6 +138,8 @@ jobs:
     needs: natives-plan
     if: ${{ needs.natives-plan.outputs.cached != 'true' }}
     uses: ./.github/workflows/natives.yaml
+    with:
+      key: ${{ needs.natives-plan.outputs.key }}
     permissions:
       contents: read
 
@@ -192,28 +184,11 @@ jobs:
 
       # The natives of every platform are bundled in the server jar
       - name: "Restore Natives"
-        if: ${{ needs.natives-plan.outputs.cached == 'true' }}
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: prebuilt-natives
           key: ${{ needs.natives-plan.outputs.key }}
           fail-on-cache-miss: true
-
-      - name: "Download Natives"
-        if: ${{ needs.natives-plan.outputs.cached != 'true' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          pattern: natives-*
-          path: prebuilt-natives
-          merge-multiple: true
-
-      # Saved before the build, so failing tests do not throw away freshly compiled natives
-      - name: "Save Natives"
-        if: ${{ needs.natives-plan.outputs.cached != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: prebuilt-natives
-          key: ${{ needs.natives-plan.outputs.key }}
 
       - name: "Build Server"
         run: ./gradlew :nohorny-frontend:check :nohorny-server:build -Pprebuilt_natives=prebuilt-natives
@@ -253,7 +228,6 @@ jobs:
       - name: "Checkout Repository"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # The server job fills the natives cache, the image only needs the linux-x86_64 natives
       - name: "Restore Natives"
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
