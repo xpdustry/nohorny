@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
 import com.xpdustry.nohorny.server.request.RetentionController;
 import com.xpdustry.nohorny.server.security.SecurityConfiguration;
@@ -68,12 +69,14 @@ public final class NoHornyController {
     public ResponseEntity<?> onClassify(
             final @RequestBody byte[] body,
             final @RequestHeader(name = VERSION_HEADER, required = false) @Nullable String version,
+            final @RequestHeader(name = ArtKind.HEADER, required = false) @Nullable String kind,
             final @Nullable Authentication authentication,
             final HttpServletRequest request) {
         return this.classifications.classify(
                 body,
                 new ClassificationService.Submission(
                         version,
+                        ArtKind.ofKey(kind),
                         this.requesters.resolve(authentication, request.getRemoteAddr()),
                         SecurityConfiguration.isAuthenticated(authentication),
                         request.getRemoteAddr()));

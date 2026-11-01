@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 /// The JSON representation of a classification request.
 ///
+/// @param kind the [com.xpdustry.nohorny.common.ArtKind#key()] of the image, `null` for the older clients
 /// @param restricted the administrator only fields, omitted entirely for the other callers
 public record RequestView(
         String id,
@@ -20,6 +21,7 @@ public record RequestView(
         @Nullable Double confidence,
         String classifier,
         @Nullable String version,
+        @Nullable String kind,
         Requester requester,
         Image image,
         List<Step> steps,

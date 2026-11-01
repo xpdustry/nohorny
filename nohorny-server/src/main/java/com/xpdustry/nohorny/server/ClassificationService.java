@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.ClassificationResponse;
 import com.xpdustry.nohorny.common.Rating;
 import com.xpdustry.nohorny.common.SimpleServerMessage;
@@ -70,6 +71,7 @@ public final class ClassificationService {
                 outcome.classifier(),
                 outcome.outcome(),
                 truncate(submission.version()),
+                submission.kind(),
                 submission.requester(),
                 submission.authenticated(),
                 submission.remoteAddress(),
@@ -177,8 +179,13 @@ public final class ClassificationService {
     private record Final(String classifier, Outcome outcome) {}
 
     /// @param version the plugin version of the caller
+    /// @param kind the kind of buildings the image was made with, if sent and known
     /// @param requester who sent the image, see [RequesterResolver]
     /// @param authenticated whether it was sent with an account
     public record Submission(
-            @Nullable String version, Requester requester, boolean authenticated, String remoteAddress) {}
+            @Nullable String version,
+            @Nullable ArtKind kind,
+            Requester requester,
+            boolean authenticated,
+            String remoteAddress) {}
 }

@@ -12,7 +12,7 @@ final class NoHornyHarness implements AutoCloseable {
     long grouped = 0;
 
     NoHornyHarness() {
-        final GroupClassifier classifier = group -> {
+        final GroupClassifier classifier = (group, _) -> {
             this.groups++;
             this.grouped += group.elements().size();
             return true;

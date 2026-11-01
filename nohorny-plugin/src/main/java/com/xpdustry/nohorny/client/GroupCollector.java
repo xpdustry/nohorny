@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import com.xpdustry.nohorny.common.MindustryImage;
@@ -33,6 +34,7 @@ final class GroupCollector<T extends MindustryImage> {
 
     private final VirtualBuildingIndex<T> index;
     private final GroupClassifier classifier;
+    private final ArtKind kind;
     private final Predicate<Block> blocks;
     private final Predicate<VirtualBuilding<T>> isEligibleAnchor;
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
@@ -43,12 +45,14 @@ final class GroupCollector<T extends MindustryImage> {
     GroupCollector(
             final VirtualBuildingIndex<T> index,
             final GroupClassifier classifier,
+            final ArtKind kind,
             final Predicate<Block> blocks,
             final Predicate<VirtualBuilding<T>> isEligibleAnchor,
             final Predicate<VirtualBuilding.Group<T>> isEligibleGroup,
             final int maxGroupRange) {
         this.index = index;
         this.classifier = classifier;
+        this.kind = kind;
         this.blocks = blocks;
         this.isEligibleAnchor = isEligibleAnchor;
         this.isEligibleGroup = isEligibleGroup;
@@ -159,7 +163,7 @@ final class GroupCollector<T extends MindustryImage> {
             });
         }
         final var group = grouper.create();
-        if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group)) {
+        if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group, this.kind)) {
             this.grouper = null;
         }
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.DrawInstruction;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
@@ -38,6 +39,7 @@ final class DisplayTracker implements LifecycleListener {
         this.collector = new GroupCollector<>(
                 this.displays,
                 classifier,
+                ArtKind.LOGIC_DISPLAY,
                 block -> block instanceof LogicBlock || block instanceof LogicDisplay,
                 DisplayTracker::isEligible,
                 _ -> true,

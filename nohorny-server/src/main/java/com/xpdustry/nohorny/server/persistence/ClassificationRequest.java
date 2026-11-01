@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
+import com.xpdustry.nohorny.common.ArtKind;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -49,6 +50,9 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     private @Nullable String version;
 
     @Enumerated(EnumType.STRING)
+    private @Nullable ArtKind artKind;
+
+    @Enumerated(EnumType.STRING)
     private RequesterType requesterType;
 
     private @Nullable String requesterName;
@@ -75,6 +79,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     /// @param classifier the classifier of the final verdict, or the one that failed
     /// @param outcome the final verdict, or the failure
     /// @param version the plugin version of the caller, if sent
+    /// @param artKind the kind of buildings the image was made with, if sent
     /// @param requester who sent the request
     /// @param authenticated whether it was sent with an account, rather than given a requester by a mapping
     /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
@@ -86,6 +91,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
             final String classifier,
             final Outcome outcome,
             final @Nullable String version,
+            final @Nullable ArtKind artKind,
             final Requester requester,
             final boolean authenticated,
             final String remoteAddress,
@@ -103,6 +109,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
         this.confidence = Outcome.confidence(outcome);
         this.error = Outcome.error(outcome);
         this.version = version;
+        this.artKind = artKind;
         this.requesterType = requester.type();
         this.requesterName = requester.name();
         this.authenticated = authenticated;
@@ -135,6 +142,10 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
 
     public @Nullable String getVersion() {
         return this.version;
+    }
+
+    public @Nullable ArtKind getArtKind() {
+        return this.artKind;
     }
 
     public Requester getRequester() {

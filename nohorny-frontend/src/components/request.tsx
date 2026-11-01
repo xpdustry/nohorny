@@ -2,11 +2,12 @@
 
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
-import type {
-  FailureDetails as FailureDetailsData,
-  Request,
-  Requester as RequesterData,
-  RequesterType,
+import {
+  ART_KINDS,
+  type FailureDetails as FailureDetailsData,
+  type Request,
+  type Requester as RequesterData,
+  type RequesterType,
 } from '../lib/api';
 import { bucket, classifierInfo, duration, formatTime, percent, shortId, stepBucket } from '../lib/format';
 import { EXTERNAL } from '../lib/links';
@@ -384,6 +385,7 @@ export function DetailsCard(props: { request: Request }) {
       </time>,
     ],
     ['Duration', duration(props.request.durationMillis)],
+    ['Type', props.request.kind ? ART_KINDS[props.request.kind] : 'unknown'],
     ['Requester', <Requester requester={props.request.requester} />],
     ['Plugin', <code>{props.request.version ? `v${props.request.version}` : 'unknown'}</code>],
     ['Request ID', <CopyCode text={props.request.id} label="request ID" />],
