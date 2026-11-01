@@ -22,7 +22,7 @@
     "@sentry/browser": "11.8.0",
     "@solidjs/meta": "1.0.0-next.2",
     "@solidjs/router": "2.0.0-next.43",
-    "@solidjs/web": "2.0.0-rc.16",
+    "@solidjs/web": "2.0.0-rc.20",
     "solid-js": "2.0.0-rc.16"
   },
   "devDependencies": {
