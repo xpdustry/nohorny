@@ -76,7 +76,8 @@ public final class NoHornyController {
                 body,
                 new ClassificationService.Submission(
                         version,
-                        ArtKind.ofKey(kind),
+                        // Ignores the kinds this server does not know yet, the image is still worth classifying
+                        kind == null ? null : ArtKind.fromKey(kind).orElse(null),
                         this.requesters.resolve(authentication, request.getRemoteAddr()),
                         SecurityConfiguration.isAuthenticated(authentication),
                         request.getRemoteAddr()));

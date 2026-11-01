@@ -2,7 +2,7 @@
 package com.xpdustry.nohorny.common;
 
 import java.util.Locale;
-import org.jspecify.annotations.Nullable;
+import java.util.Optional;
 
 /// The kind of buildings an image was made with, sent along the image so the moderators know what to look for.
 public enum ArtKind {
@@ -30,16 +30,12 @@ public enum ArtKind {
         return this.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
-    /// @return the kind of the given [#key()], or `null` if unknown
-    public static @Nullable ArtKind ofKey(final @Nullable String key) {
-        if (key == null) {
-            return null;
-        }
+    public static Optional<ArtKind> fromKey(final String key) {
         for (final var kind : values()) {
-            if (kind.key().equals(key.trim().toLowerCase(Locale.ROOT))) {
-                return kind;
+            if (kind.key().equals(key)) {
+                return Optional.of(kind);
             }
         }
-        return null;
+        return Optional.empty();
     }
 }
