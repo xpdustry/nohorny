@@ -19,7 +19,6 @@ import java.util.Map;
 
 public final class MindustryImageRenderer {
 
-    private static final int MAX_IMAGE_SIZE = 2048;
     private static final int BLOCK_SIZE = 32;
 
     private MindustryImageRenderer() {}
@@ -29,10 +28,13 @@ public final class MindustryImageRenderer {
         final var renderW = NoHornyPreconditions.positive(group.w() * BLOCK_SIZE, "group w");
         final var renderH = NoHornyPreconditions.positive(group.h() * BLOCK_SIZE, "group h");
 
-        final double downscaling =
-                Math.min(1D, Math.min(MAX_IMAGE_SIZE / (double) renderW, MAX_IMAGE_SIZE / (double) renderH));
-        final int imageW = Math.min(MAX_IMAGE_SIZE, (int) Math.ceil(renderW * downscaling));
-        final int imageH = Math.min(MAX_IMAGE_SIZE, (int) Math.ceil(renderH * downscaling));
+        final double downscaling = Math.min(
+                1D,
+                Math.min(
+                        MindustryImage.MAX_RENDER_SIZE / (double) renderW,
+                        MindustryImage.MAX_RENDER_SIZE / (double) renderH));
+        final int imageW = Math.min(MindustryImage.MAX_RENDER_SIZE, (int) Math.ceil(renderW * downscaling));
+        final int imageH = Math.min(MindustryImage.MAX_RENDER_SIZE, (int) Math.ceil(renderH * downscaling));
         final var image = new BufferedImage(imageW, imageH, BufferedImage.TYPE_INT_RGB);
 
         try (final var global = new GraphicsScope(image)) {

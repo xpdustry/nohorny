@@ -5,11 +5,14 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.security.SecureRandom;
 import java.time.Instant;
 
 @Entity
 @Table(name = "user_account")
 public class UserAccount extends AssignedIdEntity<String> {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Id
     private String username;
@@ -40,6 +43,8 @@ public class UserAccount extends AssignedIdEntity<String> {
         this.admin = admin;
         this.rateLimit = rateLimit;
         this.createdAt = createdAt;
+        // Random rather than 0, so the sessions of a deleted account never match an account created with its name
+        this.sessionVersion = RANDOM.nextLong();
     }
 
     @Override
