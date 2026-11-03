@@ -248,12 +248,9 @@ final class VirtualBuildingIndex<T> {
             return this.visited.contains(packed);
         }
 
-        public void removeVisited(final Collection<Integer> packed) {
-            if (packed.size() < this.visited.size) {
-                packed.removeIf(this.visited::contains);
-            } else {
-                this.visited.each(packed::remove);
-            }
+        // A fresh iterator, it stays valid across ticks once the grouper is completed since nothing is visited anymore
+        public IntSet.IntSetIterator visited() {
+            return new IntSet.IntSetIterator(this.visited);
         }
 
         public VirtualBuilding.@Nullable Group<T> create() {

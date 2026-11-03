@@ -72,6 +72,10 @@ public class TickBenchmark {
     public void teardown() {
         if (this.harness != null) {
             this.harness.close();
+            // The batches only settle as the game time goes by, without groups only the tracking would be measured
+            if (this.changesPerTick > 0 && this.harness.groups == 0) {
+                throw new IllegalStateException("No group was sent to classification, the grouping was not measured");
+            }
         }
         Vars.state.set(GameState.State.menu);
     }
@@ -79,6 +83,8 @@ public class TickBenchmark {
     @Benchmark
     @SuppressWarnings("NullAway")
     public void tick() {
+        // Like the game update, which runs before the trackers
+        Vars.state.tick++;
         for (int i = 0; i < this.changesPerTick; i++) {
             this.world.change();
         }

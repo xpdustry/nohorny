@@ -43,7 +43,8 @@ final class DisplayTracker implements LifecycleListener {
                 block -> block instanceof LogicBlock || block instanceof LogicDisplay,
                 DisplayTracker::isEligible,
                 _ -> true,
-                MAX_GROUP_RANGE);
+                MAX_GROUP_RANGE,
+                events::player);
     }
 
     @Override

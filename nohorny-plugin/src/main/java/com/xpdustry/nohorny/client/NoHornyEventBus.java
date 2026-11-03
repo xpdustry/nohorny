@@ -5,7 +5,9 @@ import arc.Events;
 import arc.func.Cons;
 import com.xpdustry.nohorny.common.MindustryAuthor;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import mindustry.Vars;
 import mindustry.core.GameState;
 import mindustry.game.EventType;
@@ -21,10 +23,16 @@ final class NoHornyEventBus implements AutoCloseable {
 
     private final List<ArcSubscription<?>> subscriptions = new ArrayList<>();
     private final List<BuildingDispatch<?>> buildingDispatches = new ArrayList<>();
+    private final Map<MUUID, Player> players = new HashMap<>();
     private int preChangePos = -1;
     private @Nullable Building preChangeBuild = null;
 
     NoHornyEventBus() {
+        this.subscribe(EventType.PlayerJoin.class, event -> this.players.put(MUUID.from(event.player), event.player));
+        // Only the last player to join is mapped, cloned clients leaving after it do not unmap it
+        this.subscribe(
+                EventType.PlayerLeave.class, event -> this.players.remove(MUUID.from(event.player), event.player));
+
         this.subscribe(EventType.BlockBuildEndEvent.class, event -> {
             if (event.tile.build instanceof ConstructBlock.ConstructBuild constructing
                     && constructing.prevBuild != null) {
@@ -113,6 +121,10 @@ final class NoHornyEventBus implements AutoCloseable {
         return () -> this.buildingDispatches.remove(dispatch);
     }
 
+    public @Nullable Player player(final MUUID muuid) {
+        return this.players.get(muuid);
+    }
+
     public <E> void publish(final E event) {
         Events.fire(event);
     }
@@ -124,6 +136,7 @@ final class NoHornyEventBus implements AutoCloseable {
         }
         this.subscriptions.clear();
         this.buildingDispatches.clear();
+        this.players.clear();
     }
 
     private void load() {
@@ -141,7 +154,7 @@ final class NoHornyEventBus implements AutoCloseable {
     }
 
     private static @Nullable MindustryAuthor asAuthor(final @Nullable Player player) {
-        return player == null ? null : new MindustryAuthor(player.uuid(), player.ip());
+        return player == null ? null : new MindustryAuthor(player.uuid(), player.usid(), player.ip());
     }
 
     private record BuildingDispatch<B extends Building>(Class<B> type, BuildingSubscriber<B> subscriber) {

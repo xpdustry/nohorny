@@ -410,17 +410,20 @@ The benchmark puts NoHorny through a **deliberate worst-case load**: maps packed
 The largest map is 500×500 tiles with about 150,000 buildings.
 At 60 TPS, 100 changes per tick means **6,000 art changes a second**, continuously.
 
-The benchmark accepts every group instantly, so the trackers keep grouping art without waiting for the API.
+The benchmark advances the game clock and accepts every group instantly, so the trackers keep grouping art without waiting for the API.
 
 Even under these conditions, NoHorny stays light on the benchmark machine:
 
-- With no art changes, mean tracking overhead is below **0.1 µs per tick**, even on the map packed with 150,000 buildings.
-- At 10 changes per tick, the highest mean overhead is **0.18 ms**, about **1.1%** of a tick's 16.7 ms budget at 60 TPS.
-- At 100 changes per tick, the highest mean overhead is **1.29 ms**, still **under 8% of a tick** across every tested map and garbage collector.
-- On the largest map, tracking adds **50 to 53 MiB** of heap, about **15%** on top of the map's own memory use.
+- With no art changes, mean tracking overhead is below **0.05 µs per tick**, even on the map packed with 150,000 buildings.
+- At 10 changes per tick, the highest mean overhead is **0.14 ms**, about **0.9%** of a tick's 16.7 ms budget at 60 TPS.
+- At 100 changes per tick, the highest mean overhead is **1.07 ms**, still **under 7% of a tick** across every tested map and garbage collector.
+- On the largest map, tracking adds **52 to 56 MiB** of heap, about **16%** on top of the map's own memory use.
 
-At 100 changes per tick, Mindustry itself spends roughly **4 to 8 times as much** applying the changes as NoHorny spends tracking them.
+At 100 changes per tick, Mindustry itself spends roughly **4 to 5.5 times as much** applying the changes as NoHorny spends tracking them.
 G1 and Serial give comparable results.
+
+The grouping also has a fixed amount of work per tick, so a huge piece of art or a flood of queued buildings
+is spread over several ticks instead of stalling one.
 
 These measurements cover tracking and grouping on Mindustry's main thread.
 Image rendering and API requests run on background threads.
@@ -434,28 +437,28 @@ Each large display had six processors with 100 draw instructions each.
 Each tick applied 0, 10, or 100 random art changes.
 
 The table shows mean main-thread time per tick.
-The Mindustry columns measure the game's own cost to apply the changes. The NoHorny columns show the extra cost of tracking them.
+The Mindustry columns measure the game's own cost to apply the changes. The NoHorny columns show the extra cost of tracking and grouping them.
 
 | Map | Art changes per tick | Mindustry, G1 | NoHorny, G1 | Mindustry, Serial | NoHorny, Serial |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 100×100, 6k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
-| 250×250, 38k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
-| 500×500, 150k buildings | 0 | ~0 µs | +0.05 µs | ~0 µs | +0.04 µs |
-| 100×100 | 10 | 422 µs | +102 µs | 405 µs | +126 µs |
-| 250×250 | 10 | 458 µs | +172 µs | 465 µs | +173 µs |
-| 500×500 | 10 | 459 µs | +143 µs | 523 µs | +178 µs |
-| 100×100 | 100 | 4.27 ms | +0.76 ms | 4.13 ms | +0.55 ms |
-| 250×250 | 100 | 4.48 ms | +0.87 ms | 4.83 ms | +1.29 ms |
-| 500×500 | 100 | 4.67 ms | +1.14 ms | 5.37 ms | +1.01 ms |
+| 100×100, 6k buildings | 0 | ~0 µs | +0.02 µs | ~0 µs | +0.04 µs |
+| 250×250, 38k buildings | 0 | ~0 µs | +0.03 µs | ~0 µs | +0.04 µs |
+| 500×500, 150k buildings | 0 | ~0 µs | +0.02 µs | ~0 µs | +0.04 µs |
+| 100×100 | 10 | 395 µs | +77 µs | 367 µs | +68 µs |
+| 250×250 | 10 | 412 µs | +98 µs | 429 µs | +104 µs |
+| 500×500 | 10 | 427 µs | +114 µs | 480 µs | +144 µs |
+| 100×100 | 100 | 3.83 ms | +0.71 ms | 3.57 ms | +0.87 ms |
+| 250×250 | 100 | 4.16 ms | +0.94 ms | 4.18 ms | +1.00 ms |
+| 500×500 | 100 | 4.12 ms | +0.91 ms | 4.77 ms | +1.07 ms |
 
 The next table shows the initial map scan.
 Heap use was measured after a full garbage collection in the run with 100 changes per tick.
 
 | Map | Scan, G1 | Scan, Serial | Map heap | NoHorny heap |
 | --- | ---: | ---: | ---: | ---: |
-| 100×100 | 4.6 ms | 2.8 ms | 25 MiB | +2.2 MiB |
-| 250×250 | 32 ms | 22 ms | 94 MiB | +12.7 MiB |
-| 500×500 | 127 ms | 110 ms | 340 MiB | +50 to 53 MiB |
+| 100×100 | 3.8 ms | 2.4 ms | 25 MiB | +2.5 to 2.7 MiB |
+| 250×250 | 27 ms | 21 ms | 94 MiB | +14.1 to 14.3 MiB |
+| 500×500 | 114 ms | 92 ms | 340 MiB | +52 to 56 MiB |
 
 </details>
 
