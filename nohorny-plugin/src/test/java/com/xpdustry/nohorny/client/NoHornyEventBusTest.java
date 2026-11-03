@@ -39,6 +39,23 @@ final class NoHornyEventBusTest {
         }
     }
 
+    @Test
+    void keep_the_last_cloned_client() {
+        try (final var events = new NoHornyEventBus()) {
+            // Same uuid and usid, only possible with strict mode off
+            final var first = player("uuid", "usid");
+            final var second = player("uuid", "usid");
+            Events.fire(new EventType.PlayerJoin(first));
+            Events.fire(new EventType.PlayerJoin(second));
+
+            Events.fire(new EventType.PlayerLeave(first));
+            assertSame(second, events.player(MUUID.from(second)));
+
+            Events.fire(new EventType.PlayerLeave(second));
+            assertNull(events.player(MUUID.from(second)));
+        }
+    }
+
     private static Player player(final String uuid, final String usid) {
         final var player = Player.create();
         player.con = new NetConnection("0.0.0.0") {

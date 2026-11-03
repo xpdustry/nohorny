@@ -29,7 +29,9 @@ final class NoHornyEventBus implements AutoCloseable {
 
     NoHornyEventBus() {
         this.subscribe(EventType.PlayerJoin.class, event -> this.players.put(MUUID.from(event.player), event.player));
-        this.subscribe(EventType.PlayerLeave.class, event -> this.players.remove(MUUID.from(event.player)));
+        // Only the last player to join is mapped, cloned clients leaving after it do not unmap it
+        this.subscribe(
+                EventType.PlayerLeave.class, event -> this.players.remove(MUUID.from(event.player), event.player));
 
         this.subscribe(EventType.BlockBuildEndEvent.class, event -> {
             if (event.tile.build instanceof ConstructBlock.ConstructBuild constructing
