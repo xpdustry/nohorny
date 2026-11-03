@@ -28,7 +28,7 @@ jobs:
             runner: macos-15
     runs-on: ${{ matrix.runner }}
     # A clean build takes about 10 minutes on every platform, mostly compiling OpenCV
-    timeout-minutes: 25
+    timeout-minutes: 20
     container: ${{ matrix.container }}
     permissions:
       contents: read
