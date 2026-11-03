@@ -32,7 +32,7 @@ jobs:
     name: "Plugin"
     # Only run on PRs if the source branch is on someone else's repo
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -102,9 +102,9 @@ jobs:
             nohorny-plugin/build/test-results/test/TEST-*.xml
             nohorny-plugin/build/reports/
 
-      # Only the common and client modules are published to Maven
+      # Only the common and client modules are published to Maven, forks lack the credentials of the xpdustry repository
       - name: "Publish to Maven"
-        if: ${{ github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) }}
+        if: ${{ github.repository_owner == 'xpdustry' && (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
         run: ./gradlew :nohorny-common:publish :nohorny-plugin:publish
         env:
           ORG_GRADLE_PROJECT_xpdustryUsername: "${{ secrets.XPDUSTRY_MAVEN_USERNAME }}"
@@ -116,7 +116,7 @@ jobs:
   natives-plan:
     name: "Natives Plan"
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -148,7 +148,7 @@ jobs:
     needs: [ natives-plan, natives ]
     # The natives job is skipped when the natives are cached, which would skip this one too
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name) }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -215,7 +215,7 @@ jobs:
     needs: [ natives-plan, server ]
     # The natives job is skipped when the natives are cached, which would skip this one too
     if: ${{ !cancelled() && !failure() && (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -239,9 +239,7 @@ jobs:
         run: find prebuilt-natives/com/xpdustry/nohorny/server/natives -mindepth 1 -maxdepth 1 ! -name linux-x86_64 -exec rm -rf {} +
 
       - name: "Setup Docker Builder"
-        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2
-        with:
-          cache-key: xpdustry/nohorny-server
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: "Login to GitHub Container Registry"
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
@@ -263,10 +261,12 @@ jobs:
             type=ref,event=branch
 
       - name: "Build and Publish Docker Image"
-        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: "."
           push: true
+          cache-from: type=gha,scope=nohorny-server
+          cache-to: type=gha,scope=nohorny-server,mode=max
           tags: "${{ steps.meta.outputs.tags }}"
           labels: "${{ steps.meta.outputs.labels }}"
           build-args: |
@@ -278,7 +278,7 @@ jobs:
     needs: [ plugin, server ]
     # The natives job is skipped when the natives are cached, which would skip this one too
     if: ${{ !cancelled() && !failure() && github.event_name == 'release' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -333,7 +333,7 @@ jobs:
   event-file:
     name: "Event File"
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
