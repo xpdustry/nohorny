@@ -30,7 +30,14 @@ abstract class BuildingImageTracker<B extends Building, T extends MindustryImage
         this.buildingType = buildingType;
         this.minGroupSize = minGroupSize;
         this.collector = new GroupCollector<>(
-                this.index, classifier, kind, blockType::isInstance, this::isEligible, this::isEligible, maxGroupRange);
+                this.index,
+                classifier,
+                kind,
+                blockType::isInstance,
+                this::isEligible,
+                this::isEligible,
+                maxGroupRange,
+                events::player);
     }
 
     protected abstract T data(final B building, final @Nullable MindustryAuthor author);

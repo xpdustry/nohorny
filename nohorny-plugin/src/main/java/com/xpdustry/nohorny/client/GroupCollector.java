@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.client;
 
+import arc.struct.IntMap;
+import arc.struct.IntSet;
 import com.xpdustry.nohorny.common.ArtKind;
 import com.xpdustry.nohorny.common.GeometryUtils;
 import com.xpdustry.nohorny.common.MindustryAuthor;
@@ -9,9 +11,10 @@ import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.SequencedMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import mindustry.Vars;
-import mindustry.gen.Groups;
+import mindustry.gen.Player;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
 
@@ -19,18 +22,26 @@ import org.jspecify.annotations.Nullable;
 //
 // Queued buildings are batched per author, a batch is only grouped once its author is done building,
 // so a build is classified once, whole, instead of once per finished building.
+// A building waits in a single batch, the one of the first author that changed it,
+// the changes of the other authors keep that batch waiting.
 //
 // A player that keeps building, or just keeps a plan it never gets to finish, delays the scan of its own art.
 // The wait is capped, so the art is sent at most MAX_WAIT_TICKS after its first building.
+//
+// Every step of a tick has a budget, so a tick costs the same whatever the size of the art and of the batches.
 final class GroupCollector<T extends MindustryImage> {
 
-    private static final int MAX_GROUP_STEPS = 50;
+    static final int MAX_GROUP_STEPS = 50;
+    // Unqueuing a grouped building is two map removals, much cheaper than a grouping step
+    static final int MAX_CLEANUP_STEPS = 1000;
+    // Checking an anchor can scan a whole canvas
+    static final int MAX_ANCHOR_CHECKS = 100;
     // Time without new buildings from an author before its batch can be grouped, covers the gaps between plans
-    private static final long QUIET_TICKS = 90;
+    static final long QUIET_TICKS = 90;
     // Batches are grouped after that long even if their author is still at it
-    private static final long MAX_WAIT_TICKS = 15 * 60L;
+    static final long MAX_WAIT_TICKS = 15 * 60L;
     // For the buildings without a known author, like the ones changing team
-    private static final String UNKNOWN_AUTHOR = "";
+    private static final MUUID UNKNOWN_AUTHOR = new MUUID("", "");
 
     private final VirtualBuildingIndex<T> index;
     private final GroupClassifier classifier;
@@ -39,8 +50,11 @@ final class GroupCollector<T extends MindustryImage> {
     private final Predicate<VirtualBuilding<T>> isEligibleAnchor;
     private final Predicate<VirtualBuilding.Group<T>> isEligibleGroup;
     private final int maxGroupRange;
-    private final Map<String, Batch> batches = new LinkedHashMap<>();
-    private VirtualBuildingIndex<T>.@Nullable IncrementalGrouper grouper = null;
+    private final Function<MUUID, @Nullable Player> players;
+    private final Map<MUUID, Batch> batches = new LinkedHashMap<>();
+    // The batch of each queued building
+    private final IntMap<Batch> queued = new IntMap<>();
+    private @Nullable Grouping grouping = null;
 
     GroupCollector(
             final VirtualBuildingIndex<T> index,
@@ -49,7 +63,8 @@ final class GroupCollector<T extends MindustryImage> {
             final Predicate<Block> blocks,
             final Predicate<VirtualBuilding<T>> isEligibleAnchor,
             final Predicate<VirtualBuilding.Group<T>> isEligibleGroup,
-            final int maxGroupRange) {
+            final int maxGroupRange,
+            final Function<MUUID, @Nullable Player> players) {
         this.index = index;
         this.classifier = classifier;
         this.kind = kind;
@@ -57,31 +72,47 @@ final class GroupCollector<T extends MindustryImage> {
         this.isEligibleAnchor = isEligibleAnchor;
         this.isEligibleGroup = isEligibleGroup;
         this.maxGroupRange = maxGroupRange;
+        this.players = players;
     }
 
     public void enqueue(final int packed, final @Nullable MindustryAuthor author) {
-        if (this.grouper != null && this.grouper.isVisited(packed)) {
+        if (this.grouping != null && this.grouping.grouper.isVisited(packed)) {
             return;
         }
-        final var key = author == null ? UNKNOWN_AUTHOR : author.uuid();
         final long now = now();
-        final var batch = this.batches.computeIfAbsent(key, _ -> new Batch(now));
-        batch.anchors.putIfAbsent(packed, now);
+        var batch = this.queued.get(packed);
+        if (batch == null) {
+            final var key = author == null ? UNKNOWN_AUTHOR : MUUID.from(author);
+            batch = this.batches.computeIfAbsent(key, _ -> new Batch(key, now));
+            batch.anchors.put(packed, now);
+            this.queued.put(packed, batch);
+        }
         batch.touchedAt = now;
     }
 
     public void dequeue(final int packed) {
-        this.batches.values().removeIf(batch -> batch.anchors.remove(packed) != null && batch.anchors.isEmpty());
+        final var batch = this.queued.remove(packed);
+        if (batch != null) {
+            batch.anchors.remove(packed);
+            if (batch.anchors.isEmpty()) {
+                this.batches.remove(batch.author);
+            }
+        }
     }
 
     public void clear() {
         this.batches.clear();
-        this.grouper = null;
+        this.queued.clear();
+        this.grouping = null;
+    }
+
+    int size() {
+        return this.queued.size;
     }
 
     public void tick() {
-        if (this.grouper != null) {
-            this.continueGrouping(this.grouper);
+        if (this.grouping != null) {
+            this.continueGrouping(this.grouping);
             return;
         }
         if (this.batches.isEmpty()) {
@@ -89,25 +120,34 @@ final class GroupCollector<T extends MindustryImage> {
         }
 
         final long now = now();
-        final var iterator = this.batches.entrySet().iterator();
-        while (iterator.hasNext()) {
-            final var entry = iterator.next();
-            if (!this.isSettled(entry.getKey(), entry.getValue(), now)) {
+        int checks = MAX_ANCHOR_CHECKS;
+        final var iterator = this.batches.values().iterator();
+        while (iterator.hasNext() && checks > 0) {
+            final var batch = iterator.next();
+            if (!this.isSettled(batch, now)) {
                 continue;
             }
-            final var anchor = this.selectAnchor(entry.getValue());
-            if (anchor == null) {
+            final var anchors = batch.anchors.keySet().iterator();
+            while (anchors.hasNext() && checks > 0) {
+                checks--;
+                final int point = anchors.next();
+                final var anchor = this.index.select(GeometryUtils.x(point), GeometryUtils.y(point));
+                if (anchor != null && this.isEligibleAnchor.test(anchor)) {
+                    this.grouping = new Grouping(this.index.selectGroupWithinRangeIncremental(
+                            anchor.x(), anchor.y(), this.maxGroupRange, MAX_GROUP_STEPS));
+                    this.continueGrouping(this.grouping);
+                    return;
+                }
+                anchors.remove();
+                this.queued.remove(point);
+            }
+            if (batch.anchors.isEmpty()) {
                 iterator.remove();
-                continue;
             }
-            this.grouper = this.index.selectGroupWithinRangeIncremental(
-                    anchor.x(), anchor.y(), this.maxGroupRange, MAX_GROUP_STEPS);
-            this.continueGrouping(this.grouper);
-            return;
         }
     }
 
-    private boolean isSettled(final String author, final Batch batch, final long now) {
+    private boolean isSettled(final Batch batch, final long now) {
         // The anchors are in the order they were queued, the first one has waited the longest
         final long oldest = batch.anchors.firstEntry().getValue();
         if (now < oldest) {
@@ -118,12 +158,12 @@ final class GroupCollector<T extends MindustryImage> {
         if (now - oldest >= MAX_WAIT_TICKS) {
             return true;
         }
-        return now - batch.touchedAt >= QUIET_TICKS && !this.isBuilding(author);
+        return now - batch.touchedAt >= QUIET_TICKS && !this.isBuilding(batch.author);
     }
 
     // The server only sees the first plans of a unit queue, which is enough to tell that the player is still at it
-    private boolean isBuilding(final String author) {
-        final var player = Groups.player.find(candidate -> candidate.uuid().equals(author));
+    private boolean isBuilding(final MUUID author) {
+        final var player = this.players.apply(author);
         final var unit = player == null ? null : player.unit();
         if (unit == null || unit.dead) {
             return false;
@@ -137,34 +177,27 @@ final class GroupCollector<T extends MindustryImage> {
         return false;
     }
 
-    private @Nullable VirtualBuilding<T> selectAnchor(final Batch batch) {
-        final var iterator = batch.anchors.keySet().iterator();
-        while (iterator.hasNext()) {
-            final int point = iterator.next();
-            final var anchor = this.index.select(GeometryUtils.x(point), GeometryUtils.y(point));
-            if (anchor != null && this.isEligibleAnchor.test(anchor)) {
-                return anchor;
-            }
-            iterator.remove();
-        }
-        return null;
-    }
-
-    private void continueGrouping(final VirtualBuildingIndex<T>.IncrementalGrouper grouper) {
+    private void continueGrouping(final Grouping grouping) {
+        final var grouper = grouping.grouper;
         if (!grouper.isCompleted()) {
             grouper.progress();
             if (!grouper.isCompleted()) {
                 return;
             }
-            // Visited buildings cannot be enqueued while grouping, so the batches only need to be cleaned once
-            this.batches.values().removeIf(batch -> {
-                grouper.removeVisited(batch.anchors.keySet());
-                return batch.anchors.isEmpty();
-            });
+        }
+        // Visited buildings cannot be enqueued while grouping, so the batches only need to be cleaned once
+        if (grouping.cleanup == null) {
+            grouping.cleanup = grouper.visited();
+        }
+        for (int i = 0; i < MAX_CLEANUP_STEPS && grouping.cleanup.hasNext; i++) {
+            this.dequeue(grouping.cleanup.next());
+        }
+        if (grouping.cleanup.hasNext) {
+            return;
         }
         final var group = grouper.create();
         if (group == null || !this.isEligibleGroup.test(group) || this.classifier.tryAccept(group, this.kind)) {
-            this.grouper = null;
+            this.grouping = null;
         }
     }
 
@@ -172,13 +205,26 @@ final class GroupCollector<T extends MindustryImage> {
         return (long) Vars.state.tick;
     }
 
+    private final class Grouping {
+
+        private final VirtualBuildingIndex<T>.IncrementalGrouper grouper;
+        // The visited buildings left to unqueue, once the grouper is completed
+        private IntSet.@Nullable IntSetIterator cleanup = null;
+
+        private Grouping(final VirtualBuildingIndex<T>.IncrementalGrouper grouper) {
+            this.grouper = grouper;
+        }
+    }
+
     private static final class Batch {
 
+        private final MUUID author;
         // Queued buildings with the tick they were queued at
         private final SequencedMap<Integer, Long> anchors = new LinkedHashMap<>();
         private long touchedAt;
 
-        private Batch(final long now) {
+        private Batch(final MUUID author, final long now) {
+            this.author = author;
             this.touchedAt = now;
         }
     }
