@@ -240,6 +240,19 @@
   @apply mx-auto w-full max-w-6xl px-4 sm:px-8;
 }
 
+/* The frosted bars at the edges of the pages: the headers on top, the footer below. Translucent and blurred, so the
+   dithered background and the page scrolling under them show through softly.
+   An overscroll pulls the page past its edge, the tint carries on past the bar so the gap reads as more of the bar
+   instead of the bare page. A shadow, as it paints past the page without growing its scrollable area */
+@utility bar-top {
+  @apply border-line border-b bg-bg/70 backdrop-blur-lg;
+  box-shadow: 0 -50lvh 0 50lvh --alpha(var(--color-bg) / 70%);
+}
+@utility bar-bottom {
+  @apply border-line border-t bg-bg/70 backdrop-blur-lg;
+  box-shadow: 0 50lvh 0 50lvh --alpha(var(--color-bg) / 70%);
+}
+
 @utility link {
   @apply text-accent-ink underline decoration-1 underline-offset-[0.2em] hover:decoration-current;
   text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
