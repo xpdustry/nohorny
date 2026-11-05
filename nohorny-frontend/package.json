@@ -19,22 +19,22 @@
   "dependencies": {
     "@fontsource-variable/martian-mono": "5.3.0",
     "@fontsource/momo-trust-display": "5.3.0",
-    "@sentry/browser": "11.8.0",
+    "@sentry/browser": "11.10.0",
     "@solidjs/meta": "1.0.0-next.2",
     "@solidjs/router": "2.0.0-next.43",
     "@solidjs/web": "2.0.0-rc.20",
     "solid-js": "2.0.0-rc.20"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
+    "@biomejs/biome": "2.6.5",
     "@solidjs/diagnostics": "2.0.0-rc.20",
-    "@solidjs/vite-plugin": "3.0.0-next.54",
-    "@tailwindcss/vite": "4.3.3",
+    "@solidjs/vite-plugin": "3.0.0-next.56",
+    "@tailwindcss/vite": "4.3.4",
     "@types/node": "24.19.2",
-    "filesystem-routing": "0.4.0",
-    "prerender-crawler": "0.2.0",
-    "tailwindcss": "4.3.3",
+    "filesystem-routing": "0.4.2",
+    "prerender-crawler": "0.3.0",
+    "tailwindcss": "4.3.4",
     "typescript": "7.0.2",
-    "vite": "8.3.4"
+    "vite": "8.3.5"
   }
 }

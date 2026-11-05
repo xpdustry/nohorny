@@ -1,6 +1,6 @@
 [versions]
 nohorny = "4.0.0-beta.12"
-errorprone = "2.50.0"
+errorprone = "2.52.0"
 nullaway = "0.14.3"
 jmh = "1.37"
 
@@ -15,14 +15,14 @@ jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh-generator = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
 
 nohorny-natives = "com.xpdustry:nohorny-natives:0.1.0"
-sqlite-jdbc = "org.xerial:sqlite-jdbc:3.53.4.0"
+sqlite-jdbc = "org.xerial:sqlite-jdbc:3.54.1.0"
 bouncycastle = "org.bouncycastle:bcprov-jdk18on:1.86"
-bucket4j = "com.bucket4j:bucket4j_jdk17-core:8.21.0"
+bucket4j = "com.bucket4j:bucket4j_jdk17-core:8.22.0"
 # The half precision variant of the default model in application.yaml, for a smaller download
 vit-model = "onnx-community:nsfw_image_detection-ONNX:1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5"
 
 [plugins]
-spotless = "com.diffplug.spotless:8.10.4"
+spotless = "com.diffplug.spotless:8.11.0"
 errorprone = "net.ltgt.errorprone:5.2.0"
 shadow = "com.gradleup.shadow:9.6.1"
 toxopid = "com.xpdustry.toxopid:4.2.0"
