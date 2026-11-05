@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class GroupCollectorTest {
 
-    // Batches are settled once they waited that long, whatever their author does
     private static final long SETTLED = MAX_WAIT_TICKS;
 
     private static final MindustryAuthor ALICE = new MindustryAuthor("alice", "alice-usid", "0.0.0.1");
@@ -116,7 +115,6 @@ final class GroupCollectorTest {
         collector.enqueue(GeometryUtils.pack(0, 0), BOB);
         assertEquals(1, collector.size());
 
-        // Alice is quiet, but Bob changed the building since
         Vars.state.tick = QUIET_TICKS;
         collector.tick();
         assertTrue(this.groups.isEmpty());

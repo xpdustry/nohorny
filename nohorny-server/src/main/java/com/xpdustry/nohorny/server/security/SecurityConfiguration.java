@@ -39,8 +39,6 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
 
-/// Users authenticate with HTTP Basic, stateless, or with the session cookie obtained from `POST /login`.
-/// Nothing redirects, the failures answer JSON errors.
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(ApiSecurityProperties.class)
 public class SecurityConfiguration {
@@ -119,7 +117,6 @@ public class SecurityConfiguration {
                         .failureHandler((request, response, exception) -> unauthorized.write(response)))
                 .logout(logout -> logout.logoutUrl("/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
-                // Ends the sessions signed in before their account changed, see UserAccount
                 .addFilterAfter(new SessionRevalidationFilter(users), SecurityContextHolderFilter.class)
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(unauthorized)
@@ -157,7 +154,7 @@ public class SecurityConfiguration {
         }
     }
 
-    /// Answers a status with a JSON message. Never sends `WWW-Authenticate`, which would make browsers prompt.
+    /// Never sends `WWW-Authenticate`, which would make browsers prompt.
     private record JsonStatusWriter(JsonMapper mapper, HttpStatus status, String message)
             implements AuthenticationEntryPoint {
 

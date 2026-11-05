@@ -12,7 +12,6 @@ import mindustry.world.blocks.distribution.Sorter;
 import mindustry.world.blocks.power.LightBlock;
 import org.jspecify.annotations.Nullable;
 
-// Pixel art made of single tile buildings displaying a configurable color
 final class PixelTracker<B extends Building> extends BuildingImageTracker<B, MindustryPixel> {
 
     private static final int MAX_GROUP_RANGE = 150;

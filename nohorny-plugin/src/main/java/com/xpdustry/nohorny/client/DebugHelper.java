@@ -30,26 +30,26 @@ final class DebugHelper implements LifecycleListener {
 
     // https://stackoverflow.com/a/4382138
     private static final Color[] KELLY_COLORS = {
-        new Color(0xFFB300FF), // Vivid Yellow
-        new Color(0x803E75FF), // Strong Purple
-        new Color(0xFF6800FF), // Vivid Orange
-        new Color(0xA6BDD7FF), // Very Light Blue
-        new Color(0xC10020FF), // Vivid Red
-        new Color(0xCEA262FF), // Grayish Yellow
-        new Color(0x817066FF), // Medium Gray
-        new Color(0x007D34FF), // Vivid Green
-        new Color(0xF6768EFF), // Strong Purplish Pink
-        new Color(0x00538AFF), // Strong Blue
-        new Color(0xFF7A5CFF), // Strong Yellowish Pink
-        new Color(0x53377AFF), // Strong Violet
-        new Color(0xFF8E00FF), // Vivid Orange Yellow
-        new Color(0xB32851FF), // Strong Purplish Red
-        new Color(0xF4C800FF), // Vivid Greenish Yellow
-        new Color(0x7F180DFF), // Strong Reddish Brown
-        new Color(0x93AA00FF), // Vivid Yellowish Green
-        new Color(0x593315FF), // Deep Yellowish Brown
-        new Color(0xF13A13FF), // Vivid Reddish Orange
-        new Color(0x232C16FF), // Dark Olive Green
+        new Color(0xFFB300FF),
+        new Color(0x803E75FF),
+        new Color(0xFF6800FF),
+        new Color(0xA6BDD7FF),
+        new Color(0xC10020FF),
+        new Color(0xCEA262FF),
+        new Color(0x817066FF),
+        new Color(0x007D34FF),
+        new Color(0xF6768EFF),
+        new Color(0x00538AFF),
+        new Color(0xFF7A5CFF),
+        new Color(0x53377AFF),
+        new Color(0xFF8E00FF),
+        new Color(0xB32851FF),
+        new Color(0xF4C800FF),
+        new Color(0x7F180DFF),
+        new Color(0x93AA00FF),
+        new Color(0x593315FF),
+        new Color(0xF13A13FF),
+        new Color(0x232C16FF),
     };
 
     private final IntMap<DebugTap> taps = new IntMap<>();

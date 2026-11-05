@@ -7,8 +7,6 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 
-/// A user account as authenticated, see [SessionRevalidationFilter].
-///
 /// The session version comes from the same read as the password hash and the authorities, so it identifies exactly
 /// the account state the caller signed in with.
 public final class AccountDetails extends User {

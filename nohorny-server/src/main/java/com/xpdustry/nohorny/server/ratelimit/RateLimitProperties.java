@@ -7,13 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/// The limits per minute of the API.
-///
-/// @param anonymous the classifications of an anonymous client address, `0` requires an account
-/// @param mindustry the classifications of a listed Mindustry network without an account, `0` requires one
-/// @param user the classifications of a new account, each account has its own limit set from the admin panel
-/// @param reads the reads of the request pages, the administrators are not limited
-/// @param imageDeletions the image deletions from the request pages, the administrators are not limited
 @ConfigurationProperties("nohorny.rate-limit")
 @Validated
 public record RateLimitProperties(

@@ -1,5 +1,3 @@
-// Request components shared by the request page and the viewer of the admin panel.
-
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
 import {
@@ -43,9 +41,6 @@ const PLACEHOLDERS = {
   deleted: 'Image deleted',
 };
 
-// The confirmations are shared by the request page and the admin panel
-
-/** Asks to confirm the deletion of the image of a request. */
 export function confirmImageDeletion(request: Request): Promise<boolean> {
   return confirm({
     title: `Delete the image of ${shortId(request.id)}?`,
@@ -54,7 +49,6 @@ export function confirmImageDeletion(request: Request): Promise<boolean> {
   });
 }
 
-/** Asks to confirm the deletion of a request. */
 export function confirmRequestDeletion(request: Request): Promise<boolean> {
   return confirm({
     title: `Delete request ${shortId(request.id)}?`,
@@ -63,7 +57,6 @@ export function confirmRequestDeletion(request: Request): Promise<boolean> {
   });
 }
 
-/** The image of a request. Flagged images stay blurred until `revealed`, a click toggles them. */
 export function RequestImage(props: {
   request: Request;
   revealed: boolean;
@@ -109,7 +102,6 @@ export function RequestImage(props: {
               when={blurred()}
               fallback={
                 <Show when={sensitive()}>
-                  {/* The whole image blurs it back, with a hint on hover */}
                   <button
                     type="button"
                     aria-label="Blur the image"
@@ -191,7 +183,7 @@ export function ChainCard(props: { request: Request }) {
   );
 }
 
-/** The classifiers a request went through, in order. An NSFW verdict escalates to the next classifier. */
+/** An NSFW verdict escalates to the next classifier. */
 export function ClassifierTimeline(props: { request: Request }) {
   // The verdict comes from the last step of its classifier with a rating, a failed request has none
   const decided = () =>
@@ -247,7 +239,6 @@ function createCopy(text: () => string, fallback: () => Node) {
   return [copied, copy] as const;
 }
 
-/** Code copied to the clipboard on click. */
 function CopyCode(props: { text: string; label: string }) {
   let code!: HTMLElement;
   const [copied, copy] = createCopy(
@@ -270,7 +261,6 @@ function CopyCode(props: { text: string; label: string }) {
   );
 }
 
-/** The exception of a failure, which opens its stack trace. Only the administrators receive it. */
 function FailureDetails(props: { details: FailureDetailsData }) {
   const [open, setOpen] = createSignal(false);
   let trace!: HTMLPreElement;
@@ -319,7 +309,6 @@ function FailureDetails(props: { details: FailureDetailsData }) {
   );
 }
 
-/** The short name of a classifier, its model in the tooltip, linking to the page of the model. */
 function Classifier(props: { id: string; class?: string }) {
   const info = () => classifierInfo(props.id);
   return (
@@ -349,7 +338,6 @@ function Classifier(props: { id: string; class?: string }) {
   );
 }
 
-/** The icon, the kind and the fallback name of each requester type. */
 const REQUESTERS: Record<
   RequesterType,
   { icon: (props: { class?: string }) => JSX.Element; kind: string; unnamed: string }
@@ -360,7 +348,6 @@ const REQUESTERS: Record<
   anonymous: { icon: HatGlassesIcon, kind: 'Anonymous client', unnamed: 'Anonymous' },
 };
 
-/** Who sent a request: an icon for its type, named in the tooltip and for screen readers, then its name. */
 export function Requester(props: { requester: RequesterData; class?: string }) {
   const info = () => REQUESTERS[props.requester.type];
   return (
@@ -412,7 +399,6 @@ export function KeyValues(props: { rows: [string, JSX.Element][] }) {
   );
 }
 
-/** Shown while a request loads, after a moment. The prerendered shell of the request pages contains it. */
 export function RequestLoading() {
   return (
     <div class="pending">

@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
-// The CI scripts and the build scripts live in the root project
 spotless {
     java {
         target(".github/scripts/*.java")

@@ -1,6 +1,5 @@
 spring:
   application.name: nohorny
-  # Disable the default HTML error page.
   web.error.whitelabel.enabled: false
   # The Mindustry server list refresh resolves host names, a second thread keeps the retention on time meanwhile.
   task.scheduling.pool.size: 2
@@ -12,7 +11,6 @@ spring:
 server:
   # Listen on localhost. Use 0.0.0.0 to expose the API on your network.
   address: 127.0.0.1
-  # HTTP port used for the app
   port: 8080
   # Set to framework when running behind a trusted reverse proxy that overwrites the Forwarded/X-Forwarded-* headers.
   # The client address is used for the rate limits and to recognize the Mindustry servers.
@@ -26,7 +24,6 @@ nohorny:
   # When set, the classification responses link to the request pages.
   # public-url: https://nohorny.example.com
   storage:
-    # SQLite database file.
     database: database.sqlite
     # Directory of the stored images, one file per distinct image named by its SHA-256 hash.
     images: images
@@ -67,19 +64,16 @@ nohorny:
       source:
         type: hugging-face
         hugging-face:
-          # Hugging Face repository that contains the ONNX model file.
           repository: onnx-community/nsfw_image_detection-ONNX
           # Repository revision to download from. Pinning a commit keeps deployments reproducible.
           revision: 1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5
           # ONNX model file loaded from the repository and revision above.
           # Use onnx/model_fp16.onnx to halve the memory usage at a small speed cost.
           file: onnx/model.onnx
-          # Local directory for downloaded model files.
           download-directory: .cached-models
           # Only needed for private or gated Hugging Face models.
           # token: ${HF_TOKEN}
         local:
-          # Local ONNX model file.
           path: my_model.onnx
       # Labels returned by the model, in the same order as its output probabilities.
       labels:
@@ -97,9 +91,7 @@ nohorny:
         nsfw: 0.9
     # Enable SightEngine by including sight-engine in nohorny.classifier.type.
     sight-engine:
-      # SightEngine API user.
       user: ${SIGHT_ENGINE_USER}
-      # SightEngine API secret.
       secret: ${SIGHT_ENGINE_SECRET}
       thresholds:
         # Scores below warn are SAFE. Scores from warn up to nsfw are WARN.

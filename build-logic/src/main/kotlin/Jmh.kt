@@ -18,7 +18,6 @@ abstract class Jmh : JavaExec() {
         // Providers, unlike args, are kept when --args replaces the arguments
         argumentProviders.add {
             listOf(
-                // The gc param of the benchmarks only takes effect through this profiler
                 "-prof",
                 "com.xpdustry.nohorny.client.GarbageCollectorSelector",
                 "-prof",

@@ -9,8 +9,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-/// Runs an ONNX ViT model with the native classifiers. Since a native classifier is not
-/// thread-safe, each one of them handles a single image at a time.
+/// A native classifier is not thread-safe, so each one handles a single image at a time.
 public final class ViTClassifier implements Classifier {
 
     private final ViTClassifierProperties properties;

@@ -16,10 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 
-/// Identifies the origin of a classification request from its remote address: a local address, a known public
-/// Mindustry server, or an unknown host. The Mindustry server list is refreshed periodically from the official sources.
-///
-/// The list groups the servers by network, the network names are normalized with [#normalize].
 @Component
 public final class MindustryClientDirectory {
 
@@ -67,7 +63,6 @@ public final class MindustryClientDirectory {
                     if (address == null) {
                         continue;
                     }
-                    // A server without a usable network name is still a known server
                     final var names = refreshed.computeIfAbsent(address, ignored -> new TreeSet<>());
                     if (name != null) {
                         names.add(name);
@@ -94,8 +89,8 @@ public final class MindustryClientDirectory {
         return new ClientInfo(ClientInfo.UNKNOWN, null);
     }
 
-    /// @return whether the address is loopback, link-local or private, like a Docker bridge gateway. The IPv6 unique
-    ///     local addresses (`fc00::/7`) are checked apart, [InetAddress#isSiteLocalAddress] only knows `fec0::/10`
+    /// The IPv6 unique local addresses (`fc00::/7`) are checked apart, [InetAddress#isSiteLocalAddress] only knows
+    /// `fec0::/10`.
     static boolean isLocal(final InetAddress address) {
         return address.isLoopbackAddress()
                 || address.isAnyLocalAddress()
@@ -104,7 +99,6 @@ public final class MindustryClientDirectory {
                 || (address instanceof Inet6Address && (address.getAddress()[0] & 0xFE) == 0xFC);
     }
 
-    /// @return the network name without its markup, see [MindustryText#plain], `null` if nothing is left
     static @Nullable String normalize(final String name) {
         final var plain = MindustryText.plain(name);
         return plain.isEmpty() ? null : plain;

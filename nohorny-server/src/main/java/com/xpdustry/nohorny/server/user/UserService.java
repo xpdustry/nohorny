@@ -19,10 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/// Manages the user accounts and the bootstrap administrator.
-///
-/// The sessions of a user end when its password or role changes, or when it is deleted, so they sign in again with
-/// their current permissions, see `SessionRevalidationFilter`.
 @Service
 public class UserService {
 
@@ -47,7 +43,6 @@ public class UserService {
         this.defaultRateLimit = limits.user();
     }
 
-    /// Creates the bootstrap administrator if missing, or resets its password and role if they changed.
     @Transactional
     public void ensureBootstrapAdministrator() {
         final var password = this.bootstrap.password();
@@ -82,14 +77,12 @@ public class UserService {
         return this.bootstrap.configured() && this.bootstrap.username().equals(username);
     }
 
-    /// @return the users sorted by username
     public List<UserView> list() {
         return this.users.findAllByOrderByUsernameAsc().stream()
                 .map(this::toView)
                 .toList();
     }
 
-    /// @param rateLimit the classifications per minute, the configured default if `null`
     @Transactional
     public UserView create(
             final String username, final String password, final boolean admin, final @Nullable Integer rateLimit) {
@@ -102,7 +95,6 @@ public class UserService {
         return this.toView(account);
     }
 
-    /// Applies to the next classification, the sessions are kept.
     @Transactional
     public void setRateLimit(final String username, final int rateLimit) {
         this.find(username).setRateLimit(rateLimit);
@@ -120,7 +112,6 @@ public class UserService {
         log.info("Changed the password of user {}", username);
     }
 
-    /// @param caller the user doing the change, cannot demote itself
     @Transactional
     public void setAdmin(final String username, final boolean admin, final String caller) {
         final var account = this.find(username);
@@ -142,9 +133,6 @@ public class UserService {
         log.info("Set admin={} for user {}", admin, username);
     }
 
-    /// Deletes the requester mappings to the user with it.
-    ///
-    /// @param caller the user doing the deletion, cannot delete itself
     @Transactional
     public void delete(final String username, final String caller) {
         final var account = this.find(username);

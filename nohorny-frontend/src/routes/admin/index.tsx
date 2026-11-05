@@ -1,5 +1,3 @@
-// The requests page of the admin panel, with the activity chart, the filtered request list and the viewer.
-
 import { Meta, Title } from '@solidjs/meta';
 import type { JSX } from '@solidjs/web';
 import {
@@ -25,7 +23,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   ImageOffIcon,
-  RefreshIcon,
+  RefreshCwIcon,
   SearchIcon,
   TrashIcon,
   XIcon,
@@ -83,7 +81,6 @@ const RANGES: { value: HistoryRange; label: string }[] = [
   { value: '90d', label: '90 d' },
 ];
 
-/** The minimum delay between two reloads of the history triggered by the live statistics. */
 const REFRESH_MILLIS = 15000;
 
 const SEGMENTED = 'flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-bg-2 p-1';
@@ -99,8 +96,7 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
   const networks = createMemo(() => call<Networks>(`/api/stats/networks?range=${range()}`));
   const versions = createMemo(() => call<Versions>(`/api/stats/versions?range=${range()}`));
 
-  // Reloads the history when the live total changes. A busy server classifies many images per second, so the reloads
-  // wait at least REFRESH_MILLIS apart
+  // A busy server classifies many images per second, so the reloads wait at least REFRESH_MILLIS apart
   let lastLoad = Date.now();
   let pending: ReturnType<typeof setTimeout> | undefined;
   createEffect(
@@ -216,7 +212,6 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
   );
 }
 
-/** A titled chart of the overview, failing on its own. */
 function Breakdown<T>(props: { id: string; title: string; data: () => T; children: (data: () => T) => JSX.Element }) {
   return (
     <section class="flex min-w-0 flex-col gap-4" aria-labelledby={props.id}>
@@ -274,7 +269,6 @@ type Pick = Partial<Omit<Query, 'rating' | 'id'>>;
 const FILTER_FIELD =
   'h-9 rounded-full border border-line-strong bg-bg-2 px-3 font-mono text-ink text-xs transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-10';
 
-/** Past this many pages of new requests, a refresh reloads the list from the top. */
 const MAX_REFRESH_PAGES = 5;
 
 const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expired: 'Expired', deleted: 'Deleted' };
@@ -282,12 +276,10 @@ const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expire
 function RequestList(props: { pick: Pick | null }) {
   const admin = useContext(AdminContext);
   const [query, setQuery] = createSignal<Query>(NO_QUERY);
-  /** The text of the identifier field, applied when it changes and is valid. */
   const [idText, setIdText] = createSignal('');
   const [list, setList] = createStore({
     /** Loaded requests, newest first. */
     items: [] as Request[],
-    /** Whether the items belong to the previous filters, until the first page of the new ones replaces them. */
     stale: false,
     loading: false,
     exhausted: false,
@@ -312,7 +304,6 @@ function RequestList(props: { pick: Pick | null }) {
   let sentinel!: HTMLDivElement;
   let observer: IntersectionObserver | undefined;
 
-  /** The cursor of the first page: the end of the identifier prefix or the end of the range, whichever is older. */
   function startCursor(): string | null {
     const bounds = [parsePrefix(current.id)?.cursor, current.to === null ? undefined : cursorAt(current.to)];
     return bounds.reduce<string | null>(
@@ -336,7 +327,6 @@ function RequestList(props: { pick: Pick | null }) {
     query().to !== null;
   const idInvalid = () => idText().trim() !== '' && !parsePrefix(idText());
 
-  /** Clears the requester, the version, the identifier and the time range, the rating filter stays. */
   const clearFilters = () => reset({ ...NO_QUERY, rating: current.rating });
 
   /** Loads the list of `next` filters. The current requests stay, dimmed, until its first page replaces them. */
@@ -360,7 +350,6 @@ function RequestList(props: { pick: Pick | null }) {
     void loadMore();
   }
 
-  /** The URL of the page of the current filters that starts before `before`. */
   function pageUrl(before: string | null): string {
     const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
     if (current.rating) params.set('rating', current.rating);
@@ -373,7 +362,6 @@ function RequestList(props: { pick: Pick | null }) {
     return `/api/requests?${params}`;
   }
 
-  /** Adds a page to the list, or replaces the stale requests with it. */
   function applyPage(page: Page<Request>) {
     const end = page.items.findIndex((item) => !matches(item));
     const items = end === -1 ? page.items : page.items.slice(0, end);
@@ -436,7 +424,7 @@ function RequestList(props: { pick: Pick | null }) {
     }
   }
 
-  // The first page loads with the panel, which reveals once it is here. The next ones load as the list scrolls
+  // The first page loads with the panel, which reveals once it is here
   const firstPage = createMemo(() =>
     call<Page<Request>>(pageUrl(null)).then(
       (page) => ({ page }),
@@ -460,14 +448,12 @@ function RequestList(props: { pick: Pick | null }) {
     { defer: true },
   );
 
-  /** Applies the identifier field, unless it holds something that cannot start an identifier. */
   function applyId(value: string) {
     const text = value.trim();
     if (text === current.id || (text !== '' && !parsePrefix(text))) return;
     reset({ ...current, id: text });
   }
 
-  /** Applies a datetime-local field, an empty one removes the bound. */
   function applyTime(bound: 'from' | 'to', value: string) {
     const millis = value ? new Date(value).getTime() : null;
     if (millis === null || !Number.isNaN(millis)) reset({ ...current, [bound]: millis });
@@ -483,10 +469,6 @@ function RequestList(props: { pick: Pick | null }) {
 
   const [refreshing, setRefreshing] = createSignal(false);
 
-  /**
-   * Adds the requests newer than the loaded ones on top of the list, page by page until a loaded request shows up.
-   * Starts over when more than MAX_REFRESH_PAGES pages are new.
-   */
   async function loadNewer() {
     if (list.items.length === 0 || failed) return reset(current);
     const at = generation;
@@ -529,7 +511,6 @@ function RequestList(props: { pick: Pick | null }) {
 
   function replace(updated: Request) {
     setList((draft) => {
-      // Writes only the changed fields onto the loaded request
       const item = draft.items.find((item) => item.id === updated.id);
       if (item) reconcile(updated, 'id')(item);
     });
@@ -614,7 +595,6 @@ function RequestList(props: { pick: Pick | null }) {
     return index === null || !item ? null : { index, item };
   });
 
-  /** Moves the viewer by `delta` requests. Loads the next page near the end of the list. */
   function step(delta: number) {
     const index = (viewing() ?? 0) + delta;
     if (index < 0 || index >= list.items.length) return;
@@ -651,7 +631,6 @@ function RequestList(props: { pick: Pick | null }) {
             aria-pressed={revealAll() ? 'true' : 'false'}
             data-tooltip={revealAll() ? 'Blur flagged images' : 'Reveal all images'}
             onClick={() => {
-              // Applies to every image, the ones revealed or blurred one by one included
               setRevealAll(!revealAll());
               setList((draft) => {
                 draft.revealed = {};
@@ -671,7 +650,7 @@ function RequestList(props: { pick: Pick | null }) {
               admin.stats.refresh();
             }}>
             <Show when={!refreshing()}>
-              <RefreshIcon />
+              <RefreshCwIcon />
             </Show>
             <span class="max-sm:sr-only">Refresh</span>
           </Button>
@@ -768,7 +747,6 @@ function RequestList(props: { pick: Pick | null }) {
           </For>
         </ul>
         <div ref={sentinel} class="flex flex-col items-center gap-3 p-6 text-ink-3 text-sm">
-          {/* A change of the filters dims the current requests instead */}
           <Show when={list.loading && !list.stale}>
             <Spinner class="pending size-5 text-ink-3" />
           </Show>
@@ -914,7 +892,6 @@ function RequestList(props: { pick: Pick | null }) {
   );
 }
 
-/** A filter set from the charts, removed with its button. */
 function FilterChip(props: { label: string; mono?: boolean; onRemove: () => void }) {
   return (
     <span class="inline-flex h-9 items-center gap-1 rounded-full border border-accent-edge bg-accent-soft pr-1 pl-3 text-on-accent-soft text-xs pointer-coarse:h-10">
@@ -933,7 +910,6 @@ function FilterChip(props: { label: string; mono?: boolean; onRemove: () => void
   );
 }
 
-// The tooltips of the image deletion buttons, which explain why they are disabled
 const IMAGE_TOOLTIPS = {
   none: 'No image kept',
   stored: 'Delete image',

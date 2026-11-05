@@ -7,10 +7,6 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 
-/// A block of IPv4 or IPv6 addresses in CIDR notation, such as `172.16.0.0/12` or `fd00::/8`.
-///
-/// @param network the first address of the block, its host bits cleared
-/// @param prefix the number of leading bits shared by the addresses of the block
 public record AddressRange(InetAddress network, int prefix) {
 
     public AddressRange {
@@ -23,10 +19,6 @@ public record AddressRange(InetAddress network, int prefix) {
         }
     }
 
-    /// Parses an address range, the host bits are cleared so `172.18.0.1/16` gives `172.18.0.0/16`.
-    ///
-    /// @param value a range in CIDR notation, or a single address
-    /// @throws IllegalArgumentException if the value is not an IP literal with an optional prefix in range
     public static AddressRange parse(final String value) {
         final var trimmed = value.strip();
         final var slash = trimmed.indexOf('/');
@@ -55,9 +47,7 @@ public record AddressRange(InetAddress network, int prefix) {
         }
     }
 
-    /// Parses an IP literal without any lookup. An IPv4-mapped IPv6 address, like `::ffff:172.18.0.1`, is an IPv4 one.
-    ///
-    /// @return `null` if the value is not an IP literal, or has a scope
+    /// An IPv4-mapped IPv6 address, like `::ffff:172.18.0.1`, is an IPv4 one.
     public static @Nullable InetAddress parseAddress(final String value) {
         if (value.indexOf('%') != -1) {
             return null;
@@ -71,21 +61,17 @@ public record AddressRange(InetAddress network, int prefix) {
 
     /// Parses the remote address of a connection, an IP literal written by the servlet container. The scope of an IPv6
     /// link-local address, like the `%1` of `fe80:0:0:0:0:0:0:1%1`, is dropped, the ranges have none.
-    ///
-    /// @return `null` if the value is not an IP literal
     public static @Nullable InetAddress parseRemoteAddress(final String value) {
         final var scope = value.indexOf('%');
         return parseAddress(scope == -1 ? value : value.substring(0, scope));
     }
 
-    /// @return whether the address is in this block, always `false` for an address of the other family
     public boolean contains(final InetAddress address) {
         final var bytes = address.getAddress();
         return bytes.length == this.network.getAddress().length
                 && Arrays.equals(mask(bytes, this.prefix), this.network.getAddress());
     }
 
-    /// @return the normalized CIDR notation, the IPv6 addresses compressed like `fd00::/8`
     @Override
     public String toString() {
         return format(this.network) + "/" + this.prefix;

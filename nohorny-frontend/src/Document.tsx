@@ -4,7 +4,6 @@ import { HydrationScript } from '@solidjs/web';
 import type { ParentProps } from 'solid-js';
 import { installDither } from './lib/dither';
 
-// The <html> around every page. vite build prerenders it with each page listed in vite.config.ts.
 export default function Document(props: ParentProps) {
   return (
     <html lang="en">
@@ -27,13 +26,12 @@ export default function Document(props: ParentProps) {
         <link rel="preload" as="font" type="font/woff2" href={momoLatin} crossorigin="anonymous" />
         <link rel="preload" as="font" type="font/woff2" href={martianLatin} crossorigin="anonymous" />
         <title>NoHorny · Autonomous NSFW moderation for Mindustry servers</title>
-        {/* The runtime configuration from the server. A classic script, it runs before the app module */}
+        {/* A classic script, it runs before the app module */}
         <script src="/config.js" />
         <HydrationScript />
       </head>
       <body>
-        {/* The dithered background, painted as soon as the page is parsed rather than after the hydration. Without
-            fallback content, screen readers skip the canvas */}
+        {/* The dithered background, painted as soon as the page is parsed rather than after the hydration */}
         <canvas id="dither" class="pointer-events-none fixed inset-0 -z-10 size-full [image-rendering:pixelated]" />
         <script innerHTML={`(${installDither})()`} />
         {props.children}

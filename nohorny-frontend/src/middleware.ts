@@ -1,5 +1,3 @@
-// Runs around the server rendering of every page, the prerendering included.
-
 /**
  * Defers the client entry until the document is parsed. The plugin marks it async to hydrate a streamed page early,
  * but when the HTML arrives slower than the cached scripts, such as with the back button, it runs before the end of

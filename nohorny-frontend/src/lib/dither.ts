@@ -1,11 +1,3 @@
-// The background of the pages: a mesh of soft blobs, quantised to the --dither-* tones of the theme and
-// ordered-dithered with an 8 by 8 Bayer matrix, the dither pixel artists use. It reads as a glow from afar and as pixel
-// art up close. It is drawn at one canvas pixel per dither pixel and scaled up, so it only repaints on a resize or a
-// change of theme.
-//
-// After the "Dithered mesh" of the xpdustry.com gradient lab, itself after grainient.supply and ditther
-// (https://ditther.com). The ordered dither is Bryce Bayer's, from 1973.
-
 /**
  * Paints the #dither canvas and repaints it on a resize or a change of theme.
  *
@@ -17,7 +9,6 @@ export function installDither() {
   const PIXEL = 4;
   /** How long a resize settles before the background repaints. A paint takes tens of milliseconds. */
   const RESIZE_MILLIS = 150;
-  /** The tones, from the page background up to the brightest, read from these custom properties. */
   const TONES = ['--bg', '--dither-1', '--dither-2', '--dither-3'];
   /** The blobs: their centre in fractions of the viewport, their radius in fractions of its larger side, their weight. */
   const BLOBS = [
@@ -65,7 +56,6 @@ export function installDither() {
     const image = context.createImageData(width, height);
     for (let y = 0; y < height; y++)
       for (let x = 0; x < width; x++) {
-        // How bright the mesh is here, each blob fading out smoothly to its radius
         let field = 0;
         for (const [bx, by, radius, weight] of BLOBS) {
           const dx = (x - bx * width) / (radius * side);
@@ -89,7 +79,6 @@ export function installDither() {
     timer = setTimeout(paint, RESIZE_MILLIS);
   };
   paint();
-  // The canvas stretches with the window until the resize settles
   window.addEventListener('resize', schedule);
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
 }

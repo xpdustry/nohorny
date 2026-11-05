@@ -1,16 +1,10 @@
-// The page scrollbar, drawn over the content so the layout keeps its width whether the page scrolls or not.
-// App.css hides the native one. The thumb shows while scrolling and while the pointer is over the right edge.
-
 import { createSignal, onSettled, Show } from 'solid-js';
 
-/** The shortest thumb, in pixels, so it stays easy to grab on long pages. */
 const MIN_THUMB = 32;
 
-/** How long the thumb stays visible after the page stops scrolling, in milliseconds. */
 const LINGER_MILLIS = 900;
 
 export function OverlayScrollbar() {
-  // A measure equal to the last one does not notify, so an unchanged page does not redraw the thumb
   const [thumb, setThumb] = createSignal<{ top: number; height: number } | null>(null, {
     equals: (previous, next) => previous?.top === next?.top && previous?.height === next?.height,
   });
@@ -54,7 +48,6 @@ export function OverlayScrollbar() {
     };
   });
 
-  /** Drags the thumb, the page follows the pointer. */
   function grab(event: PointerEvent) {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -76,7 +69,6 @@ export function OverlayScrollbar() {
     target.addEventListener('pointercancel', release);
   }
 
-  /** A click on the track scrolls a page towards the click, like the native scrollbar. */
   function page(event: MouseEvent) {
     const current = thumb();
     if (!current || event.target !== event.currentTarget) return;

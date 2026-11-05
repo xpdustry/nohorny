@@ -175,8 +175,6 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
         Core.app.post(() -> this.events.publish(new ClassificationEvent(group, kind, author, classification)));
     }
 
-    /// Sends the request, waiting out the rate limit of the server between the attempts.
-    ///
     /// The worker keeps its classification permit while it waits,
     /// so the collectors hold their next group meanwhile.
     private HttpResponse<String> send(final HttpRequest request) throws Exception {
@@ -197,7 +195,6 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
         }
     }
 
-    /// @return the wait announced by the `Retry-After` header, in seconds or as an HTTP date, capped
     private static Duration retryAfter(final HttpResponse<?> response) {
         final var header = response.headers().firstValue("Retry-After").orElse(null);
         Duration wait = DEFAULT_RETRY_AFTER;

@@ -5,8 +5,6 @@ import com.xpdustry.nohorny.server.persistence.RatingBucket;
 import java.time.Instant;
 import java.util.Map;
 
-/// Aggregated classification counters, without any per-request data.
-///
 /// @param total the number of requests since the first one, deleted requests included
 /// @param last24Hours the retained requests of the last 24 hours
 public record Statistics(long total, Ratings ratings, Window last24Hours, Instant updatedAt) {

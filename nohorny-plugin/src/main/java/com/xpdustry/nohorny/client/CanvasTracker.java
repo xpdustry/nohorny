@@ -35,8 +35,8 @@ final class CanvasTracker extends BuildingImageTracker<CanvasBlock.CanvasBuild, 
             final int bitIndex = index * block.bitsPerPixel;
             int value = 0;
             for (int offset = 0; offset < block.bitsPerPixel; offset++) {
-                final byte word = building.data[(bitIndex + offset) >>> 3]; // Divide by 8
-                final int mask = (1 << ((bitIndex + offset) & 7)); // Modulo 8
+                final byte word = building.data[(bitIndex + offset) >>> 3];
+                final int mask = (1 << ((bitIndex + offset) & 7));
                 value |= ((word & mask) == 0 ? 0 : 1) << offset;
             }
             pixels[index] = (byte) Math.min(value, block.palette.length - 1);

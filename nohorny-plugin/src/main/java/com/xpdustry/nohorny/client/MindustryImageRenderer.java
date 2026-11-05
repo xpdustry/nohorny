@@ -41,7 +41,6 @@ public final class MindustryImageRenderer {
             global.graphics().setColor(Color.BLACK);
             global.graphics().fillRect(0, 0, image.getWidth(), image.getHeight());
             // Invert y-axis, because Mindustry uses bottom-left as the origin
-            // The flip also includes downscaling in case the virtual image is too big
             global.graphics().translate(0, imageH);
             global.graphics().scale(downscaling, -downscaling);
 

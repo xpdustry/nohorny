@@ -21,7 +21,6 @@ if (dsn) {
     dataCollection: {
       userInfo: false,
       cookies: false,
-      // The browser and its version, nothing else
       httpHeaders: { request: { allow: ['User-Agent'] }, response: false },
       httpBodies: [],
       urlQueryParams: false,

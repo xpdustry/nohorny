@@ -1,5 +1,3 @@
-// The layout of the public pages, their header and footer.
-
 import type { RouteSectionProps } from '@solidjs/router';
 import xpdustryLogo from '../assets/xpdustry.svg';
 import { ArrowUpIcon, CircleUserRoundIcon, DiscordIcon, GitHubIcon } from '../components/icon';

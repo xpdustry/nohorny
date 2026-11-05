@@ -8,8 +8,6 @@ import java.time.Instant;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// The JSON representation of a classification request.
-///
 /// @param kind the [com.xpdustry.nohorny.common.ArtKind#key()] of the image, `null` for the older clients
 /// @param restricted the administrator only fields, omitted entirely for the other callers
 public record RequestView(
@@ -27,13 +25,11 @@ public record RequestView(
         List<Step> steps,
         @JsonUnwrapped @Nullable Restricted restricted) {
 
-    /// @param url only present when the image is stored
     public record Image(
             String state,
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String url) {}
 
-    /// @param error the details of a failure, only sent to the administrators
     public record Step(
             String classifier,
             @Nullable Rating rating,
@@ -42,16 +38,11 @@ public record RequestView(
 
             @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable FailureDetails error) {}
 
-    /// @param error the details of a failure
     public record Restricted(String remoteAddress, @Nullable FailureDetails error) {}
 
     /// The details of a failure. Kept from the public, they reveal the internals of the server.
-    ///
-    /// @param type the name of the exception class
     public record FailureDetails(String type, String stackTrace) {}
 
     /// @param type `user`, `mindustry-network`, `local` or `anonymous`
-    /// @param name the network of a listed Mindustry server if it has one,
-    ///     the username of a user for the administrators only
     public record Requester(String type, @Nullable String name) {}
 }

@@ -22,7 +22,6 @@ public final class SessionController {
         return Session.of(authentication, this.users);
     }
 
-    /// @param bootstrap whether the caller is the bootstrap administrator
     public record Session(String username, boolean admin, boolean bootstrap) {
 
         public static Session of(final Authentication authentication, final UserService users) {

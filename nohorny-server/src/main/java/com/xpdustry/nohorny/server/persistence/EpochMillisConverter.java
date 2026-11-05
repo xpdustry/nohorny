@@ -6,7 +6,6 @@ import jakarta.persistence.Converter;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
-/// Stores instants as epoch milliseconds in `INTEGER` columns.
 @Converter
 public final class EpochMillisConverter implements AttributeConverter<Instant, Long> {
 

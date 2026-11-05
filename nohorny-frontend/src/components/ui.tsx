@@ -1,5 +1,3 @@
-// Components shared by the pages.
-
 import type { ComponentProps, JSX } from '@solidjs/web';
 import { createUniqueId, omit, Show } from 'solid-js';
 import logo from '../assets/logo.svg';
@@ -18,18 +16,15 @@ const VARIANTS: Record<Variant, string> = {
   danger: 'border border-danger/60 text-danger not-disabled:hover:bg-danger-soft',
   'solid-danger': 'bg-danger text-on-danger not-disabled:hover:bg-danger-hover',
   quiet: 'text-ink-2 not-disabled:hover:bg-surface-2 not-disabled:hover:text-ink',
-  // A destructive action repeated on every row, which only turns red under the pointer
   'quiet-danger': 'text-ink-2 not-disabled:hover:bg-danger-soft not-disabled:hover:text-danger',
 };
 
-// Touch screens get taller targets
 const SIZES: Record<Size, string> = {
   md: 'h-10 gap-2 px-4 text-[0.95rem] pointer-coarse:h-11',
   sm: 'h-8 gap-1.5 px-3 text-sm pointer-coarse:h-10',
   icon: 'size-9 justify-center pointer-coarse:size-11',
 };
 
-/** The classes of a button, for links that look like one. */
 export function buttonClass(variant: Variant = 'default', size: Size = 'md'): string[] {
   return [
     'inline-flex shrink-0 select-none items-center whitespace-nowrap rounded-full no-underline [&_svg]:size-4',
@@ -57,7 +52,6 @@ export function Button(props: ComponentProps<'button'> & { variant?: Variant; si
   );
 }
 
-/** A labelled text input. The hint shows until the field has an error, and both describe the input. */
 export function Field(props: ComponentProps<'input'> & { label: string; hint?: string; error?: string | null }) {
   const rest = omit(props, 'label', 'hint', 'error', 'class');
   const id = createUniqueId();
@@ -95,7 +89,6 @@ export function Spinner(props: { class?: string }) {
   );
 }
 
-/** The fallback of a Loading boundary, a spinner centered in a box sized by `class`. It shows after a moment. */
 export function LoadingSpinner(props: { class: string; size?: string }) {
   return (
     <div class={['pending grid place-items-center text-ink-3', props.class]}>
@@ -118,7 +111,6 @@ export const RATING_FILL: Record<Bucket, string> = {
   failed: 'bg-fill-failed',
 };
 
-/** The dot of a rating, hollow when the rating is hidden. */
 export function RatingDot(props: { rating: Bucket; hollow?: boolean }) {
   return (
     <span
@@ -144,7 +136,6 @@ export function RatingBadge(props: { rating: Bucket; label?: string }) {
   );
 }
 
-/** Horizontal gauge of a 0..1 NSFW score. */
 export function Meter(props: { value: number; rating: Bucket; class?: string }) {
   return (
     <span
@@ -159,12 +150,10 @@ export function Meter(props: { value: number; rating: Bucket; class?: string }) 
   );
 }
 
-/** A vertical sequence of events joined by a line, filled with `TimelineItem`s. */
 export function Timeline(props: { children: JSX.Element; class?: string }) {
   return <ol class={['flex flex-col', props.class]}>{props.children}</ol>;
 }
 
-/** An event of a `Timeline`. The marker sits on the line, level with the first row of the content. */
 export function TimelineItem(props: { marker: JSX.Element; children: JSX.Element }) {
   return (
     <li class="group relative flex gap-3 pb-5 last:pb-0">
@@ -178,7 +167,6 @@ export function TimelineItem(props: { marker: JSX.Element; children: JSX.Element
   );
 }
 
-/** The marker of a rated event in a `Timeline`, haloed when `emphasized`. */
 export function TimelineDot(props: { rating: Bucket; emphasized?: boolean }) {
   return (
     <span
@@ -226,7 +214,6 @@ export function Brand(props: { tag?: string }) {
   );
 }
 
-/** Centered message for the loading, empty and error states of a page or a panel. */
 export function State(props: { icon?: JSX.Element; title: string; children?: JSX.Element; tone?: 'error' }) {
   return (
     <div class="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -249,7 +236,6 @@ export function State(props: { icon?: JSX.Element; title: string; children?: JSX
   );
 }
 
-/** The outcome of an action. Its icon tells a success from an error, the text stays in the ink colour. */
 export function Notice(props: { tone: 'success' | 'error'; children: JSX.Element; onDismiss?: () => void }) {
   return (
     <div

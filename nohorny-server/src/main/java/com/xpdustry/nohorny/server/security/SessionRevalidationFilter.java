@@ -10,14 +10,10 @@ import java.io.IOException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Ends the sessions signed in before their account changed.
-///
 /// Changing the password or the role of an account bumps its session version, deleting it removes it. A new account
-/// starts at a random version, so recreating a deleted username does not revive the sessions of the previous one. A
-/// session whose [AccountDetails] carry another version, or no account at all, is invalidated and the request goes on
-/// anonymous.
+/// starts at a random version, so recreating a deleted username does not revive the sessions of the previous one.
 /// Since the version is checked on every request rather than swept once, a sign in racing with the change cannot keep
-/// the previous rights. Runs right after the security context is loaded from the session, before HTTP Basic.
+/// the previous rights.
 final class SessionRevalidationFilter extends OncePerRequestFilter {
 
     private final UserAccountRepository users;

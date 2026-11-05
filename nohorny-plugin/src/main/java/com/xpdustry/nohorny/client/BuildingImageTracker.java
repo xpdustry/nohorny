@@ -9,7 +9,6 @@ import mindustry.gen.Building;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
 
-// Groups adjacent buildings into images, using the state of each building
 abstract class BuildingImageTracker<B extends Building, T extends MindustryImage> implements LifecycleListener {
 
     final VirtualBuildingIndex<T> index = new VirtualBuildingIndex<>();

@@ -1,6 +1,3 @@
-// The page of one request at /requests/:id, with its verdict, its blurred image and the button deleting it.
-// It renders in the browser only, so one prerendered shell serves every request identifier.
-
 import { Title } from '@solidjs/meta';
 import { createMemo, createSignal, Errored, onSettled, refresh, Show } from 'solid-js';
 import { api, describe, type Request, requestPath, statusOf } from '../lib/api';
@@ -27,7 +24,6 @@ const CAPTIONS = {
 export default function RequestPage(props: { id: string }) {
   onSettled(() => void checkSession());
 
-  // Resolves to null for an unknown request. Other errors reach the Errored boundary
   const request = createMemo(async () => {
     try {
       return await api<Request>(requestPath(props.id));
@@ -104,7 +100,6 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
   const [message, setMessage] = createSignal<{ tone: 'success' | 'error'; text: string } | null>(null);
   const path = () => requestPath(props.request.id);
 
-  /** Runs an action while `busy` is set. `failed(error)` returns the message to show, if any. */
   async function act(action: () => Promise<void>, failed: (error: unknown) => string | undefined) {
     setBusy(true);
     setMessage(null);
@@ -192,7 +187,6 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
         )}
       </Show>
 
-      {/* The verdict follows the image on small screens */}
       <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr]">
         <div class="flex flex-col gap-4">
           <RequestImage request={props.request} revealed={revealed()} onReveal={setRevealed} />

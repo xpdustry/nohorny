@@ -19,11 +19,7 @@ import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.power.LightBlock;
 
-// A worst case world, entirely covered by pixel art, split in 4 horizontal bands:
-// - canvases
-// - large displays, each drawn by 6 processors with 100 draw instructions
-// - sorters
-// - illuminators
+// A worst case world, entirely covered by pixel art
 final class ArtWorld {
 
     private static final Team TEAM = Team.sharded;

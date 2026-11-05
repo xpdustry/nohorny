@@ -4,10 +4,6 @@ package com.xpdustry.nohorny.server.persistence;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-/// A classification that threw.
-///
-/// @param error the stack trace of the exception, its first line starts with the name of the exception class. The
-/// failures recorded before only hold that name
 public record Failure(String error) implements Outcome {
 
     public Failure(final Throwable throwable) {
@@ -19,7 +15,6 @@ public record Failure(String error) implements Outcome {
         return RatingBucket.FAILED;
     }
 
-    /// @return the name of the exception class
     public String type() {
         final var line = this.error.lines().findFirst().orElse("");
         final var end = line.indexOf(':');

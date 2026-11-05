@@ -1,5 +1,3 @@
-// The layout of the admin panel. It shows the sign in form until an administrator signs in, then the tabs and the page.
-
 import { Meta, Title } from '@solidjs/meta';
 import { type RouteSectionProps, useIsRouting } from '@solidjs/router';
 import type { JSX } from '@solidjs/web';
@@ -90,7 +88,6 @@ export default function AdminLayout(props: RouteSectionProps) {
   );
 }
 
-/** The centered card holding the sign in form and the error states. */
 function Gate(props: { children: JSX.Element }) {
   return (
     <main class="reveal grid min-h-dvh place-items-center p-4">
@@ -207,7 +204,6 @@ function AdminShell(props: { children: JSX.Element }) {
         <main id="main" class="wrap flex flex-1 flex-col gap-6 py-8">
           {props.children}
         </main>
-        {/* Floats over the page, so the outcome of an action shows wherever the row was */}
         <div class="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex items-end justify-end gap-2">
           <Show when={admin.status()}>
             {(status) => (
@@ -225,10 +221,8 @@ function AdminShell(props: { children: JSX.Element }) {
   );
 }
 
-/** How far the page scrolls, in heights of the window, before the button shows. */
 const BACK_TO_TOP_SCREENS = 1;
 
-/** Fades in once the page is scrolled down, back to its top. */
 function BackToTop() {
   const [shown, setShown] = createSignal(false);
   onSettled(() => {

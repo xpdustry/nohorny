@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/// Deletes the expired images and requests, on startup then hourly.
 @Component
 public final class RequestRetentionTask {
 

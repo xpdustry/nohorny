@@ -4,7 +4,6 @@
 
 const HEX = /^[0-9a-f]{1,32}$/;
 
-/** Formats up to 32 hex digits with the hyphens of a UUID, '01a10c55ef3b' gives '01a10c55-ef3b'. */
 function hyphenate(hex: string): string {
   return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)]
     .filter(Boolean)

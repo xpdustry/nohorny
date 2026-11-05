@@ -1,5 +1,3 @@
-// The users page of the admin panel, which manages the accounts, their roles, passwords and rate limits.
-
 import { Meta, Title } from '@solidjs/meta';
 import {
   createMemo,
@@ -13,7 +11,7 @@ import {
   useContext,
 } from 'solid-js';
 import { confirm, Dialog } from '../../components/dialog';
-import { GaugeIcon, KeyIcon, PlusIcon, ShieldMinusIcon, ShieldPlusIcon, TrashIcon } from '../../components/icon';
+import { GaugeIcon, KeyRoundIcon, PlusIcon, ShieldMinusIcon, ShieldPlusIcon, TrashIcon } from '../../components/icon';
 import { Button, Chip, Field, State } from '../../components/ui';
 import { AdminContext } from '../../lib/admin';
 import { describe, statusOf, type User, userPath } from '../../lib/api';
@@ -33,7 +31,6 @@ const MAX_RATE_LIMIT = 100_000;
 
 const RATE_LIMIT_HINT = 'Classifications per minute, shared by all the servers using the account';
 
-/** Why a rate limit is refused, or null. Blank is only allowed where the server default applies. */
 function rateLimitProblem(value: string, optional: boolean): string | null {
   if (!value.trim()) return optional ? null : 'Enter a limit';
   const limit = Number(value);
@@ -309,7 +306,7 @@ export default function Users() {
                           : 'Set a new password'
                       }
                       onClick={() => setEditing(account())}>
-                      <KeyIcon />
+                      <KeyRoundIcon />
                       Password
                     </Button>
                     <Button
@@ -357,7 +354,6 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void; onCreated
 function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
   const admin = useContext(AdminContext);
   const [form, setForm] = createStore({ username: '', password: '', admin: false, rateLimit: '' });
-  /** The fields to check, the ones left once and all of them after a submit. */
   const [touched, setTouched] = createStore({ username: false, password: false, rateLimit: false });
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);

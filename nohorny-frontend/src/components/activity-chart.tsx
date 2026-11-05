@@ -1,5 +1,3 @@
-// Classifications over time, stacked by rating, from GET /api/stats/history.
-
 import { createMemo, createSignal, For, Show } from 'solid-js';
 import { BUCKETS, type Bucket, type History } from '../lib/api';
 import { number, ratingLabel } from '../lib/format';
@@ -16,7 +14,7 @@ function niceMax(max: number): number {
   return nice * magnitude * TICKS;
 }
 
-/** '14:00' for hourly slots, 'Oct 4' for the daily ones, which are UTC days. */
+/** Daily slots are UTC days. */
 function slotLabel(start: string, slot: History['slot']): string {
   const date = new Date(start);
   return slot === 'hour'
@@ -34,7 +32,6 @@ export function ActivityChart(props: {
 }) {
   const [hovered, setHovered] = createSignal<number | null>(null);
   const visible = createMemo(() => BUCKETS.filter((key) => props.shown[key]));
-  // The segments of each bar, computed once per change of the history or of the shown ratings.
   // Only the ratings present get a segment, so the 2px gap is only drawn between two of them.
   const bars = createMemo(() =>
     props.history.slots.map((slot) => {
@@ -56,7 +53,6 @@ export function ActivityChart(props: {
 
   return (
     <div class="relative flex gap-3" aria-hidden="true">
-      {/* The labels and the grid lines share their positions, from the top of the axis down to 0 */}
       <div
         class="relative h-56 shrink-0 font-mono text-[0.65rem] text-ink-3 tabular-nums"
         style={{ width: `${number(max()).length}ch` }}>
@@ -89,7 +85,6 @@ export function ActivityChart(props: {
                     const from = Date.parse(bar().slot.start);
                     props.onSelect?.(from, from + SLOT_MILLIS[props.history.slot]);
                   }}>
-                  {/* Empty slots render no segments. Most of the 90 day range is empty. */}
                   {/* 1.5rem wide, narrower when the slots are packed, and half the slot when they are few, like the 7 days */}
                   <Show when={bar().total > 0}>
                     <div
@@ -148,7 +143,6 @@ export function ActivityChart(props: {
         <div class="flex gap-[3px] font-mono text-[0.62rem] text-ink-3">
           <For each={props.history.slots} keyed={(slot) => slot.start}>
             {(slot, index) => (
-              // Every other label is enough on small screens
               <span
                 class={[
                   'min-w-0 flex-1 overflow-visible whitespace-nowrap text-center',

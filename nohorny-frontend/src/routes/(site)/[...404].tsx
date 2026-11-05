@@ -1,5 +1,3 @@
-// The page for unknown paths. The server answers them with its prerendered copy and a 404 status.
-
 import { Title } from '@solidjs/meta';
 import { SearchXIcon } from '../../components/icon';
 import { buttonClass, State } from '../../components/ui';

@@ -16,7 +16,6 @@ import mindustry.gen.Player;
 import mindustry.world.blocks.ConstructBlock;
 import org.jspecify.annotations.Nullable;
 
-// Turns the Mindustry building events into create/remove callbacks per building type
 final class NoHornyEventBus implements AutoCloseable {
 
     private static final MiniLogger log = MiniLogger.forClass(NoHornyEventBus.class);

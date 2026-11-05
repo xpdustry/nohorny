@@ -1,5 +1,3 @@
-// The session of the signed in user, global to the app.
-
 import { createStore } from 'solid-js';
 import { type ApiOptions, api, describe, hasCsrfToken, probeSession, type Session, statusOf } from './api';
 import { config } from './config';
@@ -14,9 +12,7 @@ type Status = 'unknown' | 'signed-out' | 'ready' | 'error';
 const [state, setState] = createStore<{
   status: Status;
   session: Session | null;
-  /** Why the session check failed, for the 'error' status. */
   error: string | null;
-  /** Shown above the sign in form, such as an expired session. */
   notice: string | null;
 }>({
   status: config ? (config.session ? 'ready' : 'signed-out') : 'unknown',
@@ -31,10 +27,7 @@ export const isAdmin = () => state.session?.admin === true;
 
 let checked: Promise<Status> | null = config ? Promise.resolve(state.status) : null;
 
-/**
- * Checks the session and resolves to its status. Without `force`, it checks only once. It writes the outcome only once
- * the server answered, so an async memo can call it, and the previous status stays meanwhile.
- */
+/** Writes the outcome only once the server answered, so an async memo can call it. */
 export function checkSession(force = false): Promise<Status> {
   if (force || !checked) checked = probe();
   return checked;
@@ -120,7 +113,6 @@ export function expire(notice: string) {
   signedOut(notice);
 }
 
-/** Calls api() with the session. A 401 shows the sign in form and throws SessionExpired. */
 export async function call<T = unknown>(path: string, options?: ApiOptions): Promise<T> {
   try {
     return await api<T>(path, options);

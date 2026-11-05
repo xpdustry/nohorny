@@ -10,8 +10,6 @@ import io.github.bucket4j.TokensInheritanceStrategy;
 import java.time.Duration;
 import org.springframework.stereotype.Component;
 
-/// Token buckets refilled continuously over a minute, kept in memory.
-///
 /// A bucket idle for a minute is full again,
 /// so the cache forgets it without changing the outcome of the next request.
 @Component
@@ -26,14 +24,9 @@ public final class RateLimiter {
             .maximumSize(MAX_BUCKETS)
             .build();
 
-    /// Takes a token from the bucket of the key, created full on first use.
-    ///
     /// When the limit of a bucket changes,
     /// a raise grants the extra tokens at once and a cut caps the remaining ones.
     ///
-    /// @param scope what is limited, such as `classify-user`
-    /// @param subject who is limited, such as a client address
-    /// @param perMinute the capacity and refill rate of the bucket
     /// @return [Duration#ZERO] if a token was taken, otherwise how long to wait for the next one
     public Duration tryAcquire(final String scope, final String subject, final int perMinute) {
         final var limited = this.buckets.get(new Key(scope, subject), ignored -> new Limited(perMinute));

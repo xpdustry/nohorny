@@ -1,7 +1,3 @@
-// The requests per Mindustry network and from the local addresses, as a donut and a legend listing every network, from
-// GET /api/stats/networks. The other requesters share a slice, and the legend lists them under the networks. A click on
-// a network, the local addresses or another requester lists its requests.
-
 import { createMemo, createSignal, For, Show } from 'solid-js';
 import type { Networks, RequesterFilter, RequesterType } from '../lib/api';
 import { number, share } from '../lib/format';
@@ -39,7 +35,6 @@ interface Row extends Slice {
   filter?: RequesterFilter;
 }
 
-/** The filters of the requesters without a network. The unknown requests are gone, they have none. */
 const UNLISTED_FILTERS: Partial<Record<RequesterType | '', Omit<RequesterFilter, 'label'>>> = {
   user: { type: 'user', name: null },
   'mindustry-network': { type: 'mindustry-network', name: '' },
@@ -61,7 +56,6 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
 
   const local = () => props.networks.requesters.find((requester) => requester.name === 'local')?.count ?? 0;
 
-  /** The networks and the local addresses, the most active first. */
   const rows = createMemo(() => {
     const entries = props.networks.networks.map((network) => ({
       key: `network:${network.name}`,
@@ -88,7 +82,6 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
     });
   });
 
-  /** The requesters without a network, sharing the unlisted slice, the most active first then the unknown one. */
   const unlisted = createMemo(() => {
     const named = props.networks.requesters.filter(
       (requester) => requester.name !== 'local' && requester.name !== '' && requester.count > 0,
@@ -140,9 +133,7 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
   });
 
   const focus = () => slices().find((slice) => slice.key === hovered());
-  /** The filter of a slice drawn for a single row, the shared ones have none. */
   const sliceFilter = (key: string) => rows().find((row) => row.key === key)?.filter;
-  /** Lists the requests of a row, when it has a filter and the chart is clickable. */
   const select = (filter: RequesterFilter | undefined) =>
     filter && props.onSelect ? () => props.onSelect?.(filter) : undefined;
 
@@ -246,7 +237,6 @@ function LegendRow(props: {
   color: string;
   active: boolean;
   onHover: (on: boolean) => void;
-  /** Lists the requests of the row. Without it, the row is not clickable. */
   onSelect?: () => void;
   class?: string | (string | Record<string, boolean>)[];
 }) {

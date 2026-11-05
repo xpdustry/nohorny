@@ -18,7 +18,6 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
-/// Every error answers `{"message": "..."}`.
 @RestControllerAdvice
 public final class ApiExceptionHandler {
 
@@ -30,7 +29,6 @@ public final class ApiExceptionHandler {
                 reason == null ? reasonOf(exception.getStatusCode().value()) : reason);
     }
 
-    /// Answers the first violated constraint of a request body, such as `password must be at least 8 characters`.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<SimpleServerMessage> onMethodArgumentNotValidException(
             final MethodArgumentNotValidException exception) {

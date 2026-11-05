@@ -42,16 +42,12 @@ public class StatisticsService {
         return new Statistics(allTime.total(), allTime.ratings(), recent, now);
     }
 
-    /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
-    ///     over the same windows as [#history]
-    /// @return the requests per listed network and per other requester, or empty for an unknown range
     public Optional<Networks> networks(final String range) {
         return this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince)
                 .map(counts -> new Networks(range, counts.total(), counts.named(), this.requesters(range)));
     }
 
     /// @param range a known range, see [#networks]
-    /// @return the requests not from a named network, per requester type key, empty for the migrated counts
     private List<Count> requesters(final String range) {
         final var counts = range.equals("24h")
                 ? this.requests.countByUnnamedRequesterSince(firstHour())
@@ -66,9 +62,6 @@ public class StatisticsService {
                 .toList();
     }
 
-    /// @param range `24h` from the retained requests, `7d`, `30d` or `90d` from the daily statistics,
-    ///     over the same windows as [#history]
-    /// @return the requests per plugin version, or empty for an unknown range
     public Optional<Versions> versions(final String range) {
         return this.counts(range, this.requests::countByVersionSince, this.dailyStats::countByVersionSince)
                 .map(counts -> new Versions(
@@ -79,10 +72,6 @@ public class StatisticsService {
                                 .toList()));
     }
 
-    /// The named counts of a range, from the retained requests for `24h` and from the daily statistics otherwise,
-    /// with every request of the range.
-    ///
-    /// @return empty for an unknown range
     private Optional<Counts> counts(
             final String range,
             final Function<Instant, List<NamedCount>> retained,
@@ -105,7 +94,6 @@ public class StatisticsService {
         return Optional.of(Counts.of(daily.apply(first), total));
     }
 
-    /// @param named the counts by name, the highest first then by name
     private record Counts(List<Count> named, long total) {
 
         static Counts of(final List<NamedCount> counts, final long total) {
@@ -120,9 +108,6 @@ public class StatisticsService {
         }
     }
 
-    /// @param range `24h` for hourly slots from the retained requests,
-    ///     `7d`, `30d` or `90d` for daily slots from the daily statistics
-    /// @return the zero-filled history, or empty for an unknown range
     public Optional<History> history(final String range) {
         if (range.equals("24h")) {
             final var first = firstHour();
@@ -167,7 +152,6 @@ public class StatisticsService {
         };
     }
 
-    /// The first day of a daily range, today is its last slot.
     private static LocalDate firstDay(final int days) {
         return LocalDate.now(ZoneOffset.UTC).minusDays(days - 1);
     }
@@ -176,7 +160,6 @@ public class StatisticsService {
         return totals.stream().mapToLong(Long::longValue).sum();
     }
 
-    /// @return the counts per slot then per bucket
     private static Map<String, Map<RatingBucket, Long>> bySlot(final List<SlotCount> counts) {
         final var slots = new HashMap<String, Map<RatingBucket, Long>>();
         for (final var count : counts) {

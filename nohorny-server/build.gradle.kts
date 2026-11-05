@@ -30,7 +30,6 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-community-dialects")
     // Required by the Argon2 password encoder
     implementation(libs.bouncycastle)
-    // Token buckets of the rate limits, held in a cache that forgets the idle ones
     implementation(libs.bucket4j)
     implementation("com.github.ben-manes.caffeine:caffeine")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
