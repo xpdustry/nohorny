@@ -23,6 +23,7 @@ import {
   TrashIcon,
 } from '../../components/icon';
 import { Button, buttonClass, Field, State } from '../../components/ui';
+import { runAction } from '../../lib/action';
 import { AdminContext } from '../../lib/admin';
 import {
   describe,
@@ -34,7 +35,7 @@ import {
   type User,
 } from '../../lib/api';
 import { formatDate, requesterLabel } from '../../lib/format';
-import { call, SessionExpired } from '../../lib/session';
+import { call, callEmpty, isSessionExpired } from '../../lib/session';
 
 /** The longest network name the API accepts. */
 const MAX_NETWORK_LENGTH = 64;
@@ -67,21 +68,22 @@ export default function Settings() {
 
   /** Runs a row action while `busy` is set, then reloads the mappings. A 404 means the mapping is already gone. */
   async function act(mapping: Mapping, action: () => Promise<string>, failed: string, unreachable: string) {
-    setBusy((draft) => {
-      draft[mapping.id] = true;
-    });
-    try {
-      admin.notify(await action());
-    } catch (error) {
-      if (error instanceof SessionExpired) return;
-      if (statusOf(error) === 404) admin.notify(`The mapping of ${mapping.range} no longer exists.`, 'error');
-      else admin.notify(describe(error, failed, unreachable), 'error');
-    } finally {
-      setBusy((draft) => {
-        delete draft[mapping.id];
-      });
-      refresh(mappings);
-    }
+    await runAction(
+      {
+        busy: (on) =>
+          setBusy((draft) => {
+            if (on) draft[mapping.id] = true;
+            else delete draft[mapping.id];
+          }),
+        report: admin.notify,
+      },
+      action,
+      (error) =>
+        statusOf(error) === 404
+          ? `The mapping of ${mapping.range} no longer exists.`
+          : describe(error, failed, unreachable),
+    );
+    refresh(mappings);
   }
 
   async function apply(mapping: Mapping) {
@@ -117,7 +119,7 @@ export default function Settings() {
     await act(
       mapping,
       async () => {
-        await call(mappingPath(mapping.id), { method: 'DELETE' });
+        await callEmpty(mappingPath(mapping.id), { method: 'DELETE' });
         return `Mapping of ${mapping.range} deleted.`;
       },
       'Could not delete the mapping',
@@ -160,7 +162,7 @@ export default function Settings() {
         <div class="card overflow-hidden">
           <Errored
             fallback={(error, reset) => (
-              <Show when={!(error() instanceof SessionExpired)}>
+              <Show when={!isSessionExpired(error())}>
                 <State title="Could not load the mappings" tone="error">
                   <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
                   <Button onClick={() => reset()}>Retry</Button>
@@ -232,7 +234,7 @@ export default function Settings() {
         }}
         label={editing() ? 'Edit mapping' : 'New mapping'}>
         <MappingForm
-          mapping={editing()}
+          initial={editing()}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -244,10 +246,9 @@ export default function Settings() {
   );
 }
 
-/** The dialog renders its content only while open, so every opening starts from the mapping or an empty form. */
-function MappingForm(props: { mapping: Mapping | null; onClose: () => void; onSaved: () => void }) {
+function MappingForm(props: { initial: Mapping | null; onClose: () => void; onSaved: () => void }) {
   const admin = useContext(AdminContext);
-  const initial = props.mapping;
+  const initial = props.initial;
   const [form, setForm] = createStore({
     range: initial?.range ?? '',
     type: initial?.type ?? ('mindustry-network' as RequesterType),
@@ -306,7 +307,7 @@ function MappingForm(props: { mapping: Mapping | null; onClose: () => void; onSa
       if (open) props.onClose();
       props.onSaved();
     } catch (failure) {
-      if (failure instanceof SessionExpired || !open) return;
+      if (isSessionExpired(failure) || !open) return;
       const status = statusOf(failure);
       if (status === 409) {
         setError(`${json.range} is already mapped, edit its mapping instead.`);

@@ -40,6 +40,7 @@ import {
 } from '../../components/request';
 import { Button, buttonClass, Chip, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
 import { VersionChart } from '../../components/version-chart';
+import { runAction } from '../../lib/action';
 import { AdminContext } from '../../lib/admin';
 import {
   BUCKETS,
@@ -56,20 +57,20 @@ import {
   type VersionFilter,
   type Versions,
 } from '../../lib/api';
-import { cursorAt, parsePrefix, toLocalInput } from '../../lib/cursor';
+import { cursorAfterPrefix, cursorBefore, parsePrefix, toDatetimeLocalValue } from '../../lib/cursor';
 import { bucket, duration, formatTime, number, ratingLabel, relativeTime, share, shortId } from '../../lib/format';
-import { call, SessionExpired } from '../../lib/session';
+import { call, callEmpty, isSessionExpired } from '../../lib/session';
 
 export default function Requests() {
   // A click on a bar of the chart, a network or a version narrows the list to its requests
-  const [pick, setPick] = createSignal<Pick | null>(null);
+  const [chartFilter, setChartFilter] = createSignal<ChartFilters | null>(null);
   return (
     <>
       <Title>Requests · NoHorny admin</Title>
       <Meta name="robots" content="noindex, nofollow" />
       {/* A new object per click, so clicking the same bar, network or version again still applies it */}
-      <Overview onPick={(filters) => setPick({ ...filters })} />
-      <RequestList pick={pick()} />
+      <Overview onChartFilter={(filters) => setChartFilter({ ...filters })} />
+      <RequestList chartFilter={chartFilter()} />
     </>
   );
 }
@@ -81,13 +82,13 @@ const RANGES: { value: HistoryRange; label: string }[] = [
   { value: '90d', label: '90 d' },
 ];
 
-const REFRESH_MILLIS = 15000;
+const HISTORY_RELOAD_MIN_MILLIS = 15000;
 
 const SEGMENTED = 'flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-bg-2 p-1';
 const SEGMENT =
   'shrink-0 rounded-full border border-transparent px-3 py-1 font-mono text-xs text-ink-2 transition-colors hover:text-ink aria-pressed:border-accent-edge aria-pressed:bg-accent-soft aria-pressed:text-on-accent-soft pointer-coarse:py-2';
 
-function Overview(props: { onPick: (filters: Pick) => void }) {
+function Overview(props: { onChartFilter: (filters: ChartFilters) => void }) {
   const admin = useContext(AdminContext);
   const [range, setRange] = createSignal<HistoryRange>('30d');
   const [shown, setShown] = createStore<Record<Bucket, boolean>>({ safe: true, warn: true, nsfw: true, failed: true });
@@ -96,7 +97,7 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
   const networks = createMemo(() => call<Networks>(`/api/stats/networks?range=${range()}`));
   const versions = createMemo(() => call<Versions>(`/api/stats/versions?range=${range()}`));
 
-  // A busy server classifies many images per second, so the reloads wait at least REFRESH_MILLIS apart
+  // A busy server classifies many images per second, so the reloads wait at least HISTORY_RELOAD_MIN_MILLIS apart
   let lastLoad = Date.now();
   let pending: ReturnType<typeof setTimeout> | undefined;
   createEffect(
@@ -111,7 +112,7 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
           refresh(networks);
           refresh(versions);
         },
-        Math.max(0, lastLoad + REFRESH_MILLIS - Date.now()),
+        Math.max(0, lastLoad + HISTORY_RELOAD_MIN_MILLIS - Date.now()),
       );
     },
     { defer: true },
@@ -156,7 +157,7 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
 
       <Errored
         fallback={(error, reset) => (
-          <Show when={!(error() instanceof SessionExpired)}>
+          <Show when={!isSessionExpired(error())}>
             <State title="Could not load the activity" tone="error">
               <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
               <Button onClick={() => reset()}>Retry</Button>
@@ -192,7 +193,7 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
               )}
             </For>
           </div>
-          <ActivityChart history={history()} shown={shown} onSelect={(from, to) => props.onPick({ from, to })} />
+          <ActivityChart history={history()} shown={shown} onSelect={props.onChartFilter} />
           <p class="sr-only">
             Classified requests over the range:{' '}
             {BUCKETS.map((key) => `${number(totals()[key])} ${ratingLabel(key)}`).join(', ')}.
@@ -202,10 +203,10 @@ function Overview(props: { onPick: (filters: Pick) => void }) {
 
       <div class="grid gap-8 border-line border-t pt-6 lg:grid-cols-[3fr_2fr]">
         <Breakdown id="networks" title="Networks" data={networks}>
-          {(data) => <NetworkChart networks={data()} onSelect={(requester) => props.onPick({ requester })} />}
+          {(data) => <NetworkChart networks={data()} onSelect={(requester) => props.onChartFilter({ requester })} />}
         </Breakdown>
         <Breakdown id="versions" title="Client versions" data={versions}>
-          {(data) => <VersionChart versions={data()} onSelect={(version) => props.onPick({ version })} />}
+          {(data) => <VersionChart versions={data()} onSelect={(version) => props.onChartFilter({ version })} />}
         </Breakdown>
       </div>
     </section>
@@ -220,7 +221,7 @@ function Breakdown<T>(props: { id: string; title: string; data: () => T; childre
       </h2>
       <Errored
         fallback={(error, reset) => (
-          <Show when={!(error() instanceof SessionExpired)}>
+          <Show when={!isSessionExpired(error())}>
             <State title={`Could not load the ${props.title.toLowerCase()}`} tone="error">
               <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
               <Button onClick={() => reset()}>Retry</Button>
@@ -242,14 +243,14 @@ const FILTERS: { value: Bucket | null; label: string }[] = [
 
 const PAGE_SIZE = 20;
 
-/** The filters of the list. `id` is an identifier or its beginning, `from` and `to` are milliseconds, `to` excluded. */
+/** The filters of the list. `idPrefix` is an identifier or its beginning, `toMillis` is excluded. */
 interface Query {
   rating: Bucket | null;
   requester: RequesterFilter | null;
   version: VersionFilter | null;
-  id: string;
-  from: number | null;
-  to: number | null;
+  idPrefix: string;
+  fromMillis: number | null;
+  toMillis: number | null;
 }
 
 /** Opens the picker of a date field on a click anywhere in it, not only on its calendar icon. */
@@ -261,10 +262,17 @@ function openPicker(event: MouseEvent & { currentTarget: HTMLInputElement }) {
   }
 }
 
-const NO_QUERY: Query = { rating: null, requester: null, version: null, id: '', from: null, to: null };
+const NO_QUERY: Query = {
+  rating: null,
+  requester: null,
+  version: null,
+  idPrefix: '',
+  fromMillis: null,
+  toMillis: null,
+};
 
 /** Filters set from the charts, replacing the same ones of the list and keeping the others. */
-type Pick = Partial<Omit<Query, 'rating' | 'id'>>;
+type ChartFilters = Partial<Omit<Query, 'rating' | 'idPrefix'>>;
 
 const FILTER_FIELD =
   'h-9 rounded-full border border-line-strong bg-bg-2 px-3 font-mono text-ink text-xs transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-10';
@@ -273,7 +281,19 @@ const MAX_REFRESH_PAGES = 5;
 
 const THUMBNAIL_PLACEHOLDERS = { none: 'Not kept', stored: 'Unavailable', expired: 'Expired', deleted: 'Deleted' };
 
-function RequestList(props: { pick: Pick | null }) {
+/** The index the viewer shows once the request at `removed` left a list of `length` requests, null when it closes. */
+function viewerIndexAfterRemoval(open: number, removed: number, length: number): number | null {
+  if (open < removed) return open;
+  // The viewer moves on to the next request, or back to the previous one at the end of the list
+  const next = open > removed || removed === length - 1 ? open - 1 : open;
+  return next < 0 ? null : next;
+}
+
+const clear = (draft: Record<string, boolean>) => {
+  for (const key of Object.keys(draft)) delete draft[key];
+};
+
+function RequestList(props: { chartFilter: ChartFilters | null }) {
   const admin = useContext(AdminContext);
   const [query, setQuery] = createSignal<Query>(NO_QUERY);
   const [idText, setIdText] = createSignal('');
@@ -284,13 +304,14 @@ function RequestList(props: { pick: Pick | null }) {
     loading: false,
     exhausted: false,
     error: null as string | null,
-    /** The images revealed or blurred one by one, over revealAll, and the rows with a running action, by request identifier. */
-    revealed: {} as Record<string, boolean>,
-    busy: {} as Record<string, boolean>,
   });
+  /** The images revealed or blurred one by one, over revealAll, by request identifier. */
+  const [revealedById, setRevealedById] = createStore<Record<string, boolean>>({});
+  /** The rows with a running action, by request identifier. */
+  const [busy, setBusy] = createStore<Record<string, boolean>>({});
   const [revealAll, setRevealAll] = createSignal(false);
   /** Index of the request open in the viewer, null when closed. */
-  const [viewing, setViewing] = createSignal<number | null>(null);
+  const [viewerIndex, setViewerIndex] = createSignal<number | null>(null);
 
   // Plain variables for the control flow. A store write shows only after the next flush. The first page is loading
   let generation = 0;
@@ -305,7 +326,11 @@ function RequestList(props: { pick: Pick | null }) {
   let observer: IntersectionObserver | undefined;
 
   function startCursor(): string | null {
-    const bounds = [parsePrefix(current.id)?.cursor, current.to === null ? undefined : cursorAt(current.to)];
+    const prefix = parsePrefix(current.idPrefix);
+    const bounds = [
+      prefix && cursorAfterPrefix(prefix),
+      current.toMillis === null ? undefined : cursorBefore(current.toMillis),
+    ];
     return bounds.reduce<string | null>(
       (oldest, bound) => (bound && (!oldest || bound < oldest) ? bound : oldest),
       null,
@@ -314,23 +339,23 @@ function RequestList(props: { pick: Pick | null }) {
 
   /** Whether a request older than the loaded ones still matches. The list ends at the first one that does not. */
   function matches(item: Request): boolean {
-    const prefix = parsePrefix(current.id)?.prefix;
+    const prefix = parsePrefix(current.idPrefix);
     if (prefix && !item.id.startsWith(prefix)) return false;
-    return current.from === null || Date.parse(item.createdAt) >= current.from;
+    return current.fromMillis === null || Date.parse(item.createdAt) >= current.fromMillis;
   }
 
   const filtered = () =>
     query().requester !== null ||
     query().version !== null ||
-    query().id !== '' ||
-    query().from !== null ||
-    query().to !== null;
+    query().idPrefix !== '' ||
+    query().fromMillis !== null ||
+    query().toMillis !== null;
   const idInvalid = () => idText().trim() !== '' && !parsePrefix(idText());
 
-  const clearFilters = () => reset({ ...NO_QUERY, rating: current.rating });
+  const clearFilters = () => applyQuery({ ...NO_QUERY, rating: current.rating });
 
   /** Loads the list of `next` filters. The current requests stay, dimmed, until its first page replaces them. */
-  function reset(next: Query) {
+  function applyQuery(next: Query) {
     generation++;
     current = next;
     cursor = startCursor();
@@ -339,8 +364,8 @@ function RequestList(props: { pick: Pick | null }) {
     failed = false;
     stale = true;
     setQuery(next);
-    setIdText(next.id);
-    setViewing(null);
+    setIdText(next.idPrefix);
+    setViewerIndex(null);
     setList((draft) => {
       draft.stale = true;
       draft.loading = false;
@@ -369,12 +394,14 @@ function RequestList(props: { pick: Pick | null }) {
     exhausted = cursor === null || end !== -1;
     const replacing = stale;
     stale = false;
+    if (replacing) {
+      setRevealedById(clear);
+      setBusy(clear);
+    }
     setList((draft) => {
       if (replacing) {
         draft.items = items;
         draft.stale = false;
-        draft.revealed = {};
-        draft.busy = {};
       } else {
         const known = new Set(draft.items.map((item) => item.id));
         draft.items.push(...items.filter((item) => !known.has(item.id)));
@@ -384,7 +411,7 @@ function RequestList(props: { pick: Pick | null }) {
   }
 
   function failPage(error: unknown) {
-    if (error instanceof SessionExpired) return;
+    if (isSessionExpired(error)) return;
     failed = true;
     const replacing = stale;
     stale = false;
@@ -439,10 +466,10 @@ function RequestList(props: { pick: Pick | null }) {
   });
 
   createEffect(
-    () => props.pick,
-    (pick) => {
-      if (!pick) return;
-      reset({ ...current, ...pick });
+    () => props.chartFilter,
+    (filters) => {
+      if (!filters) return;
+      applyQuery({ ...current, ...filters });
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     { defer: true },
@@ -450,13 +477,13 @@ function RequestList(props: { pick: Pick | null }) {
 
   function applyId(value: string) {
     const text = value.trim();
-    if (text === current.id || (text !== '' && !parsePrefix(text))) return;
-    reset({ ...current, id: text });
+    if (text === current.idPrefix || (text !== '' && !parsePrefix(text))) return;
+    applyQuery({ ...current, idPrefix: text });
   }
 
-  function applyTime(bound: 'from' | 'to', value: string) {
+  function applyTime(bound: 'fromMillis' | 'toMillis', value: string) {
     const millis = value ? new Date(value).getTime() : null;
-    if (millis === null || !Number.isNaN(millis)) reset({ ...current, [bound]: millis });
+    if (millis === null || !Number.isNaN(millis)) applyQuery({ ...current, [bound]: millis });
   }
 
   onSettled(() => {
@@ -470,7 +497,7 @@ function RequestList(props: { pick: Pick | null }) {
   const [refreshing, setRefreshing] = createSignal(false);
 
   async function loadNewer() {
-    if (list.items.length === 0 || failed) return reset(current);
+    if (list.items.length === 0 || failed) return applyQuery(current);
     const at = generation;
     const known = new Set(list.items.map((item) => item.id));
     const newer: Request[] = [];
@@ -484,7 +511,7 @@ function RequestList(props: { pick: Pick | null }) {
         newer.push(...(overlap === -1 ? page.items : page.items.slice(0, overlap)));
         if (overlap !== -1 || page.nextCursor === null) {
           if (newer.length === 0) return;
-          setViewing((index) => (index === null ? null : index + newer.length));
+          setViewerIndex((index) => (index === null ? null : index + newer.length));
           setList((draft) => {
             draft.items.unshift(...newer);
           });
@@ -492,9 +519,9 @@ function RequestList(props: { pick: Pick | null }) {
         }
         before = page.nextCursor;
       }
-      reset(current);
+      applyQuery(current);
     } catch (error) {
-      if (at === generation && !(error instanceof SessionExpired))
+      if (at === generation && !isSessionExpired(error))
         admin.notify(describe(error, 'Could not refresh the requests'), 'error');
     } finally {
       setRefreshing(false);
@@ -519,38 +546,33 @@ function RequestList(props: { pick: Pick | null }) {
   function drop(id: string) {
     const index = list.items.findIndex((item) => item.id === id);
     if (index === -1) return;
-    // The viewer moves on to the next request, or the previous one at the end of the list
-    const open = viewing();
-    if (open !== null && open >= index) {
-      const next = open > index || index === list.items.length - 1 ? open - 1 : open;
-      setViewing(next < 0 ? null : next);
-    }
+    const open = viewerIndex();
+    if (open !== null) setViewerIndex(viewerIndexAfterRemoval(open, index, list.items.length));
     setList((draft) => {
       draft.items.splice(index, 1);
     });
   }
 
-  const revealed = (item: Request) => list.revealed[item.id] ?? revealAll();
+  const revealed = (item: Request) => revealedById[item.id] ?? revealAll();
   const setRevealed = (item: Request, value: boolean) =>
-    setList((draft) => {
-      draft.revealed[item.id] = value;
+    setRevealedById((draft) => {
+      draft[item.id] = value;
     });
 
-  /** Runs a row action while `busy` is set. Both callbacks return the status to show. */
-  async function act(item: Request, action: () => Promise<string>, failed: (error: unknown) => string) {
-    setList((draft) => {
-      draft.busy[item.id] = true;
-    });
-    try {
-      admin.notify(await action());
-    } catch (error) {
-      if (!(error instanceof SessionExpired)) admin.notify(failed(error), 'error');
-    } finally {
-      setList((draft) => {
-        delete draft.busy[item.id];
-      });
-    }
-  }
+  /** Runs a row action while `busy` is set. Both callbacks return the notice to show. */
+  const act = (item: Request, action: () => Promise<string>, failed: (error: unknown) => string) =>
+    runAction(
+      {
+        busy: (on) =>
+          setBusy((draft) => {
+            if (on) draft[item.id] = true;
+            else delete draft[item.id];
+          }),
+        report: admin.notify,
+      },
+      action,
+      failed,
+    );
 
   async function deleteImage(item: Request) {
     if (!(await confirmImageDeletion(item))) return;
@@ -579,7 +601,7 @@ function RequestList(props: { pick: Pick | null }) {
     await act(
       item,
       async () => {
-        await call(requestPath(item.id), { method: 'DELETE' });
+        await callEmpty(requestPath(item.id), { method: 'DELETE' });
         return deleted();
       },
       (error) =>
@@ -590,15 +612,15 @@ function RequestList(props: { pick: Pick | null }) {
   }
 
   const viewed = createMemo(() => {
-    const index = viewing();
+    const index = viewerIndex();
     const item = index === null ? undefined : list.items[index];
     return index === null || !item ? null : { index, item };
   });
 
   function step(delta: number) {
-    const index = (viewing() ?? 0) + delta;
+    const index = (viewerIndex() ?? 0) + delta;
     if (index < 0 || index >= list.items.length) return;
-    setViewing(index);
+    setViewerIndex(index);
     if (index >= list.items.length - 3) void loadMore();
   }
 
@@ -616,7 +638,7 @@ function RequestList(props: { pick: Pick | null }) {
                 type="button"
                 class={[SEGMENT, 'inline-flex items-center justify-center gap-1.5 max-sm:flex-1 max-sm:px-2']}
                 aria-pressed={query().rating === option.value ? 'true' : 'false'}
-                onClick={() => query().rating !== option.value && reset({ ...current, rating: option.value })}>
+                onClick={() => query().rating !== option.value && applyQuery({ ...current, rating: option.value })}>
                 <Show when={option.value}>{(key) => <RatingDot rating={key()} />}</Show>
                 {option.label}
               </button>
@@ -632,9 +654,7 @@ function RequestList(props: { pick: Pick | null }) {
             data-tooltip={revealAll() ? 'Blur flagged images' : 'Reveal all images'}
             onClick={() => {
               setRevealAll(!revealAll());
-              setList((draft) => {
-                draft.revealed = {};
-              });
+              setRevealedById(clear);
             }}>
             <Show when={revealAll()} fallback={<EyeIcon />}>
               <EyeOffIcon />
@@ -680,10 +700,10 @@ function RequestList(props: { pick: Pick | null }) {
             <input
               type="datetime-local"
               class={[FILTER_FIELD, 'w-full cursor-pointer font-sans']}
-              value={query().from === null ? '' : toLocalInput(query().from ?? 0)}
-              max={query().to === null ? undefined : toLocalInput(query().to ?? 0)}
+              value={query().fromMillis === null ? '' : toDatetimeLocalValue(query().fromMillis ?? 0)}
+              max={query().toMillis === null ? undefined : toDatetimeLocalValue(query().toMillis ?? 0)}
               onClick={openPicker}
-              onChange={(event) => applyTime('from', event.currentTarget.value)}
+              onChange={(event) => applyTime('fromMillis', event.currentTarget.value)}
             />
           </label>
           <label class="grid grid-cols-[2.5rem_1fr] items-center gap-2 sm:flex">
@@ -691,16 +711,16 @@ function RequestList(props: { pick: Pick | null }) {
             <input
               type="datetime-local"
               class={[FILTER_FIELD, 'w-full cursor-pointer font-sans']}
-              value={query().to === null ? '' : toLocalInput(query().to ?? 0)}
-              min={query().from === null ? undefined : toLocalInput(query().from ?? 0)}
+              value={query().toMillis === null ? '' : toDatetimeLocalValue(query().toMillis ?? 0)}
+              min={query().fromMillis === null ? undefined : toDatetimeLocalValue(query().fromMillis ?? 0)}
               onClick={openPicker}
-              onChange={(event) => applyTime('to', event.currentTarget.value)}
+              onChange={(event) => applyTime('toMillis', event.currentTarget.value)}
             />
           </label>
         </div>
         <Show when={query().requester}>
           {(requester) => (
-            <FilterChip label={requester().label} onRemove={() => reset({ ...current, requester: null })} />
+            <FilterChip label={requester().label} onRemove={() => applyQuery({ ...current, requester: null })} />
           )}
         </Show>
         <Show when={query().version}>
@@ -708,7 +728,7 @@ function RequestList(props: { pick: Pick | null }) {
             <FilterChip
               label={version().label}
               mono={version().value !== ''}
-              onRemove={() => reset({ ...current, version: null })}
+              onRemove={() => applyQuery({ ...current, version: null })}
             />
           )}
         </Show>
@@ -736,9 +756,9 @@ function RequestList(props: { pick: Pick | null }) {
                 <RequestRow
                   request={item}
                   revealed={revealed(item)}
-                  busy={list.busy[item.id] === true}
+                  busy={busy[item.id] === true}
                   onReveal={(value) => setRevealed(item, value)}
-                  onOpen={() => setViewing(index())}
+                  onOpen={() => setViewerIndex(index())}
                   onDeleteImage={() => deleteImage(item)}
                   onDelete={() => remove(item)}
                 />
@@ -772,7 +792,7 @@ function RequestList(props: { pick: Pick | null }) {
                       : 'The requests show up here as the servers send them.'}
                   </p>
                   <Show when={filtered() || query().rating}>
-                    <Button size="sm" onClick={() => reset(NO_QUERY)}>
+                    <Button size="sm" onClick={() => applyQuery(NO_QUERY)}>
                       <XIcon />
                       Clear all filters
                     </Button>
@@ -789,9 +809,9 @@ function RequestList(props: { pick: Pick | null }) {
 
       <Dialog
         open={viewed() !== null}
-        onClose={() => setViewing(null)}
+        onClose={() => setViewerIndex(null)}
         label="Request viewer"
-        top
+        pinned
         onKeyDown={(event) => {
           if (event.key === 'ArrowLeft') step(-1);
           else if (event.key === 'ArrowRight') step(1);
@@ -824,7 +844,7 @@ function RequestList(props: { pick: Pick | null }) {
                   onClick={() => step(1)}>
                   <ChevronRightIcon />
                 </Button>
-                <Button size="icon" variant="quiet" aria-label="Close" onClick={() => setViewing(null)}>
+                <Button size="icon" variant="quiet" aria-label="Close" onClick={() => setViewerIndex(null)}>
                   <XIcon />
                 </Button>
               </header>
@@ -843,7 +863,7 @@ function RequestList(props: { pick: Pick | null }) {
                     </a>
                     <Button
                       variant="danger"
-                      busy={list.busy[value().item.id] === true}
+                      busy={busy[value().item.id] === true}
                       disabled={value().item.image.state !== 'stored'}
                       data-tooltip={imageTooltip(value().item)}
                       onClick={() => deleteImage(value().item)}>
@@ -852,7 +872,7 @@ function RequestList(props: { pick: Pick | null }) {
                     </Button>
                     <Button
                       variant="solid-danger"
-                      busy={list.busy[value().item.id] === true}
+                      busy={busy[value().item.id] === true}
                       onClick={() => remove(value().item)}>
                       <TrashIcon />
                       Delete request

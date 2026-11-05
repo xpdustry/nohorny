@@ -1,5 +1,6 @@
-# The Solid packages release in lockstep during the 2.0 prerelease cycle, exclude them from any
-# minimumReleaseAge policy so fresh releases install immediately. Remove once Solid 2.0 is stable.
+# Exclude the Solid packages and filesystem-routing, which the Solid team publishes too, from any minimumReleaseAge
+# policy so fresh releases install immediately. The Solid packages release in lockstep during the 2.0 prerelease cycle.
+# Remove once Solid 2.0 and filesystem-routing are stable.
 minimumReleaseAgeExclude:
   - solid-js
   - "@solidjs/*"

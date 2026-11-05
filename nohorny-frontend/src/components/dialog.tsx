@@ -6,10 +6,12 @@ export function Dialog(props: {
   open: boolean;
   onClose: () => void;
   label: string;
+  /** Rendered only while the dialog is open, so every opening mounts them afresh, forms included. */
   children: JSX.Element;
   class?: string;
   /** Pins the dialog below the navigation bar instead of centering it, so a change of its height does not move its controls. */
-  top?: boolean;
+  pinned?: boolean;
+  /** Receives the key events of this dialog only, not those of a dialog opened inside it. */
   onKeyDown?: (event: KeyboardEvent) => void;
 }) {
   let dialog!: HTMLDialogElement;
@@ -27,7 +29,7 @@ export function Dialog(props: {
       aria-label={props.label}
       class={[
         'overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-0 text-ink',
-        props.top ? 'mx-auto mt-20 mb-auto max-h-[calc(100dvh-7rem)]' : 'm-auto max-h-[calc(100dvh-2rem)]',
+        props.pinned ? 'mx-auto mt-20 mb-auto max-h-[calc(100dvh-7rem)]' : 'm-auto max-h-[calc(100dvh-2rem)]',
         props.class ?? 'w-[min(28rem,calc(100vw-2rem))]',
       ]}
       onCancel={(event) => {
@@ -35,7 +37,9 @@ export function Dialog(props: {
         props.onClose();
       }}
       onClick={(event) => event.target === dialog && props.onClose()}
-      onKeyDown={(event) => props.onKeyDown?.(event)}>
+      onKeyDown={(event) => {
+        if ((event.target as Element).closest('dialog') === dialog) props.onKeyDown?.(event);
+      }}>
       <Show when={props.open}>{props.children}</Show>
     </dialog>
   );

@@ -14,7 +14,7 @@ import {
 } from '../components/icon';
 import { Brand, Button, buttonClass, Field, LoadingSpinner, Notice, State } from '../components/ui';
 import { AdminContext, createAdmin } from '../lib/admin';
-import { checkSession, login, logout, session } from '../lib/session';
+import { checkSession, login, logout, messageOf, session } from '../lib/session';
 
 export default function AdminLayout(props: RouteSectionProps) {
   // The session is only known in the browser. Waiting for it holds the Loading boundary below, so the prerendered page
@@ -32,7 +32,7 @@ export default function AdminLayout(props: RouteSectionProps) {
     try {
       await logout();
     } catch (error) {
-      setSignOutFailure((error as Error).message);
+      setSignOutFailure(messageOf(error));
     }
   }
   return (
@@ -118,7 +118,7 @@ function Login() {
       await login(String(data.get('username')), String(data.get('password')));
     } catch (failure) {
       setBusy(false);
-      setError((failure as Error).message);
+      setError(messageOf(failure));
       password.value = '';
       password.focus();
     }
@@ -196,7 +196,7 @@ function AdminShell(props: { children: JSX.Element }) {
               class={buttonClass('default', 'icon')}
               aria-label="Sign out"
               data-tooltip="Sign out"
-              onClick={() => logout().catch((error: Error) => admin.notify(error.message, 'error'))}>
+              onClick={() => logout().catch((error) => admin.notify(messageOf(error), 'error'))}>
               <LogOutIcon />
             </button>
           </div>
@@ -205,11 +205,11 @@ function AdminShell(props: { children: JSX.Element }) {
           {props.children}
         </main>
         <div class="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex items-end justify-end gap-2">
-          <Show when={admin.status()}>
-            {(status) => (
+          <Show when={admin.notice()}>
+            {(notice) => (
               <div class="pop-in pointer-events-auto w-full rounded-xl shadow-float sm:w-md">
-                <Notice tone={status().tone} onDismiss={() => admin.notify(null)}>
-                  {status().text}
+                <Notice tone={notice().tone} onDismiss={admin.dismiss}>
+                  {notice().text}
                 </Notice>
               </div>
             )}

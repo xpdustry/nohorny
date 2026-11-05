@@ -1,6 +1,7 @@
 import { Title } from '@solidjs/meta';
 import { createMemo, createSignal, Errored, onSettled, refresh, Show } from 'solid-js';
-import { api, describe, type Request, requestPath, statusOf } from '../lib/api';
+import { runAction } from '../lib/action';
+import { api, apiEmpty, describe, type Request, requestPath, statusOf } from '../lib/api';
 import { relativeTime, shortId } from '../lib/format';
 import { checkSession, isAdmin } from '../lib/session';
 import { ArrowLeftIcon, ListIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
@@ -100,28 +101,28 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
   const [message, setMessage] = createSignal<{ tone: 'success' | 'error'; text: string } | null>(null);
   const path = () => requestPath(props.request.id);
 
-  async function act(action: () => Promise<void>, failed: (error: unknown) => string | undefined) {
-    setBusy(true);
-    setMessage(null);
-    try {
-      await action();
-    } catch (error) {
-      const text = failed(error);
-      if (text) setMessage({ tone: 'error', text });
-    } finally {
-      setBusy(false);
-    }
-  }
+  const act = (action: () => Promise<string | undefined>, failed: (error: unknown) => string | undefined) =>
+    runAction(
+      {
+        busy: (on) => {
+          setBusy(on);
+          if (on) setMessage(null);
+        },
+        report: (text, tone) => setMessage({ tone, text }),
+      },
+      action,
+      failed,
+    );
 
   /** Anyone can delete the image. The API rate limits the deletions. */
   async function deleteImage() {
     if (!(await confirmImageDeletion(props.request))) return;
     await act(
       async () => {
-        await api(`${path()}/image`, { method: 'DELETE' });
+        await apiEmpty(`${path()}/image`, { method: 'DELETE' });
         setRevealed(false);
-        setMessage({ tone: 'success', text: 'The image was deleted.' });
         props.onChange();
+        return 'The image was deleted.';
       },
       (error) => {
         if (statusOf(error) === 404) {
@@ -142,8 +143,9 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
     if (!(await confirmRequestDeletion(props.request))) return;
     await act(
       async () => {
-        await api(path(), { method: 'DELETE' });
+        await apiEmpty(path(), { method: 'DELETE' });
         props.onDeleted();
+        return undefined;
       },
       (error) => {
         if (statusOf(error) === 404) {

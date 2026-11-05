@@ -11,26 +11,30 @@ function hyphenate(hex: string): string {
 }
 
 /** The cursor before the requests created at `millis` or later. */
-export function cursorAt(millis: number): string {
+export function cursorBefore(millis: number): string {
   return hyphenate(Math.max(0, Math.floor(millis)).toString(16).padStart(12, '0').padEnd(32, '0'));
 }
 
 /**
  * Reads an identifier, or its beginning, from what an admin pastes: '01a10c55', a full identifier or a request link.
- * Returns the prefix in the UUID format and the cursor right after the last identifier starting with it, or null.
+ * Returns it in the UUID format, or null.
  */
-export function parsePrefix(input: string): { prefix: string; cursor: string | null } | null {
+export function parsePrefix(input: string): string | null {
   const text = input.trim().toLowerCase();
   const id = text.match(/\/requests\/([0-9a-f-]+)/)?.[1] ?? text;
   const hex = id.replaceAll('-', '');
-  if (!HEX.test(hex)) return null;
+  return HEX.test(hex) ? hyphenate(hex) : null;
+}
+
+/** The cursor right after the last identifier starting with `prefix`, null when none comes after it. */
+export function cursorAfterPrefix(prefix: string): string | null {
   // One past the largest identifier with this prefix, since the cursor is excluded. Nothing is past ffff…
-  const next = (BigInt(`0x${hex.padEnd(32, 'f')}`) + 1n).toString(16).padStart(32, '0');
-  return { prefix: hyphenate(hex), cursor: next.length > 32 ? null : hyphenate(next) };
+  const next = (BigInt(`0x${prefix.replaceAll('-', '').padEnd(32, 'f')}`) + 1n).toString(16).padStart(32, '0');
+  return next.length > 32 ? null : hyphenate(next);
 }
 
 /** The value of a datetime-local input showing `millis` in the local time zone. */
-export function toLocalInput(millis: number): string {
+export function toDatetimeLocalValue(millis: number): string {
   const date = new Date(millis);
   return new Date(millis - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }

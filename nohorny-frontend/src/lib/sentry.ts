@@ -1,5 +1,5 @@
-// Reports the errors of the browser to Sentry, when the server sets nohorny.sentry.dsn. Imported first by App.tsx, so
-// it starts before the hydration. Only the errors are collected: no tracing, no replays and no personal data.
+// Reports the errors of the browser to Sentry, when the server sets nohorny.sentry.dsn. Only the errors are collected:
+// no tracing, no replays and no personal data.
 
 import * as Sentry from '@sentry/browser';
 import { config } from './config';
@@ -12,9 +12,9 @@ const redactField = (data: Record<string, unknown> | undefined, key: string) => 
   if (data && typeof value === 'string') data[key] = redact(value);
 };
 
-const dsn = config?.sentryDsn;
-
-if (dsn) {
+export function initSentry() {
+  const dsn = config?.sentryDsn;
+  if (!dsn) return;
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,

@@ -2,7 +2,7 @@ import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
 import {
   ART_KINDS,
-  type FailureDetails as FailureDetailsData,
+  type FailureDetails,
   type Request,
   type Requester as RequesterData,
   type RequesterType,
@@ -64,13 +64,13 @@ export function RequestImage(props: {
   class?: string;
 }) {
   // Keyed by URL, because the admin viewer reuses this component across requests
-  const [broken, setBroken] = createSignal<string>();
+  const [brokenUrl, setBrokenUrl] = createSignal<string>();
   const rating = () => bucket(props.request);
   const sensitive = () => rating() !== 'safe';
   const blurred = () => sensitive() && !props.revealed;
   const url = () => {
     const url = props.request.image.state === 'stored' ? props.request.image.url : undefined;
-    return url === broken() ? undefined : url;
+    return url === brokenUrl() ? undefined : url;
   };
 
   return (
@@ -96,7 +96,7 @@ export function RequestImage(props: {
                 'veil absolute inset-0 size-full object-contain [image-rendering:pixelated]',
                 { 'blur-veil': blurred() },
               ]}
-              onError={() => setBroken(src())}
+              onError={() => setBrokenUrl(src())}
             />
             <Show
               when={blurred()}
@@ -163,7 +163,7 @@ export function VerdictCard(props: { request: Request }) {
           <Show when={props.request.error}>
             {(error) => (
               <>
-                with <FailureDetails details={error()} />
+                with <FailureTrace details={error()} />
               </>
             )}
           </Show>
@@ -212,7 +212,7 @@ export function ClassifierTimeline(props: { request: Request }) {
                   <Meter value={step.confidence ?? 0} rating={rating()} class="max-w-40 flex-1" />
                   <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
                 </Show>
-                <Show when={step.error}>{(error) => <FailureDetails details={error()} />}</Show>
+                <Show when={step.error}>{(error) => <FailureTrace details={error()} />}</Show>
               </div>
             </TimelineItem>
           );
@@ -222,7 +222,9 @@ export function ClassifierTimeline(props: { request: Request }) {
   );
 }
 
-/** Copies `text` to the clipboard, `copied` stays true for 2 seconds. Without clipboard access, selects `fallback` for a manual copy. */
+const COPIED_MILLIS = 2000;
+
+/** Copies `text` to the clipboard, `copied` stays true for COPIED_MILLIS. Without clipboard access, selects `fallback` for a manual copy. */
 function createCopy(text: () => string, fallback: () => Node) {
   const [copied, setCopied] = createSignal(false);
   let reset: ReturnType<typeof setTimeout> | undefined;
@@ -231,7 +233,7 @@ function createCopy(text: () => string, fallback: () => Node) {
       await navigator.clipboard.writeText(text());
       setCopied(true);
       clearTimeout(reset);
-      reset = setTimeout(() => setCopied(false), 2000);
+      reset = setTimeout(() => setCopied(false), COPIED_MILLIS);
     } catch {
       getSelection()?.selectAllChildren(fallback());
     }
@@ -261,7 +263,7 @@ function CopyCode(props: { text: string; label: string }) {
   );
 }
 
-function FailureDetails(props: { details: FailureDetailsData }) {
+function FailureTrace(props: { details: FailureDetails }) {
   const [open, setOpen] = createSignal(false);
   let trace!: HTMLPreElement;
   const [copied, copy] = createCopy(
@@ -277,13 +279,7 @@ function FailureDetails(props: { details: FailureDetailsData }) {
         onClick={() => setOpen(true)}>
         {props.details.type}
       </button>
-      <Dialog
-        open={open()}
-        onClose={() => setOpen(false)}
-        label="Stack trace"
-        class="w-[min(64rem,calc(100vw-2rem))]"
-        // Keeps the arrow keys from paging the request viewer of the admin panel underneath
-        onKeyDown={(event) => event.stopPropagation()}>
+      <Dialog open={open()} onClose={() => setOpen(false)} label="Stack trace" class="w-[min(64rem,calc(100vw-2rem))]">
         <div class="flex flex-col gap-4 p-6">
           <header class="flex items-start gap-2">
             <div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -311,6 +307,11 @@ function FailureDetails(props: { details: FailureDetailsData }) {
 
 function Classifier(props: { id: string; class?: string }) {
   const info = () => classifierInfo(props.id);
+  // On two lines, the tooltip keeps line breaks
+  const tooltip = () => {
+    const model = info().model;
+    return model && `${model.name}\n${model.origin}`;
+  };
   return (
     <Show
       when={info().href}
@@ -318,20 +319,20 @@ function Classifier(props: { id: string; class?: string }) {
         <code
           class={[
             'text-ink',
-            { 'cursor-help underline decoration-dotted underline-offset-4': info().details !== undefined },
+            { 'cursor-help underline decoration-dotted underline-offset-4': tooltip() !== undefined },
             props.class,
           ]}
-          data-tooltip={info().details}>
-          {info().label}
+          data-tooltip={tooltip()}>
+          {info().kind}
         </code>
       }>
       {(href) => (
         <a
           class={['link-quiet font-mono text-[0.84em]', props.class]}
           href={href()}
-          data-tooltip={info().details}
+          data-tooltip={tooltip()}
           {...EXTERNAL}>
-          {info().label}
+          {info().kind}
         </a>
       )}
     </Show>

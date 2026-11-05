@@ -29,10 +29,13 @@ export interface Networks {
   networks: { name: string; count: number }[];
   /**
    * The requests not from a listed network, by requester type. `mindustry-network` counts the listed servers without
-   * a network, an empty type the requests counted before the requesters were recorded.
+   * a network, UNRECORDED_REQUESTER the requests counted before the requesters were recorded.
    */
-  requesters: { name: RequesterType | ''; count: number }[];
+  requesters: { name: RequesterType | typeof UNRECORDED_REQUESTER; count: number }[];
 }
+
+/** The requester type of the requests counted before the requesters were recorded. */
+export const UNRECORDED_REQUESTER = '' as const;
 
 /** The requests per plugin version, the most used first. The rest of `total` comes from the clients sending none. */
 export interface Versions {
@@ -147,14 +150,22 @@ export interface Mapping {
   createdAt: string;
 }
 
-/** Thrown by api() for a non 2xx response. `status` is 0 when the request did not reach the server. */
+/** Thrown by api() for a non 2xx response. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly serverMessage: string | null = null,
   ) {
-    super(serverMessage ?? (status === 0 ? 'Could not reach the server.' : `HTTP ${status}`));
+    super(serverMessage ?? `HTTP ${status}`);
     this.name = 'ApiError';
+  }
+}
+
+/** Thrown by api() when the request did not reach the server. */
+export class NetworkError extends Error {
+  constructor() {
+    super('Could not reach the server.');
+    this.name = 'NetworkError';
   }
 }
 
@@ -176,8 +187,20 @@ export interface ApiOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit;
 }
 
-/** Fetches an API path and adds the CSRF header to unsafe methods. Resolves to the parsed body, or null if empty. */
-export async function api<T = unknown>(path: string, options: ApiOptions = {}): Promise<T> {
+/** Fetches an API path and resolves to its parsed body, which the endpoint must send. */
+export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
+  const body = await fetchBody(path, options);
+  if (body === null) throw new Error(`${path} answered without a body.`);
+  return body as T;
+}
+
+/** Fetches an API path whose response has no body, such as a 204, and ignores any it has. */
+export async function apiEmpty(path: string, options: ApiOptions = {}): Promise<void> {
+  await fetchBody(path, options);
+}
+
+/** Adds the CSRF header to unsafe methods. Resolves to the parsed body, or null if empty. */
+async function fetchBody(path: string, options: ApiOptions): Promise<unknown> {
   const { json, headers, ...rest } = options;
   const method = (rest.method ?? 'GET').toUpperCase();
   const init: RequestInit = {
@@ -197,7 +220,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   try {
     response = await fetch(path, init);
   } catch {
-    throw new ApiError(0);
+    throw new NetworkError();
   }
   if (!response.ok) {
     let message: string | null = null;
@@ -210,13 +233,13 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     throw new ApiError(response.status, message);
   }
   const text = await response.text();
-  if (!text) return null as T;
-  return ((response.headers.get('Content-Type') ?? '').includes('json') ? JSON.parse(text) : text) as T;
+  if (!text) return null;
+  return (response.headers.get('Content-Type') ?? '').includes('json') ? JSON.parse(text) : text;
 }
 
 export function describe(error: unknown, fallback: string, unreachable = 'Could not reach the server.'): string {
+  if (error instanceof NetworkError) return unreachable;
   if (!(error instanceof ApiError)) return 'Unexpected error, reload the page.';
-  if (error.status === 0) return unreachable;
   if (error.status === 429) return 'Too many requests from your address, wait a moment and retry.';
   return error.serverMessage || `${fallback} (HTTP ${error.status}).`;
 }
@@ -229,6 +252,11 @@ export async function probeSession(): Promise<Session | null> {
     if (statusOf(error) === 401) return null;
     throw error;
   }
+}
+
+/** Fetches a fresh XSRF-TOKEN cookie, any GET request sets it. */
+export async function refreshCsrfToken(): Promise<void> {
+  await probeSession();
 }
 
 export const requestPath = (id: string) => `/api/requests/${encodeURIComponent(id)}`;

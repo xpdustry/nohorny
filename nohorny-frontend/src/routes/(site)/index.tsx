@@ -43,26 +43,29 @@ const ART_COLORS: Record<string, string> = {
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** The words the headline cycles through, the first one is the prerendered and spoken one. */
-const HERO_WORDS = ['horny', 'porn', 'NSFW', 'hentai'] as const;
+/** The word of the prerendered headline, the one screen readers hear. */
+const HERO_WORD = 'horny';
+/** The words the headline cycles through after HERO_WORD. */
+const OTHER_HERO_WORDS = ['porn', 'NSFW', 'hentai'] as const;
 const WORD_MILLIS = 2200;
 
 /**
- * Cycles through the words with a short slide in. Screen readers only hear the first word, so the heading is not
- * announced again on every change. The first word stays when the user prefers reduced motion.
+ * Cycles through the words with a short slide in. Screen readers only hear `first`, so the heading is not announced
+ * again on every change. It stays when the user prefers reduced motion.
  */
-function RotatingWord(props: { words: readonly string[] }) {
+function RotatingWord(props: { first: string; others: readonly string[] }) {
+  const words = () => [props.first, ...props.others];
   const [index, setIndex] = createSignal(0);
   onSettled(() => {
     if (reducedMotion()) return;
-    const timer = setInterval(() => setIndex((current) => (current + 1) % props.words.length), WORD_MILLIS);
+    const timer = setInterval(() => setIndex((current) => (current + 1) % words().length), WORD_MILLIS);
     return () => clearInterval(timer);
   });
   return (
     <>
-      <span class="sr-only">{props.words[0]}</span>
+      <span class="sr-only">{props.first}</span>
       {/* A new element per word, so the slide in plays on every change */}
-      <For each={[props.words[index()]]}>
+      <For each={[words()[index()]]}>
         {(word) => (
           <em aria-hidden="true" class="word-in inline-block text-accent-ink not-italic">
             {word}
@@ -132,7 +135,7 @@ export default function Landing() {
            * fits. The changing word ends its line, so it never moves the rest of the headline
            */}
           <h1 id="hero" class="text-[length:min(3.75rem,11cqi)] leading-[1.02] whitespace-nowrap">
-            No more <RotatingWord words={HERO_WORDS} />
+            No more <RotatingWord first={HERO_WORD} others={OTHER_HERO_WORDS} />
             <br />
             in your Mindustry
             <br />
@@ -220,7 +223,7 @@ export default function Landing() {
               <TickRing />
               <p class="text-ink-2 text-xl">
                 Even at <strong class="font-normal text-accent-ink">600 block changes</strong> a second, NoHorny uses
-                less than <strong class="font-normal text-ink">1% of a tick</strong>.
+                less than <strong class="font-normal text-ink">{TICK_SHARE_PERCENT}% of a tick</strong>.
               </p>
             </div>
           </article>
@@ -369,7 +372,10 @@ function Verdicts() {
   );
 }
 
-/** The share of a server tick taken by NoHorny, 1%. A sweep goes around and NoHorny pulses as it is passed. */
+/** The share of a server tick taken by NoHorny. */
+const TICK_SHARE_PERCENT = 1;
+
+/** A sweep goes around the ring and NoHorny pulses as it is passed. */
 function TickRing() {
   return (
     <span class="relative grid size-32 shrink-0 place-items-center">
@@ -396,10 +402,10 @@ function TickRing() {
           stroke="var(--accent)"
           stroke-width="16"
           pathLength="100"
-          stroke-dasharray="1 99"
+          stroke-dasharray={`${TICK_SHARE_PERCENT} ${100 - TICK_SHARE_PERCENT}`}
         />
       </svg>
-      <b class="text-3xl font-normal">1%</b>
+      <b class="text-3xl font-normal">{TICK_SHARE_PERCENT}%</b>
     </span>
   );
 }

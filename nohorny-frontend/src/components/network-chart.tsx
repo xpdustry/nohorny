@@ -1,26 +1,26 @@
 import { createMemo, createSignal, For, Show } from 'solid-js';
-import type { Networks, RequesterFilter, RequesterType } from '../lib/api';
+import { type Networks, type RequesterFilter, type RequesterType, UNRECORDED_REQUESTER } from '../lib/api';
 import { number, share } from '../lib/format';
-
-/** The networks drawn in their own colour, the others share the "Other networks" slice. The local addresses always have their own. */
-const COLORED = 3;
 
 /** The colours of the slices, App.css validates the categorical ones for colour blindness against the card. */
 const COLORS = ['var(--network-1)', 'var(--network-2)', 'var(--network-3)'];
+
+/** The networks drawn in their own colour, the others share the "Other networks" slice. The local addresses always have their own. */
+const MAX_COLORED_NETWORKS = COLORS.length;
 const OTHER_COLOR = 'var(--ink-3)';
 const LOCAL_COLOR = 'var(--accent)';
 const UNLISTED_COLOR = 'var(--line-strong)';
 
-/** The requesters without a network, an empty type for the requests counted before the requesters were recorded. */
-const UNLISTED_LABELS: Record<Exclude<RequesterType, 'local'> | '', string> = {
+/** The requesters without a network. */
+const UNLISTED_LABELS: Record<Exclude<RequesterType, 'local'> | typeof UNRECORDED_REQUESTER, string> = {
   user: 'Accounts',
   'mindustry-network': 'Servers without network',
   anonymous: 'Anonymous clients',
-  '': 'Unknown requester',
+  [UNRECORDED_REQUESTER]: 'Unknown requester',
 };
 
 /** The gap between two slices, in hundredths of the circumference. */
-const GAP = 0.6;
+const SLICE_GAP_PERCENT = 0.6;
 
 interface Slice {
   key: string;
@@ -31,11 +31,11 @@ interface Slice {
 
 /** A row of the legend, with the key of the slice it is drawn in and the filter of its requests, if it has one. */
 interface Row extends Slice {
-  slice: string;
+  sliceKey: string;
   filter?: RequesterFilter;
 }
 
-const UNLISTED_FILTERS: Partial<Record<RequesterType | '', Omit<RequesterFilter, 'label'>>> = {
+const UNLISTED_FILTERS: Partial<Record<RequesterType | typeof UNRECORDED_REQUESTER, Omit<RequesterFilter, 'label'>>> = {
   user: { type: 'user', name: null },
   'mindustry-network': { type: 'mindustry-network', name: '' },
   anonymous: { type: 'anonymous', name: null },
@@ -43,14 +43,14 @@ const UNLISTED_FILTERS: Partial<Record<RequesterType | '', Omit<RequesterFilter,
 
 export function NetworkChart(props: { networks: Networks; onSelect?: (filter: RequesterFilter) => void }) {
   /** The slice under the pointer, or the slice of the row under it. */
-  const [hovered, setHovered] = createSignal<string | null>(null);
+  const [hoveredSlice, setHoveredSlice] = createSignal<string | null>(null);
   /**
    * The row under the pointer, or the row of the slice under it. A shared slice, like "Other networks", highlights
    * none of its rows, and a row of a shared slice highlights only itself.
    */
   const [hoveredRow, setHoveredRow] = createSignal<string | null>(null);
   const hover = (slice: string | null, row: string | null) => {
-    setHovered(slice);
+    setHoveredSlice(slice);
     setHoveredRow(row);
   };
 
@@ -71,24 +71,24 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
         return {
           ...entry,
           color: LOCAL_COLOR,
-          slice: entry.key,
+          sliceKey: entry.key,
           filter: { type: 'local', name: null, label: entry.label },
         };
       const filter: RequesterFilter = { type: 'mindustry-network', name: entry.label, label: entry.label };
       const index = colored++;
-      return index < COLORED
-        ? { ...entry, color: COLORS[index], slice: entry.key, filter }
-        : { ...entry, color: OTHER_COLOR, slice: 'other', filter };
+      return index < MAX_COLORED_NETWORKS
+        ? { ...entry, color: COLORS[index], sliceKey: entry.key, filter }
+        : { ...entry, color: OTHER_COLOR, sliceKey: 'other', filter };
     });
   });
 
   const unlisted = createMemo(() => {
     const named = props.networks.requesters.filter(
-      (requester) => requester.name !== 'local' && requester.name !== '' && requester.count > 0,
+      (requester) => requester.name !== 'local' && requester.name !== UNRECORDED_REQUESTER && requester.count > 0,
     );
     // Whatever the networks and the known requesters leave, the requests counted before the requesters were recorded
     const unknown = props.networks.total - [...rows(), ...named].reduce((sum, entry) => sum + entry.count, 0);
-    const entries = unknown > 0 ? [...named, { name: '' as const, count: unknown }] : named;
+    const entries = unknown > 0 ? [...named, { name: UNRECORDED_REQUESTER, count: unknown }] : named;
     return entries.map((entry): Row => {
       const label = UNLISTED_LABELS[entry.name as keyof typeof UNLISTED_LABELS];
       const filter = UNLISTED_FILTERS[entry.name];
@@ -97,16 +97,16 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
         label,
         count: entry.count,
         color: UNLISTED_COLOR,
-        slice: 'unlisted',
+        sliceKey: 'unlisted',
         filter: filter && { ...filter, label },
       };
     });
   });
 
   const slices = createMemo(() => {
-    const slices: Slice[] = rows().filter((row) => row.slice === row.key);
+    const slices: Slice[] = rows().filter((row) => row.sliceKey === row.key);
     const other = rows()
-      .filter((row) => row.slice === 'other')
+      .filter((row) => row.sliceKey === 'other')
       .reduce((sum, row) => sum + row.count, 0);
     const listed = rows().reduce((sum, row) => sum + row.count, 0);
     if (other > 0) slices.push({ key: 'other', label: 'Other networks', count: other, color: OTHER_COLOR });
@@ -126,13 +126,13 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
     let start = 0;
     return slices().map((slice) => {
       const length = (slice.count / total) * 100;
-      const arc = { slice, start, length: slices().length > 1 ? Math.max(0, length - GAP) : length };
+      const arc = { slice, start, length: slices().length > 1 ? Math.max(0, length - SLICE_GAP_PERCENT) : length };
       start += length;
       return arc;
     });
   });
 
-  const focus = () => slices().find((slice) => slice.key === hovered());
+  const focus = () => slices().find((slice) => slice.key === hoveredSlice());
   const sliceFilter = (key: string) => rows().find((row) => row.key === key)?.filter;
   const select = (filter: RequesterFilter | undefined) =>
     filter && props.onSelect ? () => props.onSelect?.(filter) : undefined;
@@ -158,12 +158,12 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
                   fill="none"
                   pathLength="100"
                   stroke={arc().slice.color}
-                  stroke-width={hovered() === arc().slice.key ? 16 : 13}
+                  stroke-width={hoveredSlice() === arc().slice.key ? 16 : 13}
                   stroke-dasharray={`${arc().length} ${100 - arc().length}`}
                   stroke-dashoffset={-arc().start}
                   class={[
                     'transition-[opacity,stroke-width] duration-200',
-                    { 'opacity-35': hovered() !== null && hovered() !== arc().slice.key },
+                    { 'opacity-35': hoveredSlice() !== null && hoveredSlice() !== arc().slice.key },
                     { 'cursor-pointer': props.onSelect !== undefined && sliceFilter(arc().slice.key) !== undefined },
                   ]}
                   onMouseEnter={() => hover(arc().slice.key, arc().slice.key)}
@@ -205,7 +205,7 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
                 total={props.networks.total}
                 color={row().color}
                 active={hoveredRow() === row().key}
-                onHover={(on) => (on ? hover(row().slice, row().key) : hover(null, null))}
+                onHover={(on) => (on ? hover(row().sliceKey, row().key) : hover(null, null))}
                 onSelect={select(row().filter)}
               />
             )}
@@ -218,7 +218,7 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
                 total={props.networks.total}
                 color={row().color}
                 active={hoveredRow() === row().key}
-                onHover={(on) => (on ? hover(row().slice, row().key) : hover(null, null))}
+                onHover={(on) => (on ? hover(row().sliceKey, row().key) : hover(null, null))}
                 onSelect={select(row().filter)}
                 class={['text-ink-3', { 'mt-1 border-line border-t pt-1': index() === 0 }]}
               />

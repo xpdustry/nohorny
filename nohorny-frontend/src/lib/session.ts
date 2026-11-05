@@ -1,9 +1,27 @@
 import { createStore } from 'solid-js';
-import { type ApiOptions, api, describe, hasCsrfToken, probeSession, type Session, statusOf } from './api';
+import {
+  type ApiOptions,
+  api,
+  apiEmpty,
+  describe,
+  hasCsrfToken,
+  probeSession,
+  refreshCsrfToken,
+  type Session,
+  statusOf,
+} from './api';
 import { config } from './config';
 
 /** Thrown by call() when the session has ended. The sign in form shows by then. */
 export class SessionExpired extends Error {}
+
+export const isSessionExpired = (error: unknown): error is SessionExpired => error instanceof SessionExpired;
+
+/** Thrown by login() and logout(), its message is the text to show. */
+export class UserMessage extends Error {}
+
+export const messageOf = (error: unknown): string =>
+  error instanceof UserMessage ? error.message : describe(error, 'The request failed');
 
 type Status = 'unknown' | 'signed-out' | 'ready' | 'error';
 
@@ -53,7 +71,8 @@ async function probe(): Promise<Status> {
   }
 }
 
-function signedOut(notice: string | null) {
+/** Ends the local session. Also used after a change that made the server invalidate it. */
+export function signedOut(notice: string | null) {
   setState((draft) => {
     draft.status = 'signed-out';
     draft.session = null;
@@ -61,64 +80,62 @@ function signedOut(notice: string | null) {
   });
 }
 
-/** Signs in. Rejects with the message to show on failure. */
-export async function login(username: string, password: string): Promise<void> {
-  const post = () => api('/login', { method: 'POST', body: new URLSearchParams({ username, password }) });
+/** Runs an unsafe request, and retries it once with a fresh CSRF token if the server found the old one stale. */
+async function withFreshCsrf(post: () => Promise<void>): Promise<void> {
   try {
-    // Any GET request sets the XSRF-TOKEN cookie.
-    if (!hasCsrfToken()) await probeSession();
-    try {
-      await post();
-    } catch (error) {
-      if (statusOf(error) !== 403) throw error;
-      // The CSRF token is stale. Fetch a fresh one and retry once.
-      await probeSession();
-      await post();
-    }
+    await post();
   } catch (error) {
-    throw new Error(statusOf(error) === 401 ? 'Invalid credentials' : describe(error, 'Sign in failed'));
+    if (statusOf(error) !== 403) throw error;
+    await refreshCsrfToken();
+    await post();
+  }
+}
+
+/** Signs in. Rejects with a UserMessage on failure. */
+export async function login(username: string, password: string): Promise<void> {
+  try {
+    if (!hasCsrfToken()) await refreshCsrfToken();
+    await withFreshCsrf(() =>
+      apiEmpty('/login', { method: 'POST', body: new URLSearchParams({ username, password }) }),
+    );
+  } catch (error) {
+    throw new UserMessage(statusOf(error) === 401 ? 'Invalid credentials' : describe(error, 'Sign in failed'));
   }
   setState((draft) => {
     draft.notice = null;
   });
   // The browser did not keep the session cookie, the form must not wait for a panel that never comes
-  if ((await checkSession(true)) === 'signed-out') throw new Error('Sign in failed, allow the cookies of this site.');
+  if ((await checkSession(true)) === 'signed-out')
+    throw new UserMessage('Sign in failed, allow the cookies of this site.');
 }
 
-/** Signs out. Rejects with the message to show when the server did not end the session, which stays signed in. */
+/** Signs out. Rejects with a UserMessage when the server did not end the session, which stays signed in. */
 export async function logout(): Promise<void> {
-  const post = () => api('/logout', { method: 'POST' });
   try {
-    try {
-      await post();
-    } catch (error) {
-      if (statusOf(error) !== 403) throw error;
-      // The CSRF token is stale. Fetch a fresh one and retry once.
-      await probeSession();
-      await post();
-    }
+    await withFreshCsrf(() => apiEmpty('/logout', { method: 'POST' }));
   } catch (error) {
     // A 401 means there is no session left to end.
     if (statusOf(error) !== 401) {
-      throw new Error(describe(error, 'Sign out failed', 'Could not reach the server, you are still signed in.'));
+      throw new UserMessage(describe(error, 'Sign out failed', 'Could not reach the server, you are still signed in.'));
     }
   }
   signedOut('You are signed out.');
   // Fetches a fresh CSRF cookie for the next sign in.
-  probeSession().catch(() => {});
+  refreshCsrfToken().catch(() => {});
 }
 
-/** Ends the local session after a change that made the server invalidate it. */
-export function expire(notice: string) {
-  signedOut(notice);
-}
-
-export async function call<T = unknown>(path: string, options?: ApiOptions): Promise<T> {
+/** Turns a 401 into a SessionExpired, and into the sign in form if the session was thought to be alive. */
+async function expiring<T>(request: Promise<T>): Promise<T> {
   try {
-    return await api<T>(path, options);
+    return await request;
   } catch (error) {
     if (statusOf(error) !== 401) throw error;
     if (state.status === 'ready') signedOut('Your session expired, sign in again.');
     throw new SessionExpired();
   }
 }
+
+export const call = <T>(path: string, options?: ApiOptions): Promise<T> => expiring(api<T>(path, options));
+
+/** Like call() for the endpoints without a response body. */
+export const callEmpty = (path: string, options?: ApiOptions): Promise<void> => expiring(apiEmpty(path, options));

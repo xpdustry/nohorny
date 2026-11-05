@@ -13,10 +13,11 @@ import {
 import { confirm, Dialog } from '../../components/dialog';
 import { GaugeIcon, KeyRoundIcon, PlusIcon, ShieldMinusIcon, ShieldPlusIcon, TrashIcon } from '../../components/icon';
 import { Button, Chip, Field, State } from '../../components/ui';
+import { runAction } from '../../lib/action';
 import { AdminContext } from '../../lib/admin';
 import { describe, statusOf, type User, userPath } from '../../lib/api';
 import { formatDate } from '../../lib/format';
-import { call, expire, SessionExpired, session } from '../../lib/session';
+import { call, callEmpty, isSessionExpired, session, signedOut } from '../../lib/session';
 
 const USERNAME_RULE = /^[a-z0-9_.-]{3,32}$/;
 
@@ -31,9 +32,8 @@ const MAX_RATE_LIMIT = 100_000;
 
 const RATE_LIMIT_HINT = 'Classifications per minute, shared by all the servers using the account';
 
-function rateLimitProblem(value: string, optional: boolean): string | null {
-  if (!value.trim()) return optional ? null : 'Enter a limit';
-  const limit = Number(value);
+function rateLimitProblem(limit: number | null, optional: boolean): string | null {
+  if (limit === null) return optional ? null : 'Enter a limit';
   return Number.isInteger(limit) && limit >= 1 && limit <= MAX_RATE_LIMIT
     ? null
     : `Use a whole number from 1 to ${MAX_RATE_LIMIT.toLocaleString('en')}`;
@@ -45,16 +45,16 @@ const RATE_LIMIT_STOPS = [10, 30, 60, 120, 300, 600, 1_000];
 const compact = new Intl.NumberFormat('en', { notation: 'compact' });
 
 /**
- * The rate limit as a slider snapping to RATE_LIMIT_STOPS, with a field for an exact value. `value` is the text of the
- * field. With `optional`, the first stop is the server default, an empty value.
+ * The rate limit as a slider snapping to RATE_LIMIT_STOPS, with a field for an exact value. With `optional`, the first
+ * stop is the server default, a null value.
  */
 function RateLimitField(props: {
-  value: string;
+  value: number | null;
   optional?: boolean;
   hint?: string;
   error: string | null;
   autofocus?: boolean;
-  onInput: (value: string) => void;
+  onInput: (value: number | null) => void;
   onBlur?: () => void;
   ref?: (input: HTMLInputElement) => void;
 }) {
@@ -63,8 +63,8 @@ function RateLimitField(props: {
   const last = () => stops().length - 1;
   /** The stop closest to the value on a log scale, as a typed value can fall between two. */
   const index = () => {
-    const value = Number(props.value);
-    if (!props.value.trim() || !Number.isFinite(value) || value < 1) return 0;
+    const value = props.value;
+    if (value === null || !Number.isFinite(value) || value < 1) return 0;
     const distance = (stop: number | null) => (stop === null ? Infinity : Math.abs(Math.log(stop / value)));
     return stops().reduce<number>(
       (closest, stop, at) => (distance(stop) < distance(stops()[closest]) ? at : closest),
@@ -88,14 +88,13 @@ function RateLimitField(props: {
             value={index()}
             style={{ '--fill': `${(index() / last()) * 100}%` }}
             aria-label="Rate limit"
-            aria-valuetext={props.value.trim() ? `${props.value} per minute` : 'Server default'}
-            onInput={(event) => {
-              const stop = stops()[event.currentTarget.valueAsNumber];
-              props.onInput(stop === null ? '' : String(stop));
-            }}
+            aria-valuetext={props.value === null ? 'Server default' : `${props.value} per minute`}
+            onInput={(event) => props.onInput(stops()[event.currentTarget.valueAsNumber])}
           />
-          {/* The stops, under the positions of the thumb, whose centre stays 0.5625rem inside the ends of the track */}
-          <div aria-hidden="true" class="relative mx-[0.5625rem] h-5 font-mono text-[0.6rem] text-ink-3">
+          {/* The stops, under the positions of the thumb, whose centre stays half its size inside the ends of the track */}
+          <div
+            aria-hidden="true"
+            class="relative mx-[calc(var(--range-thumb)/2)] h-5 font-mono text-[0.6rem] text-ink-3">
             <For each={stops()}>
               {(stop, at) => (
                 <span
@@ -120,11 +119,13 @@ function RateLimitField(props: {
           max={MAX_RATE_LIMIT}
           placeholder={props.optional ? 'Default' : undefined}
           class="field w-28 text-right tabular-nums"
-          value={props.value}
+          value={props.value ?? ''}
           autofocus={props.autofocus}
           aria-invalid={props.error ? 'true' : undefined}
           aria-describedby={note() ? `${id}-note` : undefined}
-          onInput={(event) => props.onInput(event.currentTarget.value)}
+          onInput={(event) =>
+            props.onInput(event.currentTarget.value.trim() ? Number(event.currentTarget.value) : null)
+          }
           onBlur={() => props.onBlur?.()}
         />
       </div>
@@ -171,21 +172,20 @@ export default function Users() {
 
   /** Runs a row action while `busy` is set, then reloads the accounts. A 404 means the account is already gone. */
   async function act(account: User, action: () => Promise<string>, failed: string, unreachable: string) {
-    setBusy((draft) => {
-      draft[account.username] = true;
-    });
-    try {
-      admin.notify(await action());
-    } catch (error) {
-      if (error instanceof SessionExpired) return;
-      if (statusOf(error) === 404) admin.notify(`User ${account.username} no longer exists.`, 'error');
-      else admin.notify(describe(error, failed, unreachable), 'error');
-    } finally {
-      setBusy((draft) => {
-        delete draft[account.username];
-      });
-      refresh(users);
-    }
+    await runAction(
+      {
+        busy: (on) =>
+          setBusy((draft) => {
+            if (on) draft[account.username] = true;
+            else delete draft[account.username];
+          }),
+        report: admin.notify,
+      },
+      action,
+      (error) =>
+        statusOf(error) === 404 ? `User ${account.username} no longer exists.` : describe(error, failed, unreachable),
+    );
+    refresh(users);
   }
 
   function toggleAdmin(account: User) {
@@ -193,7 +193,7 @@ export default function Users() {
     void act(
       account,
       async () => {
-        await call(`${userPath(account.username)}/admin`, { method: 'PUT', json: { admin: promote } });
+        await callEmpty(`${userPath(account.username)}/admin`, { method: 'PUT', json: { admin: promote } });
         return promote
           ? `${account.username} is now an administrator.`
           : `${account.username} is no longer an administrator.`;
@@ -213,7 +213,7 @@ export default function Users() {
     await act(
       account,
       async () => {
-        await call(userPath(account.username), { method: 'DELETE' });
+        await callEmpty(userPath(account.username), { method: 'DELETE' });
         return `User ${account.username} deleted.`;
       },
       'Could not delete the user',
@@ -247,7 +247,7 @@ export default function Users() {
       <section class="card overflow-hidden" aria-label="Accounts">
         <Errored
           fallback={(error, reset) => (
-            <Show when={!(error() instanceof SessionExpired)}>
+            <Show when={!isSessionExpired(error())}>
               <State title="Could not load the users" tone="error">
                 <p class="text-ink-2">{describe(error(), 'The server answered with an error')}</p>
                 <Button onClick={() => reset()}>Retry</Button>
@@ -350,10 +350,9 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void; onCreated
   );
 }
 
-/** The dialog renders its content only while open, so every opening starts from an empty form. */
 function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
   const admin = useContext(AdminContext);
-  const [form, setForm] = createStore({ username: '', password: '', admin: false, rateLimit: '' });
+  const [form, setForm] = createStore({ username: '', password: '', admin: false, rateLimit: null as number | null });
   const [touched, setTouched] = createStore({ username: false, password: false, rateLimit: false });
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -382,13 +381,13 @@ function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
     setError(null);
     try {
       const { rateLimit, ...fields } = form;
-      const json = rateLimit.trim() ? { ...fields, rateLimit: Number(rateLimit) } : fields;
+      const json = rateLimit === null ? fields : { ...fields, rateLimit };
       const account = await call<User>('/api/users', { method: 'POST', json });
       admin.notify(`User ${account.username} created${account.admin ? ' as an administrator' : ''}.`);
       props.onClose();
       props.onCreated();
     } catch (failure) {
-      if (failure instanceof SessionExpired) return;
+      if (isSessionExpired(failure)) return;
       if (statusOf(failure) === 409) {
         setError(`The username ${form.username} is already taken, choose another one.`);
         usernameInput.focus();
@@ -454,7 +453,7 @@ function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
             draft.rateLimit = value;
           })
         }
-        onBlur={() => form.rateLimit && touch('rateLimit')}
+        onBlur={() => form.rateLimit !== null && touch('rateLimit')}
       />
       <label class="flex items-start gap-3 text-sm">
         <input
@@ -488,18 +487,21 @@ function CreateUserForm(props: { onClose: () => void; onCreated: () => void }) {
 }
 
 function PasswordDialog(props: { account: User | null; onClose: () => void }) {
+  return (
+    <Dialog open={props.account !== null} onClose={props.onClose} label="Set a password">
+      <Show when={props.account}>{(account) => <PasswordForm account={account()} onClose={props.onClose} />}</Show>
+    </Dialog>
+  );
+}
+
+function PasswordForm(props: { account: User; onClose: () => void }) {
   const admin = useContext(AdminContext);
+  const account = props.account;
   const [busy, setBusy] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
 
-  function close() {
-    setError(null);
-    setProblem(null);
-    props.onClose();
-  }
-
-  async function submit(event: SubmitEvent, account: User) {
+  async function submit(event: SubmitEvent) {
     event.preventDefault();
     const password = String(new FormData(event.currentTarget as HTMLFormElement).get('password'));
     if (password.length < PASSWORD_LENGTH) {
@@ -510,16 +512,16 @@ function PasswordDialog(props: { account: User | null; onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await call(`${userPath(account.username)}/password`, { method: 'PUT', json: { password } });
+      await callEmpty(`${userPath(account.username)}/password`, { method: 'PUT', json: { password } });
       props.onClose();
       // The server ends the sessions of an account whose password changed, the current session included
       if (account.username === session.session?.username) {
-        expire('Your password was changed, sign in with the new one.');
+        signedOut('Your password was changed, sign in with the new one.');
         return;
       }
       admin.notify(`Password of ${account.username} changed.`);
     } catch (failure) {
-      if (failure instanceof SessionExpired) return;
+      if (isSessionExpired(failure)) return;
       if (statusOf(failure) === 404) {
         props.onClose();
         admin.notify(`User ${account.username} no longer exists.`, 'error');
@@ -538,67 +540,64 @@ function PasswordDialog(props: { account: User | null; onClose: () => void }) {
   }
 
   return (
-    <Dialog open={props.account !== null} onClose={close} label="Set a password">
+    <form class="flex flex-col gap-4 p-6" novalidate onSubmit={submit}>
+      <div class="flex flex-col gap-1">
+        <h2 class="text-xl [overflow-wrap:anywhere]">Set the password of {account.username}</h2>
+        <p class="text-ink-2 text-sm">
+          {account.username === session.session?.username
+            ? 'You will be signed out and sign in again with the new password.'
+            : 'Their sessions end and they sign in again with the new password.'}
+        </p>
+      </div>
+      <Field
+        label="New password"
+        name="password"
+        type="password"
+        hint={`At least ${PASSWORD_LENGTH} characters`}
+        error={problem()}
+        autofocus
+        autocomplete="new-password"
+        onInput={() => setProblem(null)}
+      />
+      <Show when={error()}>
+        <p role="alert" class="text-danger text-sm">
+          {error()}
+        </p>
+      </Show>
+      <div class="mt-2 flex justify-end gap-2">
+        <Button onClick={() => props.onClose()}>Cancel</Button>
+        <Button type="submit" variant="primary" busy={busy()}>
+          Save password
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function RateLimitDialog(props: { account: User | null; onClose: () => void; onChanged: () => void }) {
+  return (
+    <Dialog open={props.account !== null} onClose={props.onClose} label="Change the rate limit">
       <Show when={props.account}>
-        {(account) => (
-          <form class="flex flex-col gap-4 p-6" novalidate onSubmit={(event) => submit(event, account())}>
-            <div class="flex flex-col gap-1">
-              <h2 class="text-xl [overflow-wrap:anywhere]">Set the password of {account().username}</h2>
-              <p class="text-ink-2 text-sm">
-                {account().username === session.session?.username
-                  ? 'You will be signed out and sign in again with the new password.'
-                  : 'Their sessions end and they sign in again with the new password.'}
-              </p>
-            </div>
-            <Field
-              label="New password"
-              name="password"
-              type="password"
-              hint={`At least ${PASSWORD_LENGTH} characters`}
-              error={problem()}
-              autofocus
-              autocomplete="new-password"
-              onInput={() => setProblem(null)}
-            />
-            <Show when={error()}>
-              <p role="alert" class="text-danger text-sm">
-                {error()}
-              </p>
-            </Show>
-            <div class="mt-2 flex justify-end gap-2">
-              <Button onClick={close}>Cancel</Button>
-              <Button type="submit" variant="primary" busy={busy()}>
-                Save password
-              </Button>
-            </div>
-          </form>
-        )}
+        {(account) => <RateLimitForm account={account()} onClose={props.onClose} onChanged={props.onChanged} />}
       </Show>
     </Dialog>
   );
 }
 
-function RateLimitDialog(props: { account: User | null; onClose: () => void; onChanged: () => void }) {
+function RateLimitForm(props: { account: User; onClose: () => void; onChanged: () => void }) {
   const admin = useContext(AdminContext);
+  const account = props.account;
   const [busy, setBusy] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
-  /** The edited limit, null until changed so each opening starts from the limit of the account. */
-  const [edited, setEdited] = createSignal<string | null>(null);
+  const [limit, setLimit] = createSignal<number | null>(account.rateLimit);
   let input!: HTMLInputElement;
 
-  function close() {
-    setEdited(null);
-    setError(null);
-    setProblem(null);
-    props.onClose();
-  }
-
-  async function submit(event: SubmitEvent, account: User) {
+  async function submit(event: SubmitEvent) {
     event.preventDefault();
-    const value = edited() ?? String(account.rateLimit);
-    const invalid = rateLimitProblem(value, false);
-    if (invalid) {
+    const rateLimit = limit();
+    const invalid = rateLimitProblem(rateLimit, false);
+    if (invalid || rateLimit === null) {
       setProblem(invalid);
       input.focus();
       return;
@@ -606,15 +605,14 @@ function RateLimitDialog(props: { account: User | null; onClose: () => void; onC
     setBusy(true);
     setError(null);
     try {
-      const rateLimit = Number(value);
-      await call(`${userPath(account.username)}/rate-limit`, { method: 'PUT', json: { rateLimit } });
-      close();
+      await callEmpty(`${userPath(account.username)}/rate-limit`, { method: 'PUT', json: { rateLimit } });
+      props.onClose();
       admin.notify(`${account.username} is now limited to ${rateLimit.toLocaleString('en')} per minute.`);
       props.onChanged();
     } catch (failure) {
-      if (failure instanceof SessionExpired) return;
+      if (isSessionExpired(failure)) return;
       if (statusOf(failure) === 404) {
-        close();
+        props.onClose();
         admin.notify(`User ${account.username} no longer exists.`, 'error');
         props.onChanged();
       } else {
@@ -628,38 +626,32 @@ function RateLimitDialog(props: { account: User | null; onClose: () => void; onC
   }
 
   return (
-    <Dialog open={props.account !== null} onClose={close} label="Change the rate limit">
-      <Show when={props.account}>
-        {(account) => (
-          <form class="flex flex-col gap-4 p-6" novalidate onSubmit={(event) => submit(event, account())}>
-            <div class="flex flex-col gap-1">
-              <h2 class="text-xl [overflow-wrap:anywhere]">Rate limit of {account().username}</h2>
-              <p class="text-ink-2 text-sm">{RATE_LIMIT_HINT}.</p>
-            </div>
-            <RateLimitField
-              ref={(element) => (input = element)}
-              error={problem()}
-              value={edited() ?? String(account().rateLimit)}
-              autofocus
-              onInput={(value) => {
-                setEdited(value);
-                setProblem(null);
-              }}
-            />
-            <Show when={error()}>
-              <p role="alert" class="text-danger text-sm">
-                {error()}
-              </p>
-            </Show>
-            <div class="mt-2 flex justify-end gap-2">
-              <Button onClick={close}>Cancel</Button>
-              <Button type="submit" variant="primary" busy={busy()}>
-                Save limit
-              </Button>
-            </div>
-          </form>
-        )}
+    <form class="flex flex-col gap-4 p-6" novalidate onSubmit={submit}>
+      <div class="flex flex-col gap-1">
+        <h2 class="text-xl [overflow-wrap:anywhere]">Rate limit of {account.username}</h2>
+        <p class="text-ink-2 text-sm">{RATE_LIMIT_HINT}.</p>
+      </div>
+      <RateLimitField
+        ref={(element) => (input = element)}
+        error={problem()}
+        value={limit()}
+        autofocus
+        onInput={(value) => {
+          setLimit(value);
+          setProblem(null);
+        }}
+      />
+      <Show when={error()}>
+        <p role="alert" class="text-danger text-sm">
+          {error()}
+        </p>
       </Show>
-    </Dialog>
+      <div class="mt-2 flex justify-end gap-2">
+        <Button onClick={() => props.onClose()}>Cancel</Button>
+        <Button type="submit" variant="primary" busy={busy()}>
+          Save limit
+        </Button>
+      </div>
+    </form>
   );
 }
