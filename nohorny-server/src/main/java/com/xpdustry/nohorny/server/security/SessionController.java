@@ -16,7 +16,6 @@ public final class SessionController {
         this.users = users;
     }
 
-    /// Only reached by authenticated callers, see [SecurityConfiguration].
     @GetMapping(path = "/api/session", produces = MediaType.APPLICATION_JSON_VALUE)
     public Session onSession(final Authentication authentication) {
         return Session.of(authentication, this.users);

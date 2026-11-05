@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/// The requester mappings, restricted to the administrators by the security configuration.
 @RestController
 @RequestMapping(path = "/api/mappings", produces = MediaType.APPLICATION_JSON_VALUE)
 public final class RequesterMappingController {

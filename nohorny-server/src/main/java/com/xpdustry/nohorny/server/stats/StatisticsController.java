@@ -27,13 +27,11 @@ public final class StatisticsController {
         return this.statistics.history(parseRange(range));
     }
 
-    /// Restricted to the administrators by the security configuration.
     @GetMapping(path = "/api/stats/networks", produces = MediaType.APPLICATION_JSON_VALUE)
     public Networks onNetworks(final @RequestParam(defaultValue = "30d") String range) {
         return this.statistics.networks(parseRange(range));
     }
 
-    /// Restricted to the administrators by the security configuration.
     @GetMapping(path = "/api/stats/versions", produces = MediaType.APPLICATION_JSON_VALUE)
     public Versions onVersions(final @RequestParam(defaultValue = "30d") String range) {
         return this.statistics.versions(parseRange(range));
