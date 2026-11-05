@@ -3,8 +3,6 @@ package com.xpdustry.nohorny.server.persistence;
 
 import org.jspecify.annotations.Nullable;
 
-/// Who sent a classification request.
-///
 /// @param name the username of a [RequesterType#USER], the network of a [RequesterType#MINDUSTRY_NETWORK] if listed
 ///     with one, always `null` for a [RequesterType#LOCAL] or [RequesterType#ANONYMOUS] requester
 public record Requester(RequesterType type, @Nullable String name) {

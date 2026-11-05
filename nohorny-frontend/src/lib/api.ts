@@ -1,5 +1,3 @@
-// The NoHorny JSON API.
-
 export type Rating = 'SAFE' | 'WARN' | 'NSFW';
 export type Bucket = 'safe' | 'warn' | 'nsfw' | 'failed';
 export type Ratings = Record<Bucket, number>;
@@ -164,7 +162,6 @@ export function statusOf(error: unknown): number | null {
   return error instanceof ApiError ? error.status : null;
 }
 
-/** The `X-XSRF-TOKEN` header with the value of the `XSRF-TOKEN` cookie. It is empty without the cookie. */
 function csrfHeaders(): Record<string, string> {
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
   return match ? { 'X-XSRF-TOKEN': decodeURIComponent(match[1]) } : {};
@@ -175,7 +172,6 @@ export function hasCsrfToken(): boolean {
 }
 
 export interface ApiOptions extends Omit<RequestInit, 'body'> {
-  /** Serialized as the JSON body. */
   json?: unknown;
   body?: BodyInit;
 }
@@ -218,10 +214,6 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   return ((response.headers.get('Content-Type') ?? '').includes('json') ? JSON.parse(text) : text) as T;
 }
 
-/**
- * The message to show for a failed call. It is `unreachable` when the request did not reach the server,
- * the message of the API when it sent one, and `fallback` with the HTTP status otherwise.
- */
 export function describe(error: unknown, fallback: string, unreachable = 'Could not reach the server.'): string {
   if (!(error instanceof ApiError)) return 'Unexpected error, reload the page.';
   if (error.status === 0) return unreachable;
@@ -229,7 +221,7 @@ export function describe(error: unknown, fallback: string, unreachable = 'Could 
   return error.serverMessage || `${fallback} (HTTP ${error.status}).`;
 }
 
-/** Returns the GET /api/session payload, or null when signed out. The response also sets the XSRF-TOKEN cookie. */
+/** The response also sets the XSRF-TOKEN cookie. */
 export async function probeSession(): Promise<Session | null> {
   try {
     return await api<Session>('/api/session');

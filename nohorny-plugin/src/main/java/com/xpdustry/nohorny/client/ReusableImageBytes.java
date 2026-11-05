@@ -52,7 +52,7 @@ final class ReusableImageBytes extends ByteArrayOutputStream implements Lifecycl
         return HttpRequest.BodyPublishers.ofByteArray(this.buf, 0, this.count);
     }
 
-    /// Writes the image as the JPEG the plugin sends everywhere, leaving the stream open.
+    /// Leaves the stream open.
     static void writeJpeg(final BufferedImage image, final OutputStream stream) throws IOException {
         final var writers = ImageIO.getImageWritersByFormatName("jpeg");
         if (!writers.hasNext()) {

@@ -8,13 +8,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/// @param admin the bootstrap administrator, created or reset on every startup
 @ConfigurationProperties("nohorny.security")
 @Validated
 public record ApiSecurityProperties(@DefaultValue @Valid Admin admin) {
 
-    /// @param username the username of the bootstrap administrator
-    /// @param password its password, no bootstrap administrator is configured when blank
     public record Admin(
             @DefaultValue("admin") @Pattern(regexp = Usernames.PATTERN, message = Usernames.MESSAGE) String username,
 

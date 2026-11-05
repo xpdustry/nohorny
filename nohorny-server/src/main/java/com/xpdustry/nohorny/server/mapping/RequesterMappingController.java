@@ -50,13 +50,11 @@ public final class RequesterMappingController {
         this.mappings.delete(id);
     }
 
-    /// Relabels the retained requests the mapping would have matched, see [RequesterMappingService#apply].
     @PostMapping("/{id}/apply")
     public Applied onApply(final @PathVariable String id) {
         return new Applied(this.mappings.apply(id));
     }
 
-    /// @param range an address range in CIDR notation, or a single address
     /// @param type `user`, `mindustry-network`, `local` or `anonymous`
     /// @param name the username of a user or the network name, ignored for the other types
     public record MappingBody(
@@ -66,6 +64,5 @@ public final class RequesterMappingController {
 
             @Nullable String name) {}
 
-    /// @param requests the number of changed requests
     public record Applied(int requests) {}
 }

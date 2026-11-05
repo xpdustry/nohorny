@@ -1,5 +1,3 @@
-// Statistics from GET /api/stats, polled while the page is visible.
-
 import { type Accessor, createMemo, createSignal, onCleanup } from 'solid-js';
 import { api, type Stats } from './api';
 
@@ -7,14 +5,9 @@ export interface LiveStats {
   data: Accessor<Stats | null>;
   /** Settles with the first statistics, or when they fail to come, so a Loading boundary can wait for them. */
   ready: Accessor<true>;
-  /** Fetches the statistics now. */
   refresh(): void;
 }
 
-/**
- * Polls every `pollSeconds` while the calling component is mounted, from its hydration. A hidden page skips the polls
- * and catches up as soon as it shows again.
- */
 export function createLiveStats(pollSeconds: number, load = () => api<Stats>('/api/stats')): LiveStats {
   const [data, setData] = createSignal<Stats | null>(null);
   let lastPoll = 0;
@@ -43,7 +36,6 @@ export function createLiveStats(pollSeconds: number, load = () => api<Stats>('/a
     }
   }
 
-  /** Polls now and then every `pollSeconds`. Returns the stop. */
   function start(): () => void {
     void poll();
     const timer = setInterval(() => !document.hidden && poll(), pollSeconds * 1000);

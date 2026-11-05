@@ -52,7 +52,6 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
     @Query(nativeQuery = true, value = "DELETE FROM daily_stat WHERE count <= 0")
     void deleteEmpty();
 
-    /// Counts a request in the statistics of its day.
     default void increment(final ClassificationRequest request) {
         final var requester = request.getRequester();
         final var version = request.getVersion();
@@ -66,12 +65,10 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
                 version != null && version.length() <= DailyStat.MAX_VERSION_LENGTH ? version : "");
     }
 
-    /// @return the number of requests per bucket since the first one, deleted requests included
     @Query("SELECT d.id.bucket AS bucket, SUM(d.count) AS total FROM DailyStat d GROUP BY d.id.bucket")
     List<BucketCount> countByBucket();
 
     /// @param from the first ISO-8601 day, included
-    /// @return the number of requests per day and bucket since the given day, missing slots have none
     @Query("""
             SELECT d.id.day AS slot, d.id.bucket AS bucket, SUM(d.count) AS total FROM DailyStat d
             WHERE d.id.day >= :from
@@ -80,7 +77,6 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
     List<SlotCount> countByDaySince(String from);
 
     /// @param from the first ISO-8601 day, included
-    /// @return the number of requests per listed network since the given day, deleted requests included
     @Query("""
             SELECT d.id.network AS name, SUM(d.count) AS total FROM DailyStat d
             WHERE d.id.day >= :from AND d.id.network <> ''
@@ -99,7 +95,6 @@ public interface DailyStatRepository extends Repository<DailyStat, DailyStat.Key
     List<NamedCount> countByUnnamedRequesterSince(String from);
 
     /// @param from the first ISO-8601 day, included
-    /// @return the number of requests per plugin version since the given day, deleted requests included
     @Query("""
             SELECT d.id.version AS name, SUM(d.count) AS total FROM DailyStat d
             WHERE d.id.day >= :from AND d.id.version <> ''

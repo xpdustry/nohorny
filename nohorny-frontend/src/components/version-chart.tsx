@@ -1,12 +1,8 @@
-// The requests per client version, as one bar per version, from GET /api/stats/versions. A click on a version lists
-// its requests.
-
 import { createMemo, For, Show } from 'solid-js';
 import type { VersionFilter, Versions } from '../lib/api';
 import { number, share } from '../lib/format';
 
 export function VersionChart(props: { versions: Versions; onSelect?: (filter: VersionFilter) => void }) {
-  // The clients that send no version, like the scripts calling the API by hand
   const unknown = createMemo(
     () => props.versions.total - props.versions.versions.reduce((sum, version) => sum + version.count, 0),
   );
@@ -49,7 +45,6 @@ function VersionRow(props: {
   mono?: boolean;
   class?: string;
   fill?: string;
-  /** Lists the requests of the version. Without it, the row is not clickable. */
   onSelect?: () => void;
 }) {
   return (

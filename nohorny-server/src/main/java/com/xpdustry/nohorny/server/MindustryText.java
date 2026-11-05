@@ -5,8 +5,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-/// Reads the markup of Mindustry text, such as the server names, without the game.
-///
 /// The color tag parsing is ported from `MindustryDecoderImpl` of
 /// [Distributor](https://github.com/xpdustry/distributor), relicensed under MIT by its author.
 final class MindustryText {
@@ -97,10 +95,6 @@ final class MindustryText {
         return buffer.toString();
     }
 
-    /// Removes the color tags, replaces the icons of the game font and the invisible characters with spaces,
-    /// then collapses the whitespace.
-    ///
-    /// @return the plain text, empty if nothing is left
     static String plain(final String input) {
         final var stripped = stripColors(input);
         final var buffer = new StringBuilder(stripped.length());

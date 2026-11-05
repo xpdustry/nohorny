@@ -1,10 +1,7 @@
-// Modal dialogs built on <dialog>, and the confirmation dialog of the app.
-
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, onSettled, Show } from 'solid-js';
 import { Button } from './ui';
 
-/** A modal <dialog>, shown while `open`. Escape and a click on the backdrop call `onClose`. */
 export function Dialog(props: {
   open: boolean;
   onClose: () => void;
@@ -55,7 +52,6 @@ const [pending, setPending] = createSignal<Confirmation | null>(null);
 // The pending confirmation. A write to the signal shows only after the next flush, but this variable changes at once
 let current: Confirmation | null = null;
 
-/** Asks the user to confirm a destructive action. Resolves to true if they confirm. */
 export function confirm(options: { title: string; body: string; action: string }): Promise<boolean> {
   current?.resolve(false);
   return new Promise((resolve) => {
@@ -70,7 +66,6 @@ function settle(confirmed: boolean) {
   setPending(null);
 }
 
-/** Renders the confirmation dialog. App.tsx mounts it once. */
 export function ConfirmHost() {
   return (
     <Dialog open={pending() !== null} onClose={() => settle(false)} label={pending()?.title ?? 'Confirm'}>

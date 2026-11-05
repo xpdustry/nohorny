@@ -1,6 +1,3 @@
-/* Warm charcoal neutrals with a trace of the logo's aubergine, and one accent, the pink of the logo, for the actions
-   and the selected states. The ratings keep their own colours. The tokens below switch with prefers-color-scheme,
-   and the Tailwind colours read them. */
 @import "tailwindcss";
 @import "@fontsource/momo-trust-display/400.css";
 @import "@fontsource-variable/martian-mono/wght.css";
@@ -18,13 +15,10 @@
 :root {
   color-scheme: dark;
   --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The colours of the logo, for the pixel art of the landing page */
   --brand: #ff7ad9;
   --brand-deep: #c24e9b;
-  /* The page, the wells and inputs sunk into it, then the cards and what sits on them */
   --bg: oklch(0.18 0.012 340);
   --bg-2: oklch(0.16 0.011 340);
-  /* The glow of the pages, dithered over --bg toward the pink of the logo, see components/dither.tsx */
   --dither-1: oklch(0.2 0.025 345);
   --dither-2: oklch(0.225 0.04 348);
   --dither-3: oklch(0.255 0.055 350);
@@ -40,7 +34,6 @@
   --accent-hover: oklch(0.81 0.13 350);
   --accent-ink: oklch(0.8 0.13 350);
   --on-accent: oklch(0.2 0.04 350);
-  /* The selected tabs and segments. Their edge shows in the light theme, where the fill alone is too faint */
   --accent-soft: oklch(0.4 0.1 350);
   --on-accent-soft: oklch(0.97 0.01 350);
   --accent-edge: var(--accent-soft);
@@ -63,7 +56,6 @@
   --network-1: #0068ad;
   --network-2: #00a99c;
   --network-3: #9a7de3;
-  /* The elevation of what floats over the page: the toasts, the tooltips and the dialogs */
   --float: 0 16px 40px -12px oklch(0 0 0 / 0.6), 0 2px 6px oklch(0 0 0 / 0.3);
   --backdrop: oklch(0.1 0.01 340 / 0.7);
 }
@@ -205,7 +197,6 @@
       scale: 0.97;
     }
   }
-  /* The tooltips show at once and fade, so they neither wait on the pointer nor blink out when it leaves */
   [role="tooltip"] {
     opacity: 0;
     transition: opacity 120ms ease-out;
@@ -240,9 +231,7 @@
   @apply mx-auto w-full max-w-6xl px-4 sm:px-8;
 }
 
-/* The frosted bars at the edges of the pages: the headers on top, the footer below. Translucent and blurred, so the
-   dithered background and the page scrolling under them show through softly.
-   An overscroll pulls the page past its edge, the tint carries on past the bar so the gap reads as more of the bar
+/* An overscroll pulls the page past its edge, the tint carries on past the bar so the gap reads as more of the bar
    instead of the bare page. A shadow, as it paints past the page without growing its scrollable area */
 @utility bar-top {
   @apply border-line border-b bg-bg/70 backdrop-blur-lg;
@@ -258,7 +247,6 @@
   text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 }
 
-/* A link among other data, like the id of a request in a list, where the accent would repeat on every row */
 @utility link-quiet {
   @apply text-ink underline decoration-1 underline-offset-[0.2em] hover:text-accent-ink hover:decoration-current;
   text-decoration-color: var(--line-strong);
@@ -272,7 +260,6 @@
   @apply font-mono text-[0.68rem] tracking-[0.14em] text-ink-3 uppercase;
 }
 
-/* The text inputs of the forms */
 @utility field {
   @apply h-10 w-full rounded-xl border border-line-strong bg-bg-2 px-3 text-ink transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-11;
 }
@@ -308,7 +295,6 @@
   }
 }
 
-/* Slides a notice in when it appears */
 @utility pop-in {
   transition:
     opacity 200ms var(--ease-snap),
@@ -342,8 +328,6 @@
   }
 }
 
-/* A thin bar under a header while a navigation waits for its page, which stays on screen meanwhile. It shows after a
-   moment, so a quick navigation shows nothing, and it fills up as it fades out */
 .progress-bar {
   position: absolute;
   inset-inline: 0;
@@ -379,7 +363,6 @@
   transform: scale(1.1);
 }
 
-/* Fades a flagged image in and out of its blur */
 @utility veil {
   transition:
     filter 0.6s var(--ease-snap),
@@ -389,8 +372,6 @@
   }
 }
 
-/* The landing steps share one loop and play in turn, from detection to ban.
-   Without motion, every step shows its outcome. */
 .steps {
   --loop: 8s;
 }
@@ -403,7 +384,6 @@
 [data-step="act"] {
   --d: calc(var(--loop) * 0.75);
 }
-/* Watch: a scanner sweeps the art and leaves it detected, in colour */
 .scan {
   position: absolute;
   inset: 0 0 0 100%;
@@ -631,7 +611,6 @@
   }
 }
 
-/* A tick passing: the sweep goes around and NoHorny pulses as it is passed */
 @media (prefers-reduced-motion: no-preference) {
   .tick-sweep {
     animation: tick-sweep 2.4s linear infinite;
@@ -660,7 +639,6 @@
   }
 }
 
-/* The jar dropping into config/mods, each folder linked to its parent by an elbow */
 .tree ul {
   margin-left: 0.6em;
   padding-left: 1.35em;
@@ -736,7 +714,6 @@
   }
 }
 
-/* The changing word of the landing headline, see RotatingWord */
 @media (prefers-reduced-motion: no-preference) {
   .word-in {
     animation: word-in 0.45s var(--ease-snap) both;

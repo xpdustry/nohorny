@@ -6,7 +6,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// The retention periods of this server, shown on the privacy page.
 @RestController
 public final class RetentionController {
 

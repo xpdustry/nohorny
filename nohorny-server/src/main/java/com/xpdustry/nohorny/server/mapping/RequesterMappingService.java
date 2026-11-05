@@ -26,15 +26,11 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
-/// Manages the requester mappings, and finds the one of a client address.
-///
-/// The mappings are read on every classification, so they are kept in memory and reloaded once a change commits.
 @Service
 public class RequesterMappingService {
 
     private static final Logger log = LoggerFactory.getLogger(RequesterMappingService.class);
 
-    /// The longest network name of a mapping, the listed ones are far shorter.
     public static final int MAX_NETWORK_LENGTH = 64;
 
     private final RequesterMappingRepository mappings;
@@ -57,12 +53,10 @@ public class RequesterMappingService {
         this.reload();
     }
 
-    /// @return the requester of the most specific mapping containing the address, empty if none does
     public Optional<Requester> find(final InetAddress address) {
         return this.match(address).map(Rule::requester);
     }
 
-    /// @return the mappings sorted by range, the IPv4 ones first
     public List<RequesterMappingView> list() {
         return this.mappings.findAll().stream()
                 .map(RequesterMappingService::toView)
@@ -107,7 +101,6 @@ public class RequesterMappingService {
         this.reloadAfterCommit();
     }
 
-    /// Deletes the mappings to an account, within the transaction deleting it.
     @Transactional
     public void deleteForUser(final String username) {
         if (this.mappings.deleteByUser(username) > 0) {
@@ -116,11 +109,7 @@ public class RequesterMappingService {
         }
     }
 
-    /// Gives the requester of a mapping to the retained requests it would have matched, and moves their daily
-    /// statistics with them. The requests sent with an account are kept, like the addresses a more specific mapping
-    /// contains. The statistics of the deleted requests stay, their addresses are gone.
-    ///
-    /// @return the number of changed requests
+    /// The statistics of the deleted requests stay, their addresses are gone.
     @Transactional
     public int apply(final String id) {
         final var mapping = this.find(id);
@@ -240,7 +229,6 @@ public class RequesterMappingService {
         return new ResponseStatusException(HttpStatus.CONFLICT, "address range already mapped");
     }
 
-    /// The IPv4 ranges first, then by first address and prefix.
     private static final Comparator<String> RANGE_ORDER = Comparator.comparing(
             (String value) -> AddressRange.parse(value),
             Comparator.comparingInt((AddressRange range) -> range.network().getAddress().length)

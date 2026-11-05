@@ -4,7 +4,7 @@ package com.xpdustry.nohorny.server.user;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 
-/// Applies the bootstrap administrator configuration on startup, before the server accepts requests.
+/// Runs before the server accepts requests.
 @Component
 public final class BootstrapAdministratorInitializer implements SmartInitializingSingleton {
 

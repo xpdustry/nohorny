@@ -72,7 +72,6 @@ public final class RequestController {
         return this.toView(request, SecurityConfiguration.isAdmin(authentication));
     }
 
-    /// @param requester a requester type key, such as `mindustry-network`, to only list its requests
     /// @param network with `requester`, only list the requests of this name, or the unnamed ones when empty
     /// @param version only list the requests of this plugin version, or of the clients sending none when empty
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)

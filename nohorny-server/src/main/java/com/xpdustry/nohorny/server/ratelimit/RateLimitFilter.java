@@ -25,13 +25,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
 
-/// Limits the API per client address, see [RateLimitProperties]. Runs after the security filters, so it knows the
-/// caller.
-///
-/// The classifications are limited by tier: an account by its own limit, shared by all its addresses, then a listed
-/// Mindustry server by the limit of the mindustry tier, shared by all the servers of its network, then an anonymous
-/// client per address. A tier limited to `0` must authenticate. The request pages are limited per address for everyone
-/// but the administrators. A limited request is answered `429` with a `Retry-After` header in seconds.
+/// Runs after the security filters, so it knows the caller.
 @Component
 public final class RateLimitFilter extends OncePerRequestFilter {
 
@@ -95,7 +89,6 @@ public final class RateLimitFilter extends OncePerRequestFilter {
             final var requester = this.requesters.resolve(authentication, address);
             final var name = requester.name();
             return switch (requester.type()) {
-                // Read on every request, so a change from the admin panel applies at once
                 case USER ->
                     new Limit(
                             "classify-user",
@@ -104,7 +97,6 @@ public final class RateLimitFilter extends OncePerRequestFilter {
                                     .findById(name)
                                     .map(UserAccount::getRateLimit)
                                     .orElse(0));
-                // A listed server without a network name is limited on its own
                 case MINDUSTRY_NETWORK ->
                     new Limit("classify-mindustry", name == null ? address : name, this.limits.mindustry());
                 // The local addresses are limited like the anonymous clients, a reverse proxy would make every
@@ -131,8 +123,6 @@ public final class RateLimitFilter extends OncePerRequestFilter {
         this.mapper.writeValue(response.getOutputStream(), new SimpleServerMessage(message));
     }
 
-    /// @param scope the bucket family
-    /// @param subject the bucket owner within the scope
     /// @param perMinute `0` when the caller must authenticate
     private record Limit(String scope, String subject, int perMinute) {}
 }

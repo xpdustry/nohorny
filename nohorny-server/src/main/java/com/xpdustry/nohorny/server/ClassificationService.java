@@ -33,7 +33,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/// Runs the classifier chain on submitted images and records every classification.
 @Service
 public final class ClassificationService {
 
@@ -51,7 +50,6 @@ public final class ClassificationService {
         this.properties = properties;
     }
 
-    /// @param bytes the JPEG image as received, stored as is when kept
     public ResponseEntity<?> classify(final byte[] bytes, final Submission submission) {
         final var createdAt = Instant.now();
         final var start = System.nanoTime();
@@ -115,7 +113,6 @@ public final class ClassificationService {
             } catch (final Exception exception) {
                 log.error("Classification request {} failed with {}", id, classifier.name(), exception);
                 steps.add(new ClassificationStep(classifier.name(), millisSince(start), new Failure(exception)));
-                // A failure later in the chain falls back to the previous verdict
                 return verdict == null ? new Final(classifier.name(), new Failure(exception)) : verdict;
             }
         }
@@ -183,13 +180,8 @@ public final class ClassificationService {
                 : version.substring(0, MAX_VERSION_LENGTH);
     }
 
-    /// The outcome of the chain, see [#run].
     private record Final(String classifier, Outcome outcome) {}
 
-    /// @param version the plugin version of the caller
-    /// @param kind the kind of buildings the image was made with, if sent and known
-    /// @param requester who sent the image, see [RequesterResolver]
-    /// @param authenticated whether it was sent with an account
     public record Submission(
             @Nullable String version,
             @Nullable ArtKind kind,

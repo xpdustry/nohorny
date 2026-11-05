@@ -20,10 +20,6 @@ import java.util.List;
 import org.hibernate.annotations.BatchSize;
 import org.jspecify.annotations.Nullable;
 
-/// A recorded classification request.
-///
-/// The image itself, always a JPEG, lives in the [ImageStore], referenced by its hash.
-///
 /// The reads run outside of transactions, so the steps are fetched eagerly: one query loads those of a whole page.
 @Entity
 @Table(name = "request")
@@ -75,12 +71,7 @@ public class ClassificationRequest extends AssignedIdEntity<String> {
     @SuppressWarnings("NullAway")
     protected ClassificationRequest() {}
 
-    /// @param id the UUIDv7 identifier
     /// @param classifier the classifier of the final verdict, or the one that failed
-    /// @param outcome the final verdict, or the failure
-    /// @param version the plugin version of the caller, if sent
-    /// @param artKind the kind of buildings the image was made with, if sent
-    /// @param requester who sent the request
     /// @param authenticated whether it was sent with an account, rather than given a requester by a mapping
     /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
     ///     [ImageState#STORED]

@@ -77,8 +77,6 @@ public final class UserController {
         this.users.delete(username, authentication.getName());
     }
 
-    /// @param admin whether the user is an administrator, `false` if omitted
-    /// @param rateLimit the classifications per minute, the configured default if omitted
     public record CreateUser(
             @NotNull(message = "username is required") @Pattern(regexp = Usernames.PATTERN, message = Usernames.MESSAGE) String username,
 

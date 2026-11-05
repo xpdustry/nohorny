@@ -10,8 +10,6 @@ import jakarta.persistence.Table;
 
 /// The number of requests per day, bucket, requester type, network and plugin version, kept after the requests
 /// themselves are deleted. Each breakdown of the statistics is a sum over the other columns.
-///
-/// Only incremented through [DailyStatRepository#increment].
 @Entity
 @Table(name = "daily_stat")
 public class DailyStat {

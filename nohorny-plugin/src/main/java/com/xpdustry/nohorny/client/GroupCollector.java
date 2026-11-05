@@ -18,8 +18,6 @@ import mindustry.gen.Player;
 import mindustry.world.Block;
 import org.jspecify.annotations.Nullable;
 
-// Groups the queued buildings a few steps per tick and sends each group to the classifier.
-//
 // Queued buildings are batched per author, a batch is only grouped once its author is done building,
 // so a build is classified once, whole, instead of once per finished building.
 // A building waits in a single batch, the one of the first author that changed it,
@@ -27,8 +25,6 @@ import org.jspecify.annotations.Nullable;
 //
 // A player that keeps building, or just keeps a plan it never gets to finish, delays the scan of its own art.
 // The wait is capped, so the art is sent at most MAX_WAIT_TICKS after its first building.
-//
-// Every step of a tick has a budget, so a tick costs the same whatever the size of the art and of the batches.
 final class GroupCollector<T extends MindustryImage> {
 
     static final int MAX_GROUP_STEPS = 50;
@@ -36,11 +32,9 @@ final class GroupCollector<T extends MindustryImage> {
     static final int MAX_CLEANUP_STEPS = 1000;
     // Checking an anchor can scan a whole canvas
     static final int MAX_ANCHOR_CHECKS = 100;
-    // Time without new buildings from an author before its batch can be grouped, covers the gaps between plans
+    // Covers the gaps between the plans of an author
     static final long QUIET_TICKS = 90;
-    // Batches are grouped after that long even if their author is still at it
     static final long MAX_WAIT_TICKS = 15 * 60L;
-    // For the buildings without a known author, like the ones changing team
     private static final MUUID UNKNOWN_AUTHOR = new MUUID("", "");
 
     private final VirtualBuildingIndex<T> index;
@@ -52,7 +46,6 @@ final class GroupCollector<T extends MindustryImage> {
     private final int maxGroupRange;
     private final Function<MUUID, @Nullable Player> players;
     private final Map<MUUID, Batch> batches = new LinkedHashMap<>();
-    // The batch of each queued building
     private final IntMap<Batch> queued = new IntMap<>();
     private @Nullable Grouping grouping = null;
 
@@ -148,7 +141,6 @@ final class GroupCollector<T extends MindustryImage> {
     }
 
     private boolean isSettled(final Batch batch, final long now) {
-        // The anchors are in the order they were queued, the first one has waited the longest
         final long oldest = batch.anchors.firstEntry().getValue();
         if (now < oldest) {
             // The clock was reset

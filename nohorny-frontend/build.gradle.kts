@@ -2,7 +2,6 @@ plugins {
     id("nohorny.pnpm")
 }
 
-// The lockfile too, a dependency change alone must rebuild the bundle
 val sources = files(
     "src",
     "public",
@@ -38,7 +37,6 @@ val typecheck = tasks.register<Pnpm>("pnpmCheck") {
 
 tasks.check { dependsOn(lint, typecheck) }
 
-// Puts the build under static/, the directory the server serves its pages from
 val bundle = tasks.register<Sync>("bundleFrontend") {
     description = "Lay out the frontend build as the static resources of the server."
     from(build.map { layout.projectDirectory.dir("dist/client") }) {

@@ -78,7 +78,6 @@ public class UserAccount extends AssignedIdEntity<String> {
         }
     }
 
-    /// @return the version the sessions must carry, see `SessionRevalidationFilter`
     public long getSessionVersion() {
         return this.sessionVersion;
     }

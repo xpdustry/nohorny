@@ -1,5 +1,3 @@
-// The landing page, with the classification counter.
-
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, For, onSettled, Show } from 'solid-js';
 import {
@@ -75,7 +73,6 @@ function RotatingWord(props: { words: readonly string[] }) {
   );
 }
 
-/** Animates the shown value to `target()`, or jumps to it when the user prefers reduced motion. */
 function createCountUp(target: () => number | undefined) {
   const [value, setValue] = createSignal<number | null>(null);
   // The value on screen. The signal updates only after the next flush
@@ -311,7 +308,6 @@ function Step(props: { step: string; icon: JSX.Element; title: string; art: JSX.
   );
 }
 
-/** The heart, `scanned` adds the scanner of the watch step and `banned` shows it wiped. */
 function PixelArt(props: { scanned?: boolean; banned?: boolean }) {
   return (
     <span class="pixels relative grid grid-cols-12 gap-px">

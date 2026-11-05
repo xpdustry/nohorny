@@ -1,5 +1,3 @@
-// State shared by the admin pages while signed in.
-
 import { createContext, createSignal } from 'solid-js';
 import type { Stats } from './api';
 import { call } from './session';
@@ -20,7 +18,6 @@ export interface Status {
 
 export const AdminContext = createContext<Admin>();
 
-/** How long a success stays on screen. Errors stay until dismissed. */
 const SUCCESS_MILLIS = 6000;
 
 export function createAdmin(): Admin {

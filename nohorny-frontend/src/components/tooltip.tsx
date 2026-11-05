@@ -1,8 +1,5 @@
-// The tooltips of the app, shown at once on hover and on keyboard focus, unlike the native title that waits a second.
-// Any element with a data-tooltip attribute gets one. A single host listens on the document and floats the text over
-// the element, in the top layer so it also shows over the dialogs. It follows the attribute while shown, so a label
-// changing under the pointer, like "Copied", updates in place. Its line breaks are kept. With data-tooltip-overflow, it
-// only shows when the text of the element is cut, to complete a truncated label.
+// Any element with a data-tooltip attribute gets a tooltip, shown at once unlike the native title that waits a second.
+// With data-tooltip-overflow, it only shows when the text is cut. It sits in the top layer, so it shows over dialogs.
 
 import { onSettled } from 'solid-js';
 
@@ -19,7 +16,6 @@ export function TooltipHost() {
   let observer: MutationObserver | undefined;
   let closing: ReturnType<typeof setTimeout> | undefined;
 
-  /** Above the element and centered, below when there is no room above, kept inside the window. */
   function place() {
     if (target === null) return;
     tip.textContent = target.dataset.tooltip ?? '';
@@ -43,7 +39,6 @@ export function TooltipHost() {
     // Read out as a description, unless it repeats the label of an icon button
     if (element.dataset.tooltip !== element.getAttribute('aria-label'))
       element.setAttribute('aria-describedby', tip.id);
-    // A tooltip still fading out comes back from where it is
     clearTimeout(closing);
     if (!tip.matches(':popover-open')) tip.showPopover();
     tip.dataset.open = '';

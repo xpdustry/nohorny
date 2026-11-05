@@ -7,7 +7,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import org.jspecify.annotations.Nullable;
 
-/// One classifier invocation of a [ClassificationRequest].
 @Embeddable
 public class ClassificationStep {
 

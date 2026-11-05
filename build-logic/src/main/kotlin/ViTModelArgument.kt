@@ -4,7 +4,6 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.process.CommandLineArgumentProvider
 
-/** Passes the ViT model to the tests as the `nohorny.test.vit-model` system property. */
 class ViTModelArgument(
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.NONE)

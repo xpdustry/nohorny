@@ -11,7 +11,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Keeps the request pages, the admin panel and the API out of the search engines.
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public final class RobotsTagFilter extends OncePerRequestFilter {

@@ -1,5 +1,3 @@
-// The settings page of the admin panel, which manages the requester mappings.
-
 import { Meta, Title } from '@solidjs/meta';
 import {
   createMemo,
@@ -20,7 +18,7 @@ import {
   InfoIcon,
   PencilIcon,
   PlusIcon,
-  RefreshIcon,
+  RefreshCwIcon,
   SettingsIcon,
   TrashIcon,
 } from '../../components/icon';
@@ -195,7 +193,7 @@ export default function Settings() {
                           disabled={busy[mapping().id]}
                           data-tooltip="Change the retained requests of this range"
                           onClick={() => void apply(mapping())}>
-                          <RefreshIcon />
+                          <RefreshCwIcon />
                           Apply
                         </Button>
                         <Button

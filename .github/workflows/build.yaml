@@ -1,7 +1,6 @@
 name: "Build"
 
 on:
-  # Lets the draft-release workflow build in release mode
   workflow_call:
     inputs:
       release:
@@ -102,7 +101,7 @@ jobs:
             nohorny-plugin/build/test-results/test/TEST-*.xml
             nohorny-plugin/build/reports/
 
-      # Only the common and client modules are published to Maven, forks lack the credentials of the xpdustry repository
+      # Forks lack the credentials of the xpdustry repository
       - name: "Publish to Maven"
         if: ${{ github.repository_owner == 'xpdustry' && (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
         run: ./gradlew :nohorny-common:publish :nohorny-plugin:publish
@@ -136,7 +135,7 @@ jobs:
       - name: "Setup Gradle"
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      # Gradle builds the pages with pnpm. The action reads the pnpm version from nohorny-frontend/package.json
+      # Gradle builds the pages with pnpm
       - name: "Setup pnpm"
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:

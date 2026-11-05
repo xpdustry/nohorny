@@ -19,12 +19,10 @@ public interface RequesterMappingRepository extends ListCrudRepository<Requester
             """)
     List<Row> findRows();
 
-    /// @return the number of deleted mappings
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM RequesterMapping m WHERE m.requesterType = USER AND m.requesterName = :username")
     int deleteByUser(String username);
 
-    /// A mapping as stored, see [#findRows].
     interface Row {
 
         String getId();

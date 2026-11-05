@@ -15,10 +15,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Records and reads the classification requests, images included.
-///
-/// The rows decide which images are stored, the files follow them within the same transaction: a file is written
-/// when its first request is recorded and deleted once no stored request references it anymore.
 @Service
 public class RequestService {
 
@@ -35,8 +31,6 @@ public class RequestService {
         this.images = images;
     }
 
-    /// Records a request with its steps and counts it in the daily statistics.
-    ///
     /// @param image the image to store, given if and only if the image state of the request is [ImageState#STORED]
     @Transactional
     public void record(final ClassificationRequest request, final byte @Nullable [] image) {
@@ -54,22 +48,16 @@ public class RequestService {
         return this.requests.findById(id);
     }
 
-    /// @param before only return the requests with an identifier lower than this one, thus older
-    /// @return the newest requests matching the filter
     public List<ClassificationRequest> findPage(
             final RequestFilter filter, final @Nullable String before, final int limit) {
         return this.requests.findPage(filter, before, limit);
     }
 
-    /// @return the JPEG image file of the request, empty if it is not stored or its file is missing
     public Optional<Resource> findImage(final ClassificationRequest request) {
         final var hash = request.getImageHash();
         return request.getImageState() == ImageState.STORED && hash != null ? this.images.find(hash) : Optional.empty();
     }
 
-    /// Deletes the image and marks it as deleted, whatever its state.
-    ///
-    /// @return the request without its image, empty if it does not exist
     @Transactional
     public Optional<ClassificationRequest> deleteImage(final String id) {
         final var request = this.requests.findById(id);
@@ -81,7 +69,6 @@ public class RequestService {
         return this.find(id);
     }
 
-    /// @return `false` if the request does not exist
     @Transactional
     public boolean delete(final String id) {
         final var request = this.requests.findById(id);
@@ -93,7 +80,6 @@ public class RequestService {
         return true;
     }
 
-    /// @return the number of expired images
     @Transactional
     public int expireImagesBefore(final Instant before) {
         final var orphans = this.requests.findHashesStoredOnlyBefore(before);
@@ -102,9 +88,6 @@ public class RequestService {
         return expired;
     }
 
-    /// Deletes the requests created before the given instant, their images included. The daily statistics are kept.
-    ///
-    /// @return the number of deleted requests
     @Transactional
     public int deleteCreatedBefore(final Instant before) {
         final var orphans = this.requests.findHashesStoredOnlyBefore(before);
@@ -113,8 +96,6 @@ public class RequestService {
         return deleted;
     }
 
-    /// Deletes the image file of a request that no longer stores it, unless another request still does.
-    ///
     /// @param request the request as it was before its row was updated or deleted
     private void deleteImageUnlessShared(final ClassificationRequest request) {
         final var hash = request.getImageHash();

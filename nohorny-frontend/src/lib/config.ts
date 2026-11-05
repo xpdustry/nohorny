@@ -4,7 +4,6 @@ import type { Retention, Session } from './api';
 
 export interface Config {
   sentryDsn: string | null;
-  /** The signed in user, null when signed out. */
   session: Session | null;
   retention: Retention;
 }

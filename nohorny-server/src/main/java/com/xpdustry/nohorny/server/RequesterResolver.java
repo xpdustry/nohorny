@@ -9,8 +9,6 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-/// Identifies the requester of a classification, shared by the rate limits and the recorded requests so both always
-/// agree on who sent it.
 @Component
 public final class RequesterResolver {
 
@@ -22,10 +20,6 @@ public final class RequesterResolver {
         this.mappings = mappings;
     }
 
-    /// @param authentication the caller, `null` or anonymous when it did not authenticate
-    /// @param address the client address
-    /// @return an account first, then the most specific requester mapping of the address, then a listed Mindustry
-    ///     server or a local address, then an anonymous client
     public Requester resolve(final @Nullable Authentication authentication, final String address) {
         if (authentication != null
                 && authentication.isAuthenticated()

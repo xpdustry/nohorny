@@ -1,5 +1,3 @@
-// What the plugin sends and what the server keeps, with the retention periods of this server.
-
 import { Title } from '@solidjs/meta';
 import type { JSX } from '@solidjs/web';
 import { createMemo, For, Loading } from 'solid-js';

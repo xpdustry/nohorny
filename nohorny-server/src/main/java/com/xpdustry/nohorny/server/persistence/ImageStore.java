@@ -15,14 +15,9 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-/// The JPEG image files, named by the SHA-256 hash of their content.
-///
-/// Identical images share one file, `request.image_hash` references it. The file lives at `ab/abcdef...` under the
-/// directory, the first two hex characters of the hash shard the files over 256 directories.
-///
-/// The database decides whether an image is stored, this store only holds the bytes. Call it from the transaction
-/// that writes the rows: the write lock of SQLite then serializes the file operations with those of the other
-/// transactions, so a file is never deleted while a request that references it is being recorded.
+/// Call it from the transaction that writes the rows: the write lock of SQLite then serializes the file operations
+/// with those of the other transactions, so a file is never deleted while a request that references it is being
+/// recorded.
 @Component
 public final class ImageStore {
 
@@ -34,7 +29,6 @@ public final class ImageStore {
         this.directory = Files.createDirectories(properties.images().toAbsolutePath());
     }
 
-    /// @return the lowercase hex SHA-256 hash of the bytes, the name of their file
     public static String hash(final byte[] bytes) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
@@ -43,8 +37,6 @@ public final class ImageStore {
         }
     }
 
-    /// Stores the bytes unless a file with the same hash exists.
-    ///
     /// @param hash the [#hash] of the bytes
     public void store(final String hash, final byte[] bytes) {
         final var target = this.pathOf(hash);
@@ -67,13 +59,11 @@ public final class ImageStore {
         }
     }
 
-    /// @return the file of the image, empty if it does not exist
     public Optional<Resource> find(final String hash) {
         final var path = this.pathOf(hash);
         return Files.isRegularFile(path) ? Optional.of(new FileSystemResource(path)) : Optional.empty();
     }
 
-    /// Deletes the file of the image, if it exists.
     public void delete(final String hash) {
         try {
             Files.deleteIfExists(this.pathOf(hash));

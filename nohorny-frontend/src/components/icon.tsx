@@ -1,4 +1,4 @@
-// Icons inlined from Lucide (ISC, see public/licenses/lucide.txt) and Simple Icons (CC0).
+// Icons inlined from Lucide (ISC, see public/licenses/lucide.txt), named after their Lucide icon, and Simple Icons (CC0).
 
 import type { JSX } from '@solidjs/web';
 
@@ -27,7 +27,6 @@ const SIMPLE_ICONS_SVG_PROPS = {
   fill: 'currentColor',
 } satisfies JSX.SVGElementTags['svg'];
 
-// Source: https://lucide.dev/icons/arrow-left
 export function ArrowLeftIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -37,7 +36,6 @@ export function ArrowLeftIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/arrow-right
 export function ArrowRightIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -47,7 +45,6 @@ export function ArrowRightIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/arrow-up
 export function ArrowUpIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -57,7 +54,6 @@ export function ArrowUpIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/check
 export function CheckIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -66,7 +62,6 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/chevron-left
 export function ChevronLeftIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -75,7 +70,6 @@ export function ChevronLeftIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/chevron-right
 export function ChevronRightIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -84,7 +78,6 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/circle-user-round
 export function CircleUserRoundIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -95,7 +88,6 @@ export function CircleUserRoundIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/copy
 export function CopyIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -105,7 +97,6 @@ export function CopyIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/download
 export function DownloadIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -116,7 +107,6 @@ export function DownloadIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/eye
 export function EyeIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -126,7 +116,6 @@ export function EyeIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/eye-off
 export function EyeOffIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -138,7 +127,6 @@ export function EyeOffIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/flag
 export function FlagIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -147,7 +135,6 @@ export function FlagIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/gavel
 export function GavelIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -160,7 +147,6 @@ export function GavelIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/gauge
 export function GaugeIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -170,7 +156,6 @@ export function GaugeIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/hat-glasses
 export function HatGlassesIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -183,7 +168,6 @@ export function HatGlassesIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/house
 export function HouseIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -193,7 +177,6 @@ export function HouseIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/image
 export function ImageIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -204,7 +187,6 @@ export function ImageIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/image-off
 export function ImageOffIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -218,7 +200,6 @@ export function ImageOffIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/info
 export function InfoIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -229,8 +210,7 @@ export function InfoIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/key-round
-export function KeyIcon(props: IconProps) {
+export function KeyRoundIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
       <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
@@ -239,7 +219,6 @@ export function KeyIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/list
 export function ListIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -253,7 +232,6 @@ export function ListIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/lock
 export function LockIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -263,7 +241,6 @@ export function LockIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/log-out
 export function LogOutIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -274,7 +251,6 @@ export function LogOutIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/pencil
 export function PencilIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -284,7 +260,6 @@ export function PencilIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/plus
 export function PlusIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -294,8 +269,7 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/refresh-cw
-export function RefreshIcon(props: IconProps) {
+export function RefreshCwIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
       <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
@@ -306,7 +280,6 @@ export function RefreshIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/scan-search
 export function ScanSearchIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -320,7 +293,6 @@ export function ScanSearchIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/search
 export function SearchIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -330,7 +302,6 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/search-x
 export function SearchXIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -342,7 +313,6 @@ export function SearchXIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/server
 export function ServerIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -354,7 +324,6 @@ export function ServerIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/settings
 export function SettingsIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -364,7 +333,6 @@ export function SettingsIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/shield
 export function ShieldIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -373,7 +341,6 @@ export function ShieldIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/shield-minus
 export function ShieldMinusIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -383,7 +350,6 @@ export function ShieldMinusIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/shield-plus
 export function ShieldPlusIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -394,7 +360,6 @@ export function ShieldPlusIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/trash
 export function TrashIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -407,7 +372,6 @@ export function TrashIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/triangle-alert
 export function TriangleAlertIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -418,7 +382,6 @@ export function TriangleAlertIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/user
 export function UserIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -428,7 +391,6 @@ export function UserIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/users
 export function UsersIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -440,7 +402,6 @@ export function UsersIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/x
 export function XIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -450,7 +411,6 @@ export function XIcon(props: IconProps) {
   );
 }
 
-// Source: https://lucide.dev/icons/external-link
 export function ExternalLinkIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...LUCIDE_SVG_PROPS} class={props.class}>
@@ -461,7 +421,6 @@ export function ExternalLinkIcon(props: IconProps) {
   );
 }
 
-// Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/github.svg
 export function GitHubIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...SIMPLE_ICONS_SVG_PROPS} class={props.class}>
@@ -470,7 +429,6 @@ export function GitHubIcon(props: IconProps) {
   );
 }
 
-// Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/discord.svg
 export function DiscordIcon(props: IconProps) {
   return (
     <svg aria-hidden="true" {...SIMPLE_ICONS_SVG_PROPS} class={props.class}>
