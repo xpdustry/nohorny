@@ -41,21 +41,21 @@ public class StatisticsService {
 
     public Networks networks(final Range range) {
         final var counts = this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince);
-        return new Networks(range, counts.total(), counts.named(), this.requesters(range));
-    }
-
-    private List<Count> requesters(final Range range) {
         final var first = range.first();
-        final var counts = range.slot() == Range.Slot.HOUR
+        final var unnamed = range.slot() == Range.Slot.HOUR
                 ? this.requests.countByUnnamedRequesterSince(first)
                 : this.dailyStats.countByUnnamedRequesterSince(range.slot().idOf(first));
-        return Counts.of(counts, 0).named().stream()
-                .map(count -> new Count(
-                        RequesterType.fromName(count.name())
-                                .map(RequesterType::key)
-                                .orElse(""),
-                        count.count()))
-                .toList();
+        final var requesters = new ArrayList<Networks.RequesterCount>();
+        var unattributed = 0L;
+        for (final var count : Counts.of(unnamed, 0).named()) {
+            final var type = RequesterType.fromName(count.name());
+            if (type.isPresent()) {
+                requesters.add(new Networks.RequesterCount(type.get(), count.count()));
+            } else {
+                unattributed += count.count();
+            }
+        }
+        return new Networks(range, counts.total(), counts.named(), requesters, unattributed);
     }
 
     public Versions versions(final Range range) {

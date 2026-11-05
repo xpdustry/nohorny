@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from 'solid-js';
-import { type Networks, type RequesterFilter, type RequesterType, UNRECORDED_REQUESTER } from '../lib/api';
+import type { Networks, RequesterFilter, RequesterType } from '../lib/api';
 import { number, share } from '../lib/format';
 
 /** The colours of the slices, App.css validates the categorical ones for colour blindness against the card. */
@@ -12,11 +12,10 @@ const LOCAL_COLOR = 'var(--accent)';
 const UNLISTED_COLOR = 'var(--line-strong)';
 
 /** The requesters without a network. */
-const UNLISTED_LABELS: Record<Exclude<RequesterType, 'local'> | typeof UNRECORDED_REQUESTER, string> = {
+const UNLISTED_LABELS: Record<Exclude<RequesterType, 'local'>, string> = {
   user: 'Accounts',
   'mindustry-network': 'Servers without network',
   anonymous: 'Anonymous clients',
-  [UNRECORDED_REQUESTER]: 'Unknown requester',
 };
 
 /** The gap between two slices, in hundredths of the circumference. */
@@ -35,10 +34,10 @@ interface Row extends Slice {
   filter?: RequesterFilter;
 }
 
-const UNLISTED_FILTERS: Partial<Record<RequesterType | typeof UNRECORDED_REQUESTER, Omit<RequesterFilter, 'label'>>> = {
-  user: { type: 'user', name: null },
-  'mindustry-network': { type: 'mindustry-network', name: '' },
-  anonymous: { type: 'anonymous', name: null },
+const UNLISTED_FILTERS: Record<Exclude<RequesterType, 'local'>, Omit<RequesterFilter, 'label'>> = {
+  user: { type: 'user', name: { kind: 'any' } },
+  'mindustry-network': { type: 'mindustry-network', name: { kind: 'none' } },
+  anonymous: { type: 'anonymous', name: { kind: 'any' } },
 };
 
 export function NetworkChart(props: { networks: Networks; onSelect?: (filter: RequesterFilter) => void }) {
@@ -54,7 +53,7 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
     setHoveredRow(row);
   };
 
-  const local = () => props.networks.requesters.find((requester) => requester.name === 'local')?.count ?? 0;
+  const local = () => props.networks.requesters.find((requester) => requester.type === 'local')?.count ?? 0;
 
   const rows = createMemo(() => {
     const entries = props.networks.networks.map((network) => ({
@@ -72,9 +71,13 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
           ...entry,
           color: LOCAL_COLOR,
           sliceKey: entry.key,
-          filter: { type: 'local', name: null, label: entry.label },
+          filter: { type: 'local', name: { kind: 'any' }, label: entry.label },
         };
-      const filter: RequesterFilter = { type: 'mindustry-network', name: entry.label, label: entry.label };
+      const filter: RequesterFilter = {
+        type: 'mindustry-network',
+        name: { kind: 'named', name: entry.label },
+        label: entry.label,
+      };
       const index = colored++;
       return index < MAX_COLORED_NETWORKS
         ? { ...entry, color: COLORS[index], sliceKey: entry.key, filter }
@@ -83,24 +86,29 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
   });
 
   const unlisted = createMemo(() => {
-    const named = props.networks.requesters.filter(
-      (requester) => requester.name !== 'local' && requester.name !== UNRECORDED_REQUESTER && requester.count > 0,
-    );
-    // Whatever the networks and the known requesters leave, the requests counted before the requesters were recorded
-    const unknown = props.networks.total - [...rows(), ...named].reduce((sum, entry) => sum + entry.count, 0);
-    const entries = unknown > 0 ? [...named, { name: UNRECORDED_REQUESTER, count: unknown }] : named;
-    return entries.map((entry): Row => {
-      const label = UNLISTED_LABELS[entry.name as keyof typeof UNLISTED_LABELS];
-      const filter = UNLISTED_FILTERS[entry.name];
-      return {
-        key: `requester:${entry.name}`,
-        label,
-        count: entry.count,
+    const rows = props.networks.requesters.flatMap((requester): Row[] => {
+      if (requester.type === 'local' || requester.count <= 0) return [];
+      const label = UNLISTED_LABELS[requester.type];
+      return [
+        {
+          key: `requester:${requester.type}`,
+          label,
+          count: requester.count,
+          color: UNLISTED_COLOR,
+          sliceKey: 'unlisted',
+          filter: { ...UNLISTED_FILTERS[requester.type], label },
+        },
+      ];
+    });
+    if (props.networks.unattributed > 0)
+      rows.push({
+        key: 'unattributed',
+        label: 'Unknown requester',
+        count: props.networks.unattributed,
         color: UNLISTED_COLOR,
         sliceKey: 'unlisted',
-        filter: filter && { ...filter, label },
-      };
-    });
+      });
+    return rows;
   });
 
   const slices = createMemo(() => {
