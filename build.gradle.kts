@@ -268,6 +268,14 @@ project(":nohorny-plugin") {
     }
 }
 
+class ViTModelArgument(
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
+    val model: FileCollection,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dnohorny.test.vit-model=${model.singleFile.absolutePath}")
+}
+
 abstract class Jmh : JavaExec() {
     @get:Internal
     abstract val results: RegularFileProperty
@@ -398,6 +406,13 @@ project(":nohorny-server") {
         maven("https://maven.xpdustry.com/releases") {
             content { includeGroup("com.xpdustry") }
         }
+        // Lets Gradle download and cache the ViT model of the tests like any other dependency
+        ivy("https://huggingface.co") {
+            name = "huggingface"
+            patternLayout { artifact("[organisation]/[module]/resolve/[revision]/onnx/[artifact].[ext]") }
+            metadataSources { artifact() }
+            content { includeGroup("onnx-community") }
+        }
     }
 
     dependencies {
@@ -419,6 +434,26 @@ project(":nohorny-server") {
         "implementation"("com.github.ben-manes.caffeine:caffeine")
         "testImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
+    }
+
+    // The half precision variant of the default model in application.yaml, for a smaller download
+    val vitModel = configurations.register("vitModel") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+    }
+    dependencies {
+        "vitModel"("onnx-community:nsfw_image_detection-ONNX:1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5") {
+            artifact {
+                name = "model_fp16"
+                type = "onnx"
+                extension = "onnx"
+            }
+        }
+    }
+
+    tasks.withType<Test> {
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+        jvmArgumentProviders.add(ViTModelArgument(vitModel.get()))
     }
 
     // The pages are bundled as resources, either built here by nohorny-frontend
