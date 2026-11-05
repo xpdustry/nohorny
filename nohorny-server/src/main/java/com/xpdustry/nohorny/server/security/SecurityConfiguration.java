@@ -2,7 +2,11 @@
 package com.xpdustry.nohorny.server.security;
 
 import com.xpdustry.nohorny.common.SimpleServerMessage;
+import com.xpdustry.nohorny.server.RequesterResolver;
 import com.xpdustry.nohorny.server.persistence.UserAccountRepository;
+import com.xpdustry.nohorny.server.ratelimit.RateLimitFilter;
+import com.xpdustry.nohorny.server.ratelimit.RateLimitProperties;
+import com.xpdustry.nohorny.server.ratelimit.RateLimiter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,8 +29,11 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -61,6 +68,11 @@ public class SecurityConfiguration {
     }
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+    }
+
+    @Bean
     public UserDetailsService userDetailsService(final UserAccountRepository users) {
         return username -> {
             final var account = users.findById(username)
@@ -75,7 +87,12 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            final HttpSecurity http, final JsonMapper mapper, final UserAccountRepository users) {
+            final HttpSecurity http,
+            final JsonMapper mapper,
+            final UserAccountRepository users,
+            final RateLimiter limiter,
+            final RateLimitProperties limits,
+            final RequesterResolver requesters) {
         final var unauthorized = new JsonStatusWriter(mapper, HttpStatus.UNAUTHORIZED, "unauthorized");
         final var forbidden = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "forbidden");
         final var invalidCsrf = new JsonStatusWriter(mapper, HttpStatus.FORBIDDEN, "invalid csrf token");
@@ -118,6 +135,8 @@ public class SecurityConfiguration {
                 .logout(logout -> logout.logoutUrl("/logout")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
                 .addFilterAfter(new SessionRevalidationFilter(users), SecurityContextHolderFilter.class)
+                .addFilterAfter(
+                        new RateLimitFilter(limiter, limits, users, requesters, mapper), AuthorizationFilter.class)
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(unauthorized)
                         .accessDeniedHandler((request, response, exception) -> {

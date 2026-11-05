@@ -28,7 +28,6 @@ public final class HuggingFaceViTModelSource implements ViTModelSource {
         return this.properties.repository() + ":" + this.properties.revision();
     }
 
-    @SuppressWarnings("EmptyCatch")
     @Override
     public Path retrieve() {
         final var name =
@@ -58,7 +57,8 @@ public final class HuggingFaceViTModelSource implements ViTModelSource {
             } catch (final IOException e) {
                 try {
                     Files.deleteIfExists(temp);
-                } catch (final IOException _) {
+                } catch (final IOException deleteFailure) {
+                    e.addSuppressed(deleteFailure);
                 }
                 throw new RuntimeException("Failed to copy hugging face model " + name, e);
             }

@@ -10,8 +10,6 @@ import com.xpdustry.nohorny.server.persistence.RequesterType;
 import com.xpdustry.nohorny.server.persistence.SlotCount;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -19,7 +17,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
@@ -37,22 +34,21 @@ public class StatisticsService {
     public Statistics compute() {
         final var now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         final var allTime = Statistics.Window.of(toMap(this.dailyStats.countByBucket()));
-        final var recent =
-                Statistics.Window.of(toMap(this.requests.countByBucketSince(now.minus(Duration.ofHours(24)))));
+        final var recent = Statistics.Window.of(
+                toMap(this.requests.countByBucketSince(now.minus(Duration.ofHours(Range.H24.slots())))));
         return new Statistics(allTime.total(), allTime.ratings(), recent, now);
     }
 
-    public Optional<Networks> networks(final String range) {
-        return this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince)
-                .map(counts -> new Networks(range, counts.total(), counts.named(), this.requesters(range)));
+    public Networks networks(final Range range) {
+        final var counts = this.counts(range, this.requests::countByNetworkSince, this.dailyStats::countByNetworkSince);
+        return new Networks(range, counts.total(), counts.named(), this.requesters(range));
     }
 
-    /// @param range a known range, see [#networks]
-    private List<Count> requesters(final String range) {
-        final var counts = range.equals("24h")
-                ? this.requests.countByUnnamedRequesterSince(firstHour())
-                : this.dailyStats.countByUnnamedRequesterSince(
-                        firstDay(days(range)).toString());
+    private List<Count> requesters(final Range range) {
+        final var first = range.first();
+        final var counts = range.slot() == Range.Slot.HOUR
+                ? this.requests.countByUnnamedRequesterSince(first)
+                : this.dailyStats.countByUnnamedRequesterSince(range.slot().idOf(first));
         return Counts.of(counts, 0).named().stream()
                 .map(count -> new Count(
                         RequesterType.fromName(count.name())
@@ -62,36 +58,32 @@ public class StatisticsService {
                 .toList();
     }
 
-    public Optional<Versions> versions(final String range) {
-        return this.counts(range, this.requests::countByVersionSince, this.dailyStats::countByVersionSince)
-                .map(counts -> new Versions(
-                        range,
-                        counts.total(),
-                        counts.named().stream()
-                                .sorted(Comparator.comparing(Count::name, VersionComparator.INSTANCE.reversed()))
-                                .toList()));
+    public Versions versions(final Range range) {
+        final var counts = this.counts(range, this.requests::countByVersionSince, this.dailyStats::countByVersionSince);
+        return new Versions(
+                range,
+                counts.total(),
+                counts.named().stream()
+                        .sorted(Comparator.comparing(Count::name, VersionComparator.INSTANCE.reversed()))
+                        .toList());
     }
 
-    private Optional<Counts> counts(
-            final String range,
+    private Counts counts(
+            final Range range,
             final Function<Instant, List<NamedCount>> retained,
             final Function<String, List<NamedCount>> daily) {
-        if (range.equals("24h")) {
-            final var first = firstHour();
+        final var first = range.first();
+        if (range.slot() == Range.Slot.HOUR) {
             final var total = sum(this.requests.countByBucketSince(first).stream()
                     .map(BucketCount::getTotal)
                     .toList());
-            return Optional.of(Counts.of(retained.apply(first), total));
+            return Counts.of(retained.apply(first), total);
         }
-        final var days = days(range);
-        if (days == 0) {
-            return Optional.empty();
-        }
-        final var first = firstDay(days).toString();
-        final var total = sum(this.dailyStats.countByDaySince(first).stream()
+        final var day = range.slot().idOf(first);
+        final var total = sum(this.dailyStats.countByDaySince(day).stream()
                 .map(SlotCount::getTotal)
                 .toList());
-        return Optional.of(Counts.of(daily.apply(first), total));
+        return Counts.of(daily.apply(day), total);
     }
 
     private record Counts(List<Count> named, long total) {
@@ -108,52 +100,19 @@ public class StatisticsService {
         }
     }
 
-    public Optional<History> history(final String range) {
-        if (range.equals("24h")) {
-            final var first = firstHour();
-            final var counts = bySlot(this.requests.countByHourSince(first));
-            final var slots = new ArrayList<History.Slot>(24);
-            for (int i = 0; i < 24; i++) {
-                final var start = first.plus(Duration.ofHours(i));
-                final var hour = String.valueOf(
-                        start.toEpochMilli() / Duration.ofHours(1).toMillis());
-                slots.add(new History.Slot(start, Statistics.Ratings.of(counts.getOrDefault(hour, Map.of()))));
-            }
-            return Optional.of(new History(range, "hour", slots));
+    public History history(final Range range) {
+        final var first = range.first();
+        final var slot = range.slot();
+        final var counts = bySlot(
+                slot == Range.Slot.HOUR
+                        ? this.requests.countByHourSince(first)
+                        : this.dailyStats.countByDaySince(slot.idOf(first)));
+        final var slots = new ArrayList<History.Slot>(range.slots());
+        for (int i = 0; i < range.slots(); i++) {
+            final var start = first.plus(i, slot.unit());
+            slots.add(new History.Slot(start, Statistics.Ratings.of(counts.getOrDefault(slot.idOf(start), Map.of()))));
         }
-        final var days = days(range);
-        if (days == 0) {
-            return Optional.empty();
-        }
-        final var first = firstDay(days);
-        final var counts = bySlot(this.dailyStats.countByDaySince(first.toString()));
-        final var slots = new ArrayList<History.Slot>(days);
-        for (int i = 0; i < days; i++) {
-            final var day = first.plusDays(i);
-            slots.add(new History.Slot(
-                    day.atStartOfDay(ZoneOffset.UTC).toInstant(),
-                    Statistics.Ratings.of(counts.getOrDefault(day.toString(), Map.of()))));
-        }
-        return Optional.of(new History(range, "day", slots));
-    }
-
-    /// The start of the 24 hour window, the current hour is its last slot.
-    private static Instant firstHour() {
-        return Instant.now().truncatedTo(ChronoUnit.HOURS).minus(Duration.ofHours(23));
-    }
-
-    /// @return the number of days of a daily range, `0` if it is not one
-    private static int days(final String range) {
-        return switch (range) {
-            case "7d" -> 7;
-            case "30d" -> 30;
-            case "90d" -> 90;
-            default -> 0;
-        };
-    }
-
-    private static LocalDate firstDay(final int days) {
-        return LocalDate.now(ZoneOffset.UTC).minusDays(days - 1);
+        return new History(range, slot, slots);
     }
 
     private static long sum(final List<Long> totals) {

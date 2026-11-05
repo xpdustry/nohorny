@@ -8,6 +8,7 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.TokensInheritanceStrategy;
 import java.time.Duration;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /// A bucket idle for a minute is full again,
@@ -27,10 +28,13 @@ public final class RateLimiter {
     /// When the limit of a bucket changes,
     /// a raise grants the extra tokens at once and a cut caps the remaining ones.
     ///
-    /// @return [Duration#ZERO] if a token was taken, otherwise how long to wait for the next one
-    public Duration tryAcquire(final String scope, final String subject, final int perMinute) {
-        final var limited = this.buckets.get(new Key(scope, subject), ignored -> new Limited(perMinute));
-        return Duration.ofNanos(limited.tryAcquire(perMinute));
+    /// Takes a token if there is one.
+    ///
+    /// @return how long to wait for the next token, empty if one was taken
+    public Optional<Duration> retryAfter(final String scope, final String subject, final int perMinute) {
+        return this.buckets
+                .get(new Key(scope, subject), ignored -> new Limited(perMinute))
+                .retryAfter(perMinute);
     }
 
     private static Bandwidth bandwidth(final int perMinute) {
@@ -52,8 +56,8 @@ public final class RateLimiter {
             this.perMinute = perMinute;
         }
 
-        /// @return `0` if a token was taken, otherwise the nanoseconds to wait for the next one
-        synchronized long tryAcquire(final int perMinute) {
+        /// @return how long to wait for the next token, empty if one was taken
+        synchronized Optional<Duration> retryAfter(final int perMinute) {
             if (this.perMinute != perMinute) {
                 this.bucket.replaceConfiguration(
                         BucketConfiguration.builder()
@@ -62,7 +66,10 @@ public final class RateLimiter {
                         TokensInheritanceStrategy.ADDITIVE);
                 this.perMinute = perMinute;
             }
-            return this.bucket.tryConsumeAndReturnRemaining(1).getNanosToWaitForRefill();
+            final var probe = this.bucket.tryConsumeAndReturnRemaining(1);
+            return probe.isConsumed()
+                    ? Optional.empty()
+                    : Optional.of(Duration.ofNanos(probe.getNanosToWaitForRefill()));
         }
     }
 }

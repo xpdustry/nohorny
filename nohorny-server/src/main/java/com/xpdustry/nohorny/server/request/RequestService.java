@@ -31,14 +31,10 @@ public class RequestService {
         this.images = images;
     }
 
-    /// @param image the image to store, given if and only if the image state of the request is [ImageState#STORED]
     @Transactional
-    public void record(final ClassificationRequest request, final byte @Nullable [] image) {
-        final var hash = request.getImageHash();
-        if (image != null && hash != null) {
-            this.images.store(hash, image);
-        } else if (image != null || hash != null) {
-            throw new IllegalArgumentException("The image must be given if and only if it is stored");
+    public void record(final ClassificationRequest request, final byte[] image) {
+        if (!this.images.store(image).equals(request.getImageHash())) {
+            throw new IllegalArgumentException("The request does not reference the image given");
         }
         this.requests.save(request);
         this.dailyStats.increment(request);
@@ -54,8 +50,7 @@ public class RequestService {
     }
 
     public Optional<Resource> findImage(final ClassificationRequest request) {
-        final var hash = request.getImageHash();
-        return request.getImageState() == ImageState.STORED && hash != null ? this.images.find(hash) : Optional.empty();
+        return storedHash(request).flatMap(this.images::find);
     }
 
     @Transactional
@@ -64,8 +59,9 @@ public class RequestService {
         if (request.isEmpty()) {
             return Optional.empty();
         }
+        final var hash = storedHash(request.get());
         this.requests.markImageDeleted(id);
-        this.deleteImageUnlessShared(request.get());
+        hash.ifPresent(this::deleteUnlessShared);
         return this.find(id);
     }
 
@@ -75,8 +71,9 @@ public class RequestService {
         if (request.isEmpty()) {
             return false;
         }
+        final var hash = storedHash(request.get());
         this.requests.deleteById(id);
-        this.deleteImageUnlessShared(request.get());
+        hash.ifPresent(this::deleteUnlessShared);
         return true;
     }
 
@@ -96,13 +93,15 @@ public class RequestService {
         return deleted;
     }
 
-    /// @param request the request as it was before its row was updated or deleted
-    private void deleteImageUnlessShared(final ClassificationRequest request) {
-        final var hash = request.getImageHash();
-        if (request.getImageState() == ImageState.STORED
-                && hash != null
-                && this.requests.countStoredByHash(hash) == 0) {
+    private void deleteUnlessShared(final String hash) {
+        if (this.requests.countStoredByHash(hash) == 0) {
             this.images.delete(hash);
         }
+    }
+
+    private static Optional<String> storedHash(final ClassificationRequest request) {
+        return request.getImageState() == ImageState.STORED
+                ? Optional.ofNullable(request.getImageHash())
+                : Optional.empty();
     }
 }

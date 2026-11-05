@@ -24,24 +24,23 @@ public final class StatisticsController {
 
     @GetMapping(path = "/api/stats/history", produces = MediaType.APPLICATION_JSON_VALUE)
     public History onHistory(final @RequestParam(defaultValue = "30d") String range) {
-        return this.statistics
-                .history(range)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown range"));
+        return this.statistics.history(parseRange(range));
     }
 
     /// Restricted to the administrators by the security configuration.
     @GetMapping(path = "/api/stats/networks", produces = MediaType.APPLICATION_JSON_VALUE)
     public Networks onNetworks(final @RequestParam(defaultValue = "30d") String range) {
-        return this.statistics
-                .networks(range)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown range"));
+        return this.statistics.networks(parseRange(range));
     }
 
     /// Restricted to the administrators by the security configuration.
     @GetMapping(path = "/api/stats/versions", produces = MediaType.APPLICATION_JSON_VALUE)
     public Versions onVersions(final @RequestParam(defaultValue = "30d") String range) {
-        return this.statistics
-                .versions(range)
+        return this.statistics.versions(parseRange(range));
+    }
+
+    private static Range parseRange(final String key) {
+        return Range.fromKey(key)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown range"));
     }
 }

@@ -11,7 +11,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,12 +23,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
 
-/// Runs after the security filters, so it knows the caller.
-@Component
 public final class RateLimitFilter extends OncePerRequestFilter {
 
     // Matched like Spring MVC routes, on the decoded path segments, so an encoded spelling such as /api/cl%61ssify
@@ -61,59 +60,64 @@ public final class RateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         final var limit =
                 this.limitOf(request, SecurityContextHolder.getContext().getAuthentication());
-        if (limit == null) {
+        if (limit.isEmpty()) {
             chain.doFilter(request, response);
             return;
         }
-        if (limit.perMinute() == 0) {
-            this.write(response, HttpStatus.UNAUTHORIZED, "authentication required");
-            return;
+        switch (limit.get()) {
+            case Limit.RequiresAuthentication ignored ->
+                this.write(response, HttpStatus.UNAUTHORIZED, "authentication required");
+            case Limit.PerMinute perMinute -> {
+                final var retryAfter =
+                        this.limiter.retryAfter(perMinute.scope(), perMinute.subject(), perMinute.count());
+                if (retryAfter.isEmpty()) {
+                    chain.doFilter(request, response);
+                    return;
+                }
+                response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(ceilSeconds(retryAfter.get())));
+                this.write(response, HttpStatus.TOO_MANY_REQUESTS, "too many requests");
+            }
         }
-        final var wait = this.limiter.tryAcquire(limit.scope(), limit.subject(), limit.perMinute());
-        if (wait.isZero()) {
-            chain.doFilter(request, response);
-            return;
-        }
-        // Rounded up, retrying at the announced time always finds a token
-        response.setHeader(
-                HttpHeaders.RETRY_AFTER,
-                Long.toString(wait.plusSeconds(1).minusNanos(1).toSeconds()));
-        this.write(response, HttpStatus.TOO_MANY_REQUESTS, "too many requests");
     }
 
-    /// @return the limit of the request, `null` if it is not limited
-    private @Nullable Limit limitOf(final HttpServletRequest request, final @Nullable Authentication authentication) {
+    private Optional<Limit> limitOf(final HttpServletRequest request, final @Nullable Authentication authentication) {
         final var method = request.getMethod();
         final var address = request.getRemoteAddr();
         if (CLASSIFY.matches(request)) {
             final var requester = this.requesters.resolve(authentication, address);
             final var name = requester.name();
-            return switch (requester.type()) {
-                case USER ->
-                    new Limit(
-                            "classify-user",
-                            Objects.requireNonNull(name),
-                            this.users
-                                    .findById(name)
-                                    .map(UserAccount::getRateLimit)
-                                    .orElse(0));
-                case MINDUSTRY_NETWORK ->
-                    new Limit("classify-mindustry", name == null ? address : name, this.limits.mindustry());
-                // The local addresses are limited like the anonymous clients, a reverse proxy would make every
-                // client look local
-                case LOCAL, ANONYMOUS -> new Limit("classify-anonymous", address, this.limits.anonymous());
-            };
+            return Optional.of(
+                    switch (requester.type()) {
+                        case USER ->
+                            Limit.of(
+                                    "classify-user",
+                                    Objects.requireNonNull(name),
+                                    this.users
+                                            .findById(name)
+                                            .map(UserAccount::getRateLimit)
+                                            .orElse(0));
+                        case MINDUSTRY_NETWORK ->
+                            Limit.of("classify-mindustry", name == null ? address : name, this.limits.mindustry());
+                        // The local addresses are limited like the anonymous clients, a reverse proxy would make every
+                        // client look local
+                        case LOCAL, ANONYMOUS -> Limit.of("classify-anonymous", address, this.limits.anonymous());
+                    });
         }
         if (!REQUESTS.matches(request) || SecurityConfiguration.isAdmin(authentication)) {
-            return null;
+            return Optional.empty();
         }
         if (IMAGE_DELETION.matches(request)) {
-            return new Limit("image-deletion", address, this.limits.imageDeletions());
+            return Optional.of(Limit.of("image-deletion", address, this.limits.imageDeletions()));
         }
         if (HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method)) {
-            return new Limit("read", address, this.limits.reads());
+            return Optional.of(Limit.of("read", address, this.limits.reads()));
         }
-        return null;
+        return Optional.empty();
+    }
+
+    /// Rounded up, retrying at the announced time always finds a token.
+    private static long ceilSeconds(final Duration duration) {
+        return duration.plusSeconds(1).minusNanos(1).toSeconds();
     }
 
     private void write(final HttpServletResponse response, final HttpStatus status, final String message)
@@ -123,6 +127,15 @@ public final class RateLimitFilter extends OncePerRequestFilter {
         this.mapper.writeValue(response.getOutputStream(), new SimpleServerMessage(message));
     }
 
-    /// @param perMinute `0` when the caller must authenticate
-    private record Limit(String scope, String subject, int perMinute) {}
+    private sealed interface Limit {
+
+        /// A limit of zero is how the configuration asks for an account.
+        static Limit of(final String scope, final String subject, final int perMinute) {
+            return perMinute == 0 ? new RequiresAuthentication() : new PerMinute(scope, subject, perMinute);
+        }
+
+        record PerMinute(String scope, String subject, int count) implements Limit {}
+
+        record RequiresAuthentication() implements Limit {}
+    }
 }

@@ -95,8 +95,8 @@ public final class RequestController {
                         network);
         final var cursor = before == null || before.isEmpty() ? null : parseIdentifier(before);
         final var size = Math.clamp(limit, 1, MAX_PAGE_SIZE);
-        // One more to know whether there is a next page
-        final var found = this.requests.findPage(new RequestFilter(bucket, filter, version), cursor, size + 1);
+        final var lookaheadSize = size + 1;
+        final var found = this.requests.findPage(new RequestFilter(bucket, filter, version), cursor, lookaheadSize);
         final var items = found.subList(0, Math.min(found.size(), size));
         return new RequestPage(
                 items.stream().map(request -> this.toView(request, true)).toList(),
@@ -128,19 +128,19 @@ public final class RequestController {
                 request.getClassifier(),
                 request.getVersion(),
                 kind == null ? null : kind.key(),
-                new RequestView.Requester(requester.type().key(), name),
+                new RequestView.Requester(requester.type(), name),
                 new RequestView.Image(
                         request.getImageState().key(),
                         request.getImageState() == ImageState.STORED
                                 ? "/api/requests/" + request.getId() + "/image"
                                 : null),
                 request.getSteps().stream().map(step -> toView(step, admin)).toList(),
-                admin ? restricted(request, failure) : null);
+                admin ? adminOnly(request, failure) : null);
     }
 
-    private static RequestView.Restricted restricted(
+    private static RequestView.AdminOnly adminOnly(
             final ClassificationRequest request, final @Nullable Failure failure) {
-        return new RequestView.Restricted(request.getRemoteAddress(), failure == null ? null : toView(failure));
+        return new RequestView.AdminOnly(request.getRemoteAddress(), failure == null ? null : toView(failure));
     }
 
     private static RequestView.Step toView(final ClassificationStep step, final boolean admin) {

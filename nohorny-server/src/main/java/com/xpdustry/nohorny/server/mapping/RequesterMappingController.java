@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.mapping;
 
+import com.xpdustry.nohorny.server.persistence.RequesterType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -55,12 +56,11 @@ public final class RequesterMappingController {
         return new Applied(this.mappings.apply(id));
     }
 
-    /// @param type `user`, `mindustry-network`, `local` or `anonymous`
     /// @param name the username of a user or the network name, ignored for the other types
     public record MappingBody(
             @NotNull(message = "range is required") String range,
 
-            @NotNull(message = "type is required") String type,
+            @NotNull(message = "type is required") RequesterType type,
 
             @Nullable String name) {}
 

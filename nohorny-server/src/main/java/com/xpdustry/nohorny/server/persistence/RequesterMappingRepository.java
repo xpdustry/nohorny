@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
+import com.xpdustry.nohorny.server.mapping.AddressRange;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,7 +10,7 @@ import org.springframework.data.repository.ListCrudRepository;
 
 public interface RequesterMappingRepository extends ListCrudRepository<RequesterMapping, String> {
 
-    boolean existsByRange(String range);
+    boolean existsByRange(AddressRange range);
 
     /// Native, so the rows are read as stored rather than served from the persistence context of a transaction that
     /// loaded them before a change.

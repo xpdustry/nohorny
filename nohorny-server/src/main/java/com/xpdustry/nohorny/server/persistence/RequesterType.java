@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -13,6 +15,7 @@ public enum RequesterType {
     LOCAL,
     ANONYMOUS;
 
+    @JsonValue
     public String key() {
         return this.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
@@ -33,5 +36,10 @@ public enum RequesterType {
             }
         }
         return Optional.empty();
+    }
+
+    @JsonCreator
+    public static RequesterType deserialize(final String key) {
+        return fromKey(key).orElseThrow(() -> new IllegalArgumentException("Unknown requester type " + key));
     }
 }
