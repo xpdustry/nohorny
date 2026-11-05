@@ -23,9 +23,13 @@ ENV PATH="${GRADLE_HOME}/bin:${PATH}"
 
 WORKDIR /app
 
-COPY settings.gradle.kts ./
-COPY build.gradle.kts ./
-RUN mkdir nohorny-common nohorny-plugin nohorny-frontend nohorny-server
+COPY settings.gradle.kts build.gradle.kts ./
+COPY gradle/libs.versions.toml gradle/
+COPY build-logic/ build-logic/
+COPY nohorny-common/build.gradle.kts nohorny-common/
+COPY nohorny-plugin/build.gradle.kts nohorny-plugin/
+COPY nohorny-frontend/build.gradle.kts nohorny-frontend/
+COPY nohorny-server/build.gradle.kts nohorny-server/
 
 
 FROM ghcr.io/pnpm/pnpm:12.14.0@sha256:71202ae73719148f6b6e129ca1e9fa3ceabbc9a037dc34800715606f2b5290a1 AS frontend
