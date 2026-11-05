@@ -37,19 +37,10 @@ val typecheck = tasks.register<Pnpm>("pnpmCheck") {
 
 tasks.check { dependsOn(lint, typecheck) }
 
-val bundle = tasks.register<Sync>("bundleFrontend") {
-    description = "Lay out the frontend build as the static resources of the server."
-    from(build.map { layout.projectDirectory.dir("dist/client") }) {
-        into("static")
-        exclude(".vite/**")
-    }
-    into(layout.buildDirectory.dir("generated/frontend"))
-}
-
-tasks.assemble { dependsOn(bundle) }
+tasks.assemble { dependsOn(build) }
 
 configurations.register("frontend") {
     isCanBeConsumed = true
     isCanBeResolved = false
-    outgoing.artifact(layout.buildDirectory.dir("generated/frontend")) { builtBy(bundle) }
+    outgoing.artifact(layout.projectDirectory.dir("dist/client")) { builtBy(build) }
 }

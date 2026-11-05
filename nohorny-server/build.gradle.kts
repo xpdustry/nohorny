@@ -9,8 +9,6 @@ val vitModel = configurations.create("vitModel") {
     isCanBeResolved = true
 }
 
-// The pages are bundled as resources, either built here by nohorny-frontend
-//   or taken from -Pprebuilt_frontend=<dir> with a static/ directory. The Docker build passes the latter
 val frontend = configurations.create("frontend") {
     isCanBeConsumed = false
     isCanBeResolved = true
@@ -46,9 +44,13 @@ dependencies {
     frontend(project(path = ":nohorny-frontend", configuration = "frontend"))
 }
 
-val prebuiltFrontend = providers.gradleProperty("prebuilt_frontend").map { rootProject.file(it) }
-sourceSets.main {
-    resources.srcDir(if (prebuiltFrontend.isPresent) prebuiltFrontend else frontend)
+val prebuiltFrontend = providers.gradleProperty("prebuilt_frontend").map<FileCollection> { files(rootProject.file(it)) }
+
+tasks.processResources {
+    from(prebuiltFrontend.getOrElse(frontend)) {
+        into("static")
+        exclude(".vite/**")
+    }
 }
 
 tasks.withType<Test> {
