@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+// The default ktlint_official style is far more invasive than the IntelliJ one
+val ktlintStyle = mapOf("ktlint_code_style" to "intellij_idea", "max_line_length" to "120")
+
 spotless {
     java {
         target(".github/scripts/*.java")
@@ -14,11 +17,10 @@ spotless {
     }
     kotlin {
         target("build-logic/src/**/*.kt")
-        ktlint().editorConfigOverride(mapOf("ktlint_code_style" to "intellij_idea", "max_line_length" to "120"))
+        ktlint().editorConfigOverride(ktlintStyle)
     }
-    // The default ktlint_official style is far more invasive than the IntelliJ one
     kotlinGradle {
         target("*.gradle.kts", "*/*.gradle.kts", "build-logic/src/**/*.gradle.kts")
-        ktlint().editorConfigOverride(mapOf("ktlint_code_style" to "intellij_idea", "max_line_length" to "120"))
+        ktlint().editorConfigOverride(ktlintStyle)
     }
 }

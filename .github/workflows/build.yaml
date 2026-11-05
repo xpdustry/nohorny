@@ -29,8 +29,8 @@ jobs:
 
   plugin:
     name: "Plugin"
-    # Only run on PRs if the source branch is on someone else's repo
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    # Same-repo PRs are already built by their push
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -54,27 +54,13 @@ jobs:
       - name: "Setup Gradle"
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      # A release must be tagged with the project version, a draft must not reuse an existing tag.
-      # Other builds only warn, commits predating the version bump of a release still have to build
       - name: "Get And Validate Version"
         id: version
         env:
           IS_DRAFT: ${{ inputs.release }}
         run: |
-          version="$(java .github/scripts/Version.java get)"
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
-            if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-              echo "::error::Release tag '$GITHUB_REF_NAME' does not match the project version 'v$version'"
-              exit 1
-            fi
-          elif [ -n "$(git tag -l "v$version")" ]; then
-            if [ "$IS_DRAFT" = "true" ]; then
-              echo "::error::'v$version' already exists as a git tag"
-              exit 1
-            fi
-            echo "::warning::'v$version' already exists as a git tag, the version needs a bump before the next release"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          java .github/scripts/Version.java validate
+          echo "version=$(java .github/scripts/Version.java get)" >> "$GITHUB_OUTPUT"
 
       - name: "Build Plugin"
         run: ./gradlew :nohorny-common:build :nohorny-plugin:build
@@ -113,7 +99,7 @@ jobs:
 
   server:
     name: "Server"
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -277,7 +263,7 @@ jobs:
 
   event-file:
     name: "Event File"
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

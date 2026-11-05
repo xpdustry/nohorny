@@ -45,11 +45,7 @@ RUN --mount=type=cache,id=pnpm,target=/var/cache/pnpm \
 
 COPY nohorny-frontend/ ./
 
-# The same layout as the bundleFrontend task, the static/ resources of the server
-RUN pnpm run build \
-    && mkdir /frontend \
-    && cp -r dist/client /frontend/static \
-    && rm -rf /frontend/static/.vite
+RUN pnpm run build
 
 
 FROM gradle AS build
@@ -63,7 +59,7 @@ RUN --mount=type=cache,target=/cache/.gradle \
 
 COPY nohorny-common/src/ nohorny-common/src/
 COPY nohorny-server/src/ nohorny-server/src/
-COPY --from=frontend /frontend prebuilt-frontend/
+COPY --from=frontend /app/dist/client prebuilt-frontend/
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle :nohorny-server:build -x test --no-daemon --stacktrace --build-cache ${GRADLE_ARGS}
@@ -83,7 +79,6 @@ ENV JAVA_OPTS="-server \
     -XX:+UseContainerSupport \
     -XX:MaxRAMPercentage=75.0 \
     -XX:+UseG1GC \
-    --enable-native-access=ALL-UNNAMED \
     -Djava.security.egd=file:/dev/./urandom"
 
 ENV NOHORNY_STORAGE_DATABASE=/data/database.sqlite \

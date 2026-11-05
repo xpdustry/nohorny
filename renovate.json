@@ -1,4 +1,10 @@
 {
   "extends": ["local>xpdustry/.github:renovate-shared"],
-  "ignoreDeps": ["onnx-community:nsfw_image_detection-ONNX"]
+  "packageRules": [
+    {
+      "description": "The model is pinned to a Hugging Face commit in gradle/libs.versions.toml",
+      "matchPackageNames": ["onnx-community:nsfw_image_detection-ONNX"],
+      "enabled": false
+    }
+  ]
 }
