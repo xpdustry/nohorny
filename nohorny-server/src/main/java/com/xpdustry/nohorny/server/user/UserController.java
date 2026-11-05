@@ -53,7 +53,7 @@ public final class UserController {
     @PutMapping(path = "/{username}/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void onSetPassword(final @PathVariable String username, final @Valid @RequestBody SetPassword body) {
-        this.users.setPassword(username, body.password());
+        this.users.changePassword(username, body.password());
     }
 
     @PutMapping(path = "/{username}/admin", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -62,7 +62,7 @@ public final class UserController {
             final @PathVariable String username,
             final @Valid @RequestBody SetAdmin body,
             final Authentication authentication) {
-        this.users.setAdmin(username, body.admin(), authentication.getName());
+        this.users.changeRole(username, body.admin(), authentication.getName());
     }
 
     @PutMapping(path = "/{username}/rate-limit", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
+import com.xpdustry.nohorny.server.mapping.AddressRange;
+import com.xpdustry.nohorny.server.mapping.AddressRangeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -19,7 +21,8 @@ public class RequesterMapping extends AssignedIdEntity<String> {
     private String id;
 
     @Column(name = "address_range")
-    private String range;
+    @Convert(converter = AddressRangeConverter.class)
+    private AddressRange range;
 
     @Enumerated(EnumType.STRING)
     private RequesterType requesterType;
@@ -32,8 +35,8 @@ public class RequesterMapping extends AssignedIdEntity<String> {
     @SuppressWarnings("NullAway")
     protected RequesterMapping() {}
 
-    /// @param range the normalized CIDR notation of the range, see `AddressRange`
-    public RequesterMapping(final String id, final String range, final Requester requester, final Instant createdAt) {
+    public RequesterMapping(
+            final String id, final AddressRange range, final Requester requester, final Instant createdAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.range = range;
@@ -46,7 +49,7 @@ public class RequesterMapping extends AssignedIdEntity<String> {
         return this.id;
     }
 
-    public String getRange() {
+    public AddressRange getRange() {
         return this.range;
     }
 
@@ -58,7 +61,7 @@ public class RequesterMapping extends AssignedIdEntity<String> {
         return this.createdAt;
     }
 
-    public void update(final String range, final Requester requester) {
+    public void update(final AddressRange range, final Requester requester) {
         this.range = range;
         this.requesterType = requester.type();
         this.requesterName = requester.name();

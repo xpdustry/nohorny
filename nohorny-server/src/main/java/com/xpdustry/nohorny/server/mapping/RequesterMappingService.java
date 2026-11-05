@@ -38,8 +38,7 @@ public class RequesterMappingService {
     private final ClassificationRequestRepository requests;
     private final DailyStatRepository dailyStats;
 
-    /// The mappings, the most specific range first
-    private volatile List<Rule> rules = List.of();
+    private volatile RuleSet rules = new RuleSet(List.of());
 
     public RequesterMappingService(
             final RequesterMappingRepository mappings,
@@ -54,20 +53,20 @@ public class RequesterMappingService {
     }
 
     public Optional<Requester> find(final InetAddress address) {
-        return this.match(address).map(Rule::requester);
+        return this.rules.match(address).map(Rule::requester);
     }
 
     public List<RequesterMappingView> list() {
         return this.mappings.findAll().stream()
+                .sorted(Comparator.comparing(RequesterMapping::getRange, RANGE_ORDER))
                 .map(RequesterMappingService::toView)
-                .sorted(Comparator.comparing(RequesterMappingView::range, RANGE_ORDER))
                 .toList();
     }
 
     @Transactional
-    public RequesterMappingView create(final String range, final String type, final @Nullable String name) {
-        final var parsed = parseRange(range).toString();
-        final var requester = this.parseRequester(type, name);
+    public RequesterMappingView create(final String range, final RequesterType type, final @Nullable String name) {
+        final var parsed = parseRange(range);
+        final var requester = this.requester(type, name);
         if (this.mappings.existsByRange(parsed)) {
             throw conflict();
         }
@@ -80,10 +79,10 @@ public class RequesterMappingService {
 
     @Transactional
     public RequesterMappingView update(
-            final String id, final String range, final String type, final @Nullable String name) {
+            final String id, final String range, final RequesterType type, final @Nullable String name) {
         final var mapping = this.find(id);
-        final var parsed = parseRange(range).toString();
-        final var requester = this.parseRequester(type, name);
+        final var parsed = parseRange(range);
+        final var requester = this.requester(type, name);
         if (!parsed.equals(mapping.getRange()) && this.mappings.existsByRange(parsed)) {
             throw conflict();
         }
@@ -113,7 +112,7 @@ public class RequesterMappingService {
     @Transactional
     public int apply(final String id) {
         final var mapping = this.find(id);
-        final var range = parseRange(mapping.getRange());
+        final var range = mapping.getRange();
         final var requester = mapping.getRequester();
         final var rules = rulesOf(this.mappings.findRows());
         final var addresses = this.requests.findUnauthenticatedAddresses().stream()
@@ -121,7 +120,7 @@ public class RequesterMappingService {
                     final var address = AddressRange.parseRemoteAddress(value);
                     return address != null
                             && range.contains(address)
-                            && match(rules, address)
+                            && rules.match(address)
                                     .map(rule -> rule.id().equals(id))
                                     .orElse(false);
                 })
@@ -134,19 +133,6 @@ public class RequesterMappingService {
         final var changed = this.requests.relabel(addresses, type, requester.name());
         log.info("Applied the mapping of {} to {} requests", mapping.getRange(), changed);
         return changed;
-    }
-
-    private Optional<Rule> match(final InetAddress address) {
-        return match(this.rules, address);
-    }
-
-    private static Optional<Rule> match(final List<Rule> rules, final InetAddress address) {
-        for (final var rule : rules) {
-            if (rule.range().contains(address)) {
-                return Optional.of(rule);
-            }
-        }
-        return Optional.empty();
     }
 
     /// Synchronized, so two reloads cannot publish out of order: the last one reads every committed change.
@@ -170,9 +156,7 @@ public class RequesterMappingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "mapping not found"));
     }
 
-    private Requester parseRequester(final String key, final @Nullable String name) {
-        final var type = RequesterType.fromKey(key)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid requester type"));
+    private Requester requester(final RequesterType type, final @Nullable String name) {
         final var trimmed = name == null ? "" : name.strip();
         return switch (type) {
             case USER -> {
@@ -202,21 +186,23 @@ public class RequesterMappingService {
         }
     }
 
-    private static List<Rule> rulesOf(final List<RequesterMappingRepository.Row> rows) {
-        return rows.stream()
+    private static RuleSet rulesOf(final List<RequesterMappingRepository.Row> rows) {
+        return new RuleSet(rows.stream()
                 .map(row -> new Rule(
                         row.getId(),
-                        parseRange(row.getRange()),
+                        AddressRange.parse(row.getRange()),
                         new Requester(RequesterType.valueOf(row.getRequesterType()), row.getRequesterName())))
-                .sorted(Comparator.comparingInt((Rule rule) -> rule.range().prefix())
-                        .reversed())
-                .toList();
+                .toList());
     }
 
     private static RequesterMappingView toView(final RequesterMapping mapping) {
         final var requester = mapping.getRequester();
         return new RequesterMappingView(
-                mapping.getId(), mapping.getRange(), requester.type().key(), requester.name(), mapping.getCreatedAt());
+                mapping.getId(),
+                mapping.getRange().toString(),
+                requester.type(),
+                requester.name(),
+                mapping.getCreatedAt());
     }
 
     private static String describe(final Requester requester) {
@@ -229,11 +215,27 @@ public class RequesterMappingService {
         return new ResponseStatusException(HttpStatus.CONFLICT, "address range already mapped");
     }
 
-    private static final Comparator<String> RANGE_ORDER = Comparator.comparing(
-            (String value) -> AddressRange.parse(value),
-            Comparator.comparingInt((AddressRange range) -> range.network().getAddress().length)
-                    .thenComparing(range -> range.network().getAddress(), Arrays::compareUnsigned)
-                    .thenComparingInt(AddressRange::prefix));
+    private static final Comparator<AddressRange> RANGE_ORDER = Comparator.comparingInt(
+                    (AddressRange range) -> range.network().getAddress().length)
+            .thenComparing(range -> range.network().getAddress(), Arrays::compareUnsigned)
+            .thenComparingInt(AddressRange::prefix);
 
     private record Rule(String id, AddressRange range, Requester requester) {}
+
+    /// The rules, the most specific range first.
+    private record RuleSet(List<Rule> rules) {
+
+        private RuleSet {
+            rules = rules.stream()
+                    .sorted(Comparator.comparingInt((Rule rule) -> rule.range().prefix())
+                            .reversed())
+                    .toList();
+        }
+
+        Optional<Rule> match(final InetAddress address) {
+            return this.rules.stream()
+                    .filter(rule -> rule.range().contains(address))
+                    .findFirst();
+        }
+    }
 }

@@ -116,7 +116,7 @@ public final class ClassificationService {
         return Objects.requireNonNull(last);
     }
 
-    private boolean record(final ClassificationRequest request, final byte @Nullable [] image) {
+    private boolean record(final ClassificationRequest request, final byte[] image) {
         try {
             this.requests.record(request, image);
         } catch (final RuntimeException exception) {

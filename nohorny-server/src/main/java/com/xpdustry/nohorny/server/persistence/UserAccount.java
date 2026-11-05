@@ -61,7 +61,7 @@ public class UserAccount extends AssignedIdEntity<String> {
     }
 
     /// Ends the sessions of the account.
-    public void setPasswordHash(final String passwordHash) {
+    public void changePassword(final String passwordHash) {
         this.passwordHash = passwordHash;
         this.sessionVersion++;
     }
@@ -71,7 +71,7 @@ public class UserAccount extends AssignedIdEntity<String> {
     }
 
     /// Ends the sessions of the account if the role changes.
-    public void setAdmin(final boolean admin) {
+    public void changeRole(final boolean admin) {
         if (this.admin != admin) {
             this.admin = admin;
             this.sessionVersion++;

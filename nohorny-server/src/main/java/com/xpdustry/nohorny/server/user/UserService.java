@@ -64,11 +64,11 @@ public class UserService {
         }
         final var account = existing.get();
         if (!this.passwordEncoder.matches(password, account.getPasswordHash())) {
-            account.setPasswordHash(this.encode(password));
+            account.changePassword(this.encode(password));
             log.info("Reset the password of the bootstrap administrator {} to the configured one", username);
         }
         if (!account.isAdmin()) {
-            account.setAdmin(true);
+            account.changeRole(true);
             log.info("Restored the administrator role of the bootstrap administrator {}", username);
         }
     }
@@ -103,17 +103,17 @@ public class UserService {
 
     /// Ends the sessions of the user, the caller included when it changes its own password.
     @Transactional
-    public void setPassword(final String username, final String password) {
+    public void changePassword(final String username, final String password) {
         final var account = this.find(username);
         if (this.isBootstrap(username)) {
             throw conflict("cannot change the password of the bootstrap administrator");
         }
-        account.setPasswordHash(this.encode(password));
+        account.changePassword(this.encode(password));
         log.info("Changed the password of user {}", username);
     }
 
     @Transactional
-    public void setAdmin(final String username, final boolean admin, final String caller) {
+    public void changeRole(final String username, final boolean admin, final String caller) {
         final var account = this.find(username);
         if (account.isAdmin() == admin) {
             return;
@@ -129,7 +129,7 @@ public class UserService {
                 throw conflict("cannot demote the last administrator");
             }
         }
-        account.setAdmin(admin);
+        account.changeRole(admin);
         log.info("Set admin={} for user {}", admin, username);
     }
 
