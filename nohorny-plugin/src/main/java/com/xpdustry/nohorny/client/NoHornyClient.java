@@ -248,7 +248,6 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
         };
     }
 
-    @SuppressWarnings("NullAway")
     private static @Nullable MindustryAuthor computeAuthor(
             final VirtualBuilding.Group<? extends MindustryImage> group) {
         final var authors = new ArrayList<MindustryAuthor>();
@@ -284,11 +283,14 @@ final class NoHornyClient implements LifecycleListener, GroupClassifier {
 
         final var counts = new HashMap<String, Integer>();
         MindustryAuthor best = null;
+        var bestCount = 0;
         for (final var author : authors) {
-            final var address = author.ip();
-            counts.compute(address, (_, v) -> v == null ? 1 : v + 1);
-            if (best == null || counts.get(address) > counts.get(best.ip())) {
+            final var count = counts.merge(author.ip(), 1, Integer::sum);
+            if (best != null && best.ip().equals(author.ip())) {
+                bestCount = count;
+            } else if (count > bestCount) {
                 best = author;
+                bestCount = count;
             }
         }
 

@@ -12,7 +12,9 @@ import org.jspecify.annotations.Nullable;
 
 final class CanvasTracker extends BuildingImageTracker<CanvasBlock.CanvasBuild, MindustryCanvas> {
 
-    private static final int MAX_GROUP_RANGE = 50 * 3; // 50 large canvases around the anchor
+    private static final int LARGE_CANVAS_SIZE = 3;
+    private static final int GROUPED_CANVASES_AROUND_ANCHOR = 50;
+    private static final int MAX_GROUP_RANGE = GROUPED_CANVASES_AROUND_ANCHOR * LARGE_CANVAS_SIZE;
     private static final int MIN_CANVAS_GROUP_SIZE = 2 * 4;
 
     public CanvasTracker(final NoHornyEventBus events, final GroupClassifier classifier) {

@@ -23,6 +23,7 @@ import mindustry.world.blocks.logic.CanvasBlock;
 import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.logic.LogicDisplay;
 import mindustry.world.blocks.power.LightBlock;
+import org.jspecify.annotations.Nullable;
 
 final class AutoModerator implements LifecycleListener {
 
@@ -88,8 +89,6 @@ final class AutoModerator implements LifecycleListener {
         }
     }
 
-    // TODO The classification is asynchronous, meanwhile the buildings can be edited or replaced, or the world
-    //  reloaded, and the matching blocks at the positions of the group are deleted anyway. Unlikely enough for now.
     private void delete(final ClassificationEvent event) {
         final var group = event.group();
         log.info(
@@ -110,26 +109,27 @@ final class AutoModerator implements LifecycleListener {
                             : 0);
             switch (element.data()) {
                 case MindustryCanvas _ -> {
-                    if (!(Vars.world.build(element.x(), element.y()) instanceof CanvasBlock.CanvasBuild canvas)) {
+                    if (!(anchoredAt(element.x(), element.y(), element.size())
+                            instanceof CanvasBlock.CanvasBuild canvas)) {
                         continue;
                     }
                     collect(canvas, positions, seen, refunds);
                 }
                 case MindustryPixel _ -> {
-                    final var building = Vars.world.build(element.x(), element.y());
+                    final var building = anchoredAt(element.x(), element.y(), element.size());
                     if (!(building instanceof Sorter.SorterBuild || building instanceof LightBlock.LightBuild)) {
                         continue;
                     }
                     collect(building, positions, seen, refunds);
                 }
                 case MindustryDisplay data -> {
-                    if (!(Vars.world.build(element.x(), element.y())
+                    if (!(anchoredAt(element.x(), element.y(), element.size())
                             instanceof LogicDisplay.LogicDisplayBuild display)) {
                         continue;
                     }
                     collect(display, positions, seen, refunds);
                     for (final var link : data.processors().keySet()) {
-                        if (!(Vars.world.build(element.x() + GeometryUtils.x(link), element.y() + GeometryUtils.y(link))
+                        if (!(anchoredAt(element.x() + GeometryUtils.x(link), element.y() + GeometryUtils.y(link))
                                 instanceof LogicBlock.LogicBuild processor)) {
                             continue;
                         }
@@ -152,6 +152,21 @@ final class AutoModerator implements LifecycleListener {
                 log.info("Refunded team {} for deleted buildings: {}", team.name, JsonIO.write(entry.value));
             }
         }
+    }
+
+    // The classification is asynchronous, the group may describe buildings that have since been replaced
+    private static @Nullable Building anchoredAt(final int x, final int y, final int size) {
+        final var building = anchoredAt(x, y);
+        return building != null && building.block.size == size ? building : null;
+    }
+
+    private static @Nullable Building anchoredAt(final int x, final int y) {
+        final var building = Vars.world.build(x, y);
+        return building != null
+                        && MindustryUtils.anchorTileX(building) == x
+                        && MindustryUtils.anchorTileY(building) == y
+                ? building
+                : null;
     }
 
     private static void collect(

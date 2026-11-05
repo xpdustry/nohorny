@@ -232,7 +232,6 @@ final class ProxyScrapeProxySelector extends ProxySelector implements AutoClosea
         }
     }
 
-    @SuppressWarnings("EmptyCatch")
     private List<InetSocketAddress> fetchProxies() {
         final var request = HttpRequest.newBuilder(PROXY_LIST_ENDPOINT)
                 .timeout(PROXY_LIST_TIMEOUT)

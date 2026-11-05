@@ -5,10 +5,8 @@ import arc.graphics.Color;
 import arc.math.geom.Point2;
 import arc.struct.IntMap;
 import com.xpdustry.nohorny.common.GeometryUtils;
-import com.xpdustry.nohorny.common.MindustryCanvas;
 import com.xpdustry.nohorny.common.MindustryDisplay;
 import com.xpdustry.nohorny.common.MindustryImage;
-import com.xpdustry.nohorny.common.MindustryPixel;
 import com.xpdustry.nohorny.common.VirtualBuilding;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -140,23 +138,20 @@ final class DebugHelper implements LifecycleListener {
         log.info("{} rendered the group at ({}, {}) to {}", player.plainName(), x, y, jpg);
     }
 
-    @SuppressWarnings("fallthrough")
     public <T extends MindustryImage> void highlight(final Player player, final VirtualBuilding.Group<T> group) {
         final var color = KELLY_COLORS[new Random().nextInt(KELLY_COLORS.length)];
         for (final var building : group.elements()) {
-            switch (building.data()) {
-                case MindustryDisplay display:
-                    for (final var link : display.processors().keySet()) {
-                        this.sendLabelIcon(
-                                player,
-                                color,
-                                "P",
-                                building.x() + GeometryUtils.x(link),
-                                building.y() + GeometryUtils.y(link));
-                    }
-                case MindustryCanvas _, MindustryPixel _:
-                    this.sendLabelIcon(player, color, "I", building.x(), building.y());
+            if (building.data() instanceof MindustryDisplay display) {
+                for (final var link : display.processors().keySet()) {
+                    this.sendLabelIcon(
+                            player,
+                            color,
+                            "P",
+                            building.x() + GeometryUtils.x(link),
+                            building.y() + GeometryUtils.y(link));
+                }
             }
+            this.sendLabelIcon(player, color, "I", building.x(), building.y());
         }
     }
 

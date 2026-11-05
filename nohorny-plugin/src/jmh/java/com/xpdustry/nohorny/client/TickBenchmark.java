@@ -19,7 +19,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
-// Measures the art changes and the tracker ticks, nohorny=false measures the changes alone
+// Measures the art changes and the tracker ticks, trackersEnabled=false measures the changes alone
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.SampleTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -36,7 +36,7 @@ public class TickBenchmark {
     public int changesPerTick;
 
     @Param({"false", "true"})
-    public boolean nohorny;
+    public boolean trackersEnabled;
 
     // Applied by GarbageCollectorSelector when starting the fork
     @Param({"G1", "Serial"})
@@ -53,7 +53,7 @@ public class TickBenchmark {
         GarbageCollectorSelector.check(this.gc);
         HeadlessMindustry.init();
         this.world = ArtWorld.generate(this.size, 42L);
-        this.harness = this.nohorny ? new NoHornyHarness() : null;
+        this.harness = this.trackersEnabled ? new NoHornyHarness() : null;
         Vars.state.set(GameState.State.playing);
     }
 
@@ -86,7 +86,7 @@ public class TickBenchmark {
         // Like the game update, which runs before the trackers
         Vars.state.tick++;
         for (int i = 0; i < this.changesPerTick; i++) {
-            this.world.change();
+            this.world.changeRandomArt();
         }
         if (this.harness != null) {
             this.harness.tick();
