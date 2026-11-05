@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public abstract class ServerTest {
 
-    private static final String ADMIN_PASSWORD = "admin-test-password";
+    protected static final String ADMIN_PASSWORD = "admin-test-password";
 
     private static final Path DATA = createDataDirectory();
 

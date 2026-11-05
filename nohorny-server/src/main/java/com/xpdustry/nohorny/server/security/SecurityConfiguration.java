@@ -106,18 +106,33 @@ public class SecurityConfiguration {
 
         return http.authorizeHttpRequests(authorize -> {
                     // The classifications are restricted by the RateLimitFilter, which can require an account.
-                    // The reads are restricted whatever the method, Spring MVC also answers HEAD with the GET handlers.
+                    // The reads are matched whatever the method, Spring MVC also answers HEAD with the GET handlers.
+                    // An endpoint missing from these rules is denied, and AccessMatrixTest fails until it is listed.
                     authorize
-                            .requestMatchers("/api/requests", "/api/stats/networks", "/api/stats/versions")
-                            .hasRole(ADMIN_ROLE)
                             .requestMatchers(HttpMethod.DELETE, "/api/requests/*")
                             .hasRole(ADMIN_ROLE)
-                            .requestMatchers("/api/users", "/api/users/**")
-                            .hasRole(ADMIN_ROLE)
-                            .requestMatchers("/api/mappings", "/api/mappings/**")
-                            .hasRole(ADMIN_ROLE)
+                            .requestMatchers(
+                                    "/api/status",
+                                    "/api/classify",
+                                    "/api/stats",
+                                    "/api/stats/history",
+                                    "/api/retention",
+                                    "/api/requests/*",
+                                    "/api/requests/*/image")
+                            .permitAll()
                             .requestMatchers("/api/session")
                             .authenticated()
+                            .requestMatchers(
+                                    "/api/requests",
+                                    "/api/stats/networks",
+                                    "/api/stats/versions",
+                                    "/api/users",
+                                    "/api/users/**",
+                                    "/api/mappings",
+                                    "/api/mappings/**")
+                            .hasRole(ADMIN_ROLE)
+                            .requestMatchers("/api/**")
+                            .denyAll()
                             .anyRequest()
                             .permitAll();
                 })

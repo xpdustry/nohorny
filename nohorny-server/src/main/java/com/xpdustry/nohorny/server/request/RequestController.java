@@ -30,8 +30,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/// The recorded classification requests. The list and the deletion are restricted to the administrators by the
-/// security configuration, the rest is public to anyone holding the identifier.
 @RestController
 @RequestMapping("/api/requests")
 public final class RequestController {
