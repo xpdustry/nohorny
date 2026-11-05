@@ -221,7 +221,7 @@ Adjust `thresholds.warn` and `thresholds.nsfw` under `nohorny.classifier.vit` to
 
 For another ONNX model, change the Hugging Face repository, revision, and file, or set `nohorny.classifier.vit.source.type` to `local` and provide `local.path`.
 The configured `labels` must match the model's output order, and `nsfw-label` must name its NSFW label.
-See [`download-and-convert-model.sh`](nohorny-server/download-and-convert-model.sh) for conversion instructions.
+To convert a PyTorch model to ONNX, use the [Optimum exporter](https://huggingface.co/docs/optimum-onnx/onnx/usage_guides/export_a_model).
 
 To use SightEngine, set `SIGHT_ENGINE_USER` and `SIGHT_ENGINE_SECRET` and include `sight-engine` in the classifier list.
 
