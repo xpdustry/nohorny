@@ -37,7 +37,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public final class ClassificationService {
 
     private static final Logger log = LoggerFactory.getLogger(ClassificationService.class);
-    private static final int MAX_VERSION_LENGTH = 64;
+    private static final int MAX_STORED_VERSION_LENGTH = 64;
 
     private final ClassifierChain classifiers;
     private final RequestService requests;
@@ -61,14 +61,13 @@ public final class ClassificationService {
         final var id = UuidV7.next().toString();
         log.trace("Processing image {} (w={},h={})", id, image.getWidth(), image.getHeight());
 
-        final var steps = new ArrayList<ClassificationStep>();
-        final var outcome = this.run(id, image, steps);
+        final var run = this.run(id, image);
         final var request = new ClassificationRequest(
                 id,
                 createdAt,
                 millisSince(start),
-                outcome.classifier(),
-                outcome.outcome(),
+                run.classifier(),
+                run.outcome(),
                 truncate(submission.version()),
                 submission.kind(),
                 submission.requester(),
@@ -76,14 +75,14 @@ public final class ClassificationService {
                 submission.remoteAddress(),
                 ImageState.STORED,
                 ImageStore.hash(bytes),
-                steps);
+                run.steps());
 
         final var recorded = this.record(request, bytes);
 
-        return switch (outcome.outcome()) {
+        return switch (run.outcome()) {
             case Verdict verdict ->
                 ResponseEntity.ok(new ClassificationResponse(
-                        outcome.classifier(),
+                        run.classifier(),
                         verdict.rating(),
                         verdict.confidence(),
                         id,
@@ -94,30 +93,27 @@ public final class ClassificationService {
     }
 
     /// Runs the chain, which advances while the verdicts are NSFW.
-    ///
-    /// @param steps receives one step per classifier invoked
-    /// @return the final outcome and the classifier that produced it
-    private Final run(final String id, final BufferedImage image, final List<ClassificationStep> steps) {
-        @Nullable Final verdict = null;
+    private Run run(final String id, final BufferedImage image) {
+        final var steps = new ArrayList<ClassificationStep>();
+        @Nullable Run last = null;
         for (final var classifier : this.classifiers.classifiers()) {
             final var start = System.nanoTime();
             try {
                 final var result = classifier.classify(image);
                 log.trace("Processed image {} with {}, got {}", id, classifier.name(), result);
-                steps.add(new ClassificationStep(
-                        classifier.name(), millisSince(start), new Verdict(result.rating(), result.confidence())));
-                verdict = new Final(classifier.name(), new Verdict(result.rating(), result.confidence()));
+                final var verdict = new Verdict(result.rating(), result.confidence());
+                steps.add(new ClassificationStep(classifier.name(), millisSince(start), verdict));
+                last = new Run(classifier.name(), verdict, steps);
                 if (result.rating() != Rating.NSFW) {
-                    return verdict;
+                    return last;
                 }
             } catch (final Exception exception) {
                 log.error("Classification request {} failed with {}", id, classifier.name(), exception);
                 steps.add(new ClassificationStep(classifier.name(), millisSince(start), new Failure(exception)));
-                return verdict == null ? new Final(classifier.name(), new Failure(exception)) : verdict;
+                return last == null ? new Run(classifier.name(), new Failure(exception), steps) : last;
             }
         }
-        // The chain is never empty, so the loop produced a verdict
-        return Objects.requireNonNull(verdict);
+        return Objects.requireNonNull(last);
     }
 
     private boolean record(final ClassificationRequest request, final byte @Nullable [] image) {
@@ -175,12 +171,14 @@ public final class ClassificationService {
     }
 
     private static @Nullable String truncate(final @Nullable String version) {
-        return version == null || version.length() <= MAX_VERSION_LENGTH
+        return version == null || version.length() <= MAX_STORED_VERSION_LENGTH
                 ? version
-                : version.substring(0, MAX_VERSION_LENGTH);
+                : version.substring(0, MAX_STORED_VERSION_LENGTH);
     }
 
-    private record Final(String classifier, Outcome outcome) {}
+    /// @param outcome the final outcome, produced by the `classifier`
+    /// @param steps one step per classifier invoked
+    private record Run(String classifier, Outcome outcome, List<ClassificationStep> steps) {}
 
     public record Submission(
             @Nullable String version,

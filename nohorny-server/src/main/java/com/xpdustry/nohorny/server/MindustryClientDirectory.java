@@ -5,6 +5,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -79,14 +80,14 @@ public final class MindustryClientDirectory {
 
     public ClientInfo whois(final InetAddress address) {
         if (isLocal(address)) {
-            return new ClientInfo(ClientInfo.LOCAL, null);
+            return new ClientInfo(ClientInfo.Type.LOCAL, List.of());
         }
         final var names = this.addresses.get(address);
         if (names != null) {
             return new ClientInfo(
-                    ClientInfo.MINDUSTRY_SERVER, names.isEmpty() ? null : String.join(", ", new TreeSet<>(names)));
+                    ClientInfo.Type.MINDUSTRY_SERVER, names.stream().sorted().toList());
         }
-        return new ClientInfo(ClientInfo.UNKNOWN, null);
+        return new ClientInfo(ClientInfo.Type.UNKNOWN, List.of());
     }
 
     /// The IPv6 unique local addresses (`fc00::/7`) are checked apart, [InetAddress#isSiteLocalAddress] only knows
@@ -125,12 +126,13 @@ public final class MindustryClientDirectory {
         return address;
     }
 
-    /// @param type `mindustry-server`, `local` or `unknown`
-    /// @param network the normalized network names of a listed server, joined by commas, `null` for the other types
-    ///     or when the listing has no usable name
-    public record ClientInfo(String type, @Nullable String network) {
-        public static final String MINDUSTRY_SERVER = "mindustry-server";
-        public static final String LOCAL = "local";
-        public static final String UNKNOWN = "unknown";
+    /// @param networks the sorted normalized network names of a listed server, empty for the other types or when the
+    ///     listing has no usable name
+    public record ClientInfo(Type type, List<String> networks) {
+        public enum Type {
+            MINDUSTRY_SERVER,
+            LOCAL,
+            UNKNOWN
+        }
     }
 }

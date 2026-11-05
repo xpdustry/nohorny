@@ -36,9 +36,10 @@ public final class RequesterResolver {
         }
         final var client = this.clients.whois(parsed);
         return switch (client.type()) {
-            case MindustryClientDirectory.ClientInfo.MINDUSTRY_SERVER -> Requester.mindustryNetwork(client.network());
-            case MindustryClientDirectory.ClientInfo.LOCAL -> Requester.local();
-            default -> Requester.anonymous();
+            case MINDUSTRY_SERVER ->
+                Requester.mindustryNetwork(client.networks().isEmpty() ? null : String.join(", ", client.networks()));
+            case LOCAL -> Requester.local();
+            case UNKNOWN -> Requester.anonymous();
         };
     }
 }

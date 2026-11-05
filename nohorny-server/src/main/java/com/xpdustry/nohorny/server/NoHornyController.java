@@ -8,6 +8,7 @@ import com.xpdustry.nohorny.server.security.SecurityConfiguration;
 import com.xpdustry.nohorny.server.security.SessionController;
 import com.xpdustry.nohorny.server.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -25,12 +26,10 @@ public final class NoHornyController {
 
     static final String VERSION_HEADER = "X-NoHorny-Version";
 
-    private static final String ROBOTS = """
-            User-agent: *
-            Disallow: /requests/
-            Disallow: /api/
-            Disallow: /admin
-            """;
+    private static final String ROBOTS = "User-agent: *\n"
+            + RobotsTagFilter.DISALLOWED_PATHS.stream()
+                    .map(path -> "Disallow: " + path + "\n")
+                    .collect(Collectors.joining());
 
     private final StatusProperties status;
     private final ClassificationService classifications;
