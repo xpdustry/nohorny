@@ -24,6 +24,7 @@ final class ArtWorld {
 
     private static final Team TEAM = Team.sharded;
     private static final int DRAW_INSTRUCTIONS = 100;
+    private static final int PROCESSORS_PER_DISPLAY = 6;
 
     final List<CanvasBlock.CanvasBuild> canvases = new ArrayList<>();
     final List<LogicBlock.LogicBuild> displayProcessors = new ArrayList<>();
@@ -53,13 +54,13 @@ final class ArtWorld {
 
     int buildings() {
         return this.canvases.size()
-                + this.displayProcessors.size() / 6 * 7
+                + this.displayProcessors.size() / PROCESSORS_PER_DISPLAY * (PROCESSORS_PER_DISPLAY + 1)
                 + this.sorters.size()
                 + this.illuminators.size();
     }
 
     // A player changing a random piece of art
-    void change() {
+    void changeRandomArt() {
         switch (this.random.nextInt(4)) {
             case 0 -> {
                 final var canvas = this.pick(this.canvases);

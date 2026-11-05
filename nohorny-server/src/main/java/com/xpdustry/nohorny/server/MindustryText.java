@@ -121,13 +121,13 @@ final class MindustryText {
         return type == Character.PRIVATE_USE || type == Character.CONTROL || type == Character.FORMAT;
     }
 
-    /// `#rgb` up to `#rrggbbaa`, except 7 digits which the game refuses.
+    /// `#` followed by 1 to 8 hex digits, except 7 which the game refuses.
     private static boolean isHexColor(final String value) {
         if (value.charAt(0) != '#') {
             return false;
         }
         final var digits = value.length() - 1;
-        if (digits > 8 || digits == 7) {
+        if (digits < 1 || digits > 8 || digits == 7) {
             return false;
         }
         for (var i = 1; i < value.length(); i++) {

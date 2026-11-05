@@ -77,7 +77,7 @@ final class GroupCollector<T extends MindustryImage> {
         if (batch == null) {
             final var key = author == null ? UNKNOWN_AUTHOR : MUUID.from(author);
             batch = this.batches.computeIfAbsent(key, _ -> new Batch(key, now));
-            batch.anchors.put(packed, now);
+            batch.queuedAtTick.put(packed, now);
             this.queued.put(packed, batch);
         }
         batch.touchedAt = now;
@@ -86,8 +86,8 @@ final class GroupCollector<T extends MindustryImage> {
     public void dequeue(final int packed) {
         final var batch = this.queued.remove(packed);
         if (batch != null) {
-            batch.anchors.remove(packed);
-            if (batch.anchors.isEmpty()) {
+            batch.queuedAtTick.remove(packed);
+            if (batch.queuedAtTick.isEmpty()) {
                 this.batches.remove(batch.author);
             }
         }
@@ -120,7 +120,7 @@ final class GroupCollector<T extends MindustryImage> {
             if (!this.isSettled(batch, now)) {
                 continue;
             }
-            final var anchors = batch.anchors.keySet().iterator();
+            final var anchors = batch.queuedAtTick.keySet().iterator();
             while (anchors.hasNext() && checks > 0) {
                 checks--;
                 final int point = anchors.next();
@@ -134,17 +134,17 @@ final class GroupCollector<T extends MindustryImage> {
                 anchors.remove();
                 this.queued.remove(point);
             }
-            if (batch.anchors.isEmpty()) {
+            if (batch.queuedAtTick.isEmpty()) {
                 iterator.remove();
             }
         }
     }
 
     private boolean isSettled(final Batch batch, final long now) {
-        final long oldest = batch.anchors.firstEntry().getValue();
+        final long oldest = batch.queuedAtTick.firstEntry().getValue();
         if (now < oldest) {
             // The clock was reset
-            batch.anchors.replaceAll((_, _) -> now);
+            batch.queuedAtTick.replaceAll((_, _) -> now);
             batch.touchedAt = now;
         }
         if (now - oldest >= MAX_WAIT_TICKS) {
@@ -178,13 +178,13 @@ final class GroupCollector<T extends MindustryImage> {
             }
         }
         // Visited buildings cannot be enqueued while grouping, so the batches only need to be cleaned once
-        if (grouping.cleanup == null) {
-            grouping.cleanup = grouper.visited();
+        if (grouping.visitedToUnqueue == null) {
+            grouping.visitedToUnqueue = grouper.visited();
         }
-        for (int i = 0; i < MAX_CLEANUP_STEPS && grouping.cleanup.hasNext; i++) {
-            this.dequeue(grouping.cleanup.next());
+        for (int i = 0; i < MAX_CLEANUP_STEPS && grouping.visitedToUnqueue.hasNext; i++) {
+            this.dequeue(grouping.visitedToUnqueue.next());
         }
-        if (grouping.cleanup.hasNext) {
+        if (grouping.visitedToUnqueue.hasNext) {
             return;
         }
         final var group = grouper.create();
@@ -200,8 +200,7 @@ final class GroupCollector<T extends MindustryImage> {
     private final class Grouping {
 
         private final VirtualBuildingIndex<T>.IncrementalGrouper grouper;
-        // The visited buildings left to unqueue, once the grouper is completed
-        private IntSet.@Nullable IntSetIterator cleanup = null;
+        private IntSet.@Nullable IntSetIterator visitedToUnqueue = null;
 
         private Grouping(final VirtualBuildingIndex<T>.IncrementalGrouper grouper) {
             this.grouper = grouper;
@@ -211,8 +210,7 @@ final class GroupCollector<T extends MindustryImage> {
     private static final class Batch {
 
         private final MUUID author;
-        // Queued buildings with the tick they were queued at
-        private final SequencedMap<Integer, Long> anchors = new LinkedHashMap<>();
+        private final SequencedMap<Integer, Long> queuedAtTick = new LinkedHashMap<>();
         private long touchedAt;
 
         private Batch(final MUUID author, final long now) {

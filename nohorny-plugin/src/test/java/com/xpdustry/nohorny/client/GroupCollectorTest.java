@@ -88,19 +88,20 @@ final class GroupCollectorTest {
 
     @Test
     void limit_the_anchor_checks_per_tick() {
-        // Ten ticks worth of ineligible anchors
-        fill(MAX_ANCHOR_CHECKS, 10);
+        final var TICKS = 10;
+        // One check budget per tick of ineligible anchors
+        fill(MAX_ANCHOR_CHECKS, TICKS);
         final var collector = this.collector(_ -> false, 150);
         for (int x = 0; x < MAX_ANCHOR_CHECKS; x++) {
-            for (int y = 0; y < 10; y++) {
+            for (int y = 0; y < TICKS; y++) {
                 collector.enqueue(GeometryUtils.pack(x, y), ALICE);
             }
         }
         Vars.state.tick = SETTLED;
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= TICKS; i++) {
             collector.tick();
-            assertEquals((10 - i) * MAX_ANCHOR_CHECKS, collector.size());
+            assertEquals((TICKS - i) * MAX_ANCHOR_CHECKS, collector.size());
         }
         assertTrue(this.groups.isEmpty());
     }
