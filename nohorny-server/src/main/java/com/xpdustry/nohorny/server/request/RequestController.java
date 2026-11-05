@@ -9,6 +9,7 @@ import com.xpdustry.nohorny.server.persistence.RatingBucket;
 import com.xpdustry.nohorny.server.persistence.RequestFilter;
 import com.xpdustry.nohorny.server.persistence.RequesterFilter;
 import com.xpdustry.nohorny.server.persistence.RequesterType;
+import com.xpdustry.nohorny.server.persistence.ValueFilter;
 import com.xpdustry.nohorny.server.persistence.Verdict;
 import com.xpdustry.nohorny.server.security.SecurityConfiguration;
 import java.util.UUID;
@@ -70,31 +71,43 @@ public final class RequestController {
         return this.toView(request, SecurityConfiguration.isAdmin(authentication));
     }
 
-    /// @param network with `requester`, only list the requests of this name, or the unnamed ones when empty
-    /// @param version only list the requests of this plugin version, or of the clients sending none when empty
+    /// @param network with `requester`, only list the requests of this name
+    /// @param noNetwork with `requester`, only list the requests without a name, exclusive with `network`
+    /// @param version only list the requests of this plugin version
+    /// @param noVersion only list the requests of the clients sending no version, exclusive with `version`
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public RequestPage onList(
             final @RequestParam(required = false) @Nullable String rating,
             final @RequestParam(required = false) @Nullable String requester,
             final @RequestParam(required = false) @Nullable String network,
+            final @RequestParam(defaultValue = "false") boolean noNetwork,
             final @RequestParam(required = false) @Nullable String version,
+            final @RequestParam(defaultValue = "false") boolean noVersion,
             final @RequestParam(required = false) @Nullable String before,
             final @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int limit) {
         final var bucket = rating == null || rating.isEmpty()
                 ? null
                 : RatingBucket.fromKey(rating)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid rating"));
+        final var name = valueFilter(network, noNetwork, "network and noNetwork are exclusive");
         final var filter = requester == null || requester.isEmpty()
                 ? null
                 : new RequesterFilter(
                         RequesterType.fromKey(requester)
                                 .orElseThrow(
                                         () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid requester")),
-                        network);
+                        name);
+        if (filter == null && !name.isAny()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "network requires requester");
+        }
         final var cursor = before == null || before.isEmpty() ? null : parseIdentifier(before);
         final var size = Math.clamp(limit, 1, MAX_PAGE_SIZE);
         final var lookaheadSize = size + 1;
-        final var found = this.requests.findPage(new RequestFilter(bucket, filter, version), cursor, lookaheadSize);
+        final var found = this.requests.findPage(
+                new RequestFilter(
+                        bucket, filter, valueFilter(version, noVersion, "version and noVersion are exclusive")),
+                cursor,
+                lookaheadSize);
         final var items = found.subList(0, Math.min(found.size(), size));
         return new RequestPage(
                 items.stream().map(request -> this.toView(request, true)).toList(),
@@ -154,6 +167,16 @@ public final class RequestController {
 
     private static RequestView.FailureDetails toView(final Failure failure) {
         return new RequestView.FailureDetails(failure.type(), failure.error());
+    }
+
+    private static ValueFilter valueFilter(final @Nullable String value, final boolean none, final String message) {
+        if (value == null || value.isEmpty()) {
+            return none ? new ValueFilter.None() : new ValueFilter.Any();
+        }
+        if (none) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        return new ValueFilter.Named(value);
     }
 
     private static String parseIdentifier(final String value) {

@@ -32,16 +32,18 @@ public interface ClassificationRequestRepository extends Repository<Classificati
             WHERE r.id < :before
                 AND (:bucket IS NULL OR r.bucket = :bucket)
                 AND (:type IS NULL OR r.requesterType = :type)
-                AND (:name IS NULL OR r.requesterName = :name OR (:name = '' AND r.requesterName IS NULL))
-                AND (:version IS NULL OR r.version = :version
-                    OR (:version = '' AND (r.version IS NULL OR LENGTH(r.version) NOT BETWEEN 1
+                AND (:anyName = TRUE OR r.requesterName = :name OR (:name IS NULL AND r.requesterName IS NULL))
+                AND (:anyVersion = TRUE OR r.version = :version
+                    OR (:version IS NULL AND (r.version IS NULL OR LENGTH(r.version) NOT BETWEEN 1
                         AND :#{T(com.xpdustry.nohorny.server.persistence.DailyStat).MAX_VERSION_LENGTH})))
             ORDER BY r.id DESC
             """)
     List<ClassificationRequest> findFilteredBefore(
             @Nullable RatingBucket bucket,
             @Nullable RequesterType type,
+            boolean anyName,
             @Nullable String name,
+            boolean anyVersion,
             @Nullable String version,
             String before,
             Limit limit);
@@ -51,12 +53,15 @@ public interface ClassificationRequestRepository extends Repository<Classificati
         final var cursor = before == null ? NO_CURSOR : before;
         final var max = Limit.of(limit);
         final var requester = filter.requester();
-        if (requester != null || filter.version() != null) {
+        if (requester != null || !filter.version().isAny()) {
+            final var name = requester == null ? new ValueFilter.Any() : requester.name();
             return this.findFilteredBefore(
                     filter.bucket(),
                     requester == null ? null : requester.type(),
-                    requester == null ? null : requester.name(),
-                    filter.version(),
+                    name.isAny(),
+                    name.value(),
+                    filter.version().isAny(),
+                    filter.version().value(),
                     cursor,
                     max);
         }

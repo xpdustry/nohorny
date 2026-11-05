@@ -380,9 +380,15 @@ function RequestList(props: { chartFilter: ChartFilters | null }) {
     if (current.rating) params.set('rating', current.rating);
     if (current.requester) {
       params.set('requester', current.requester.type);
-      if (current.requester.name !== null) params.set('network', current.requester.name);
+      const name = current.requester.name;
+      if (name.kind === 'named') params.set('network', name.name);
+      else if (name.kind === 'none') params.set('noNetwork', 'true');
     }
-    if (current.version) params.set('version', current.version.value);
+    if (current.version) {
+      const version = current.version.version;
+      if (version.kind === 'named') params.set('version', version.name);
+      else params.set('noVersion', 'true');
+    }
     if (before) params.set('before', before);
     return `/api/requests?${params}`;
   }
@@ -727,7 +733,7 @@ function RequestList(props: { chartFilter: ChartFilters | null }) {
           {(version) => (
             <FilterChip
               label={version().label}
-              mono={version().value !== ''}
+              mono={version().version.kind === 'named'}
               onRemove={() => applyQuery({ ...current, version: null })}
             />
           )}

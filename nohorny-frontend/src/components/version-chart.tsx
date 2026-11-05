@@ -18,7 +18,10 @@ export function VersionChart(props: { versions: Versions; onSelect?: (filter: Ve
               label={version().name}
               count={version().count}
               total={props.versions.total}
-              onSelect={props.onSelect && (() => props.onSelect?.({ value: version().name, label: version().name }))}
+              onSelect={
+                props.onSelect &&
+                (() => props.onSelect?.({ version: { kind: 'named', name: version().name }, label: version().name }))
+              }
             />
           )}
         </For>
@@ -30,7 +33,9 @@ export function VersionChart(props: { versions: Versions; onSelect?: (filter: Ve
             total={props.versions.total}
             class="mt-1 border-line border-t pt-1 text-ink-3"
             fill="bg-line-strong"
-            onSelect={props.onSelect && (() => props.onSelect?.({ value: '', label: 'Unknown version' }))}
+            onSelect={
+              props.onSelect && (() => props.onSelect?.({ version: { kind: 'none' }, label: 'Unknown version' }))
+            }
           />
         </Show>
       </ul>
