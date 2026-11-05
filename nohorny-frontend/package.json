@@ -31,7 +31,7 @@
     "@solidjs/vite-plugin": "3.0.0-next.54",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "24.19.2",
-    "filesystem-routing": "0.4.0",
+    "filesystem-routing": "0.4.2",
     "prerender-crawler": "0.2.0",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
