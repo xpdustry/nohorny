@@ -1,3 +1,4 @@
 {
-  "extends": ["local>xpdustry/.github:renovate-shared"]
+  "extends": ["local>xpdustry/.github:renovate-shared"],
+  "ignoreDeps": ["onnx-community:nsfw_image_detection-ONNX"]
 }

@@ -2,5 +2,5 @@
 # minimumReleaseAge policy so fresh releases install immediately. Remove once Solid 2.0 is stable.
 minimumReleaseAgeExclude:
   - solid-js
-  - '@solidjs/*'
+  - "@solidjs/*"
   - filesystem-routing
