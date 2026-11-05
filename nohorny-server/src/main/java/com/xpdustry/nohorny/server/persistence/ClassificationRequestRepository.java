@@ -34,7 +34,8 @@ public interface ClassificationRequestRepository extends Repository<Classificati
                 AND (:type IS NULL OR r.requesterType = :type)
                 AND (:name IS NULL OR r.requesterName = :name OR (:name = '' AND r.requesterName IS NULL))
                 AND (:version IS NULL OR r.version = :version
-                    OR (:version = '' AND (r.version IS NULL OR LENGTH(r.version) NOT BETWEEN 1 AND 32)))
+                    OR (:version = '' AND (r.version IS NULL OR LENGTH(r.version) NOT BETWEEN 1
+                        AND :#{T(com.xpdustry.nohorny.server.persistence.DailyStat).MAX_VERSION_LENGTH})))
             ORDER BY r.id DESC
             """)
     List<ClassificationRequest> findFilteredBefore(
@@ -82,7 +83,7 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     /// loaded again rather than served stale from the cache.
     @Modifying(clearAutomatically = true)
     @Query("UPDATE ClassificationRequest r SET r.imageState = DELETED WHERE r.id = :id")
-    int deleteImage(String id);
+    int markImageDeleted(String id);
 
     /// Marks the stored images of the requests created before the given instant as expired. The files are left to
     /// the caller, see [ImageStore].
@@ -91,7 +92,7 @@ public interface ClassificationRequestRepository extends Repository<Classificati
             UPDATE ClassificationRequest r SET r.imageState = EXPIRED
             WHERE r.imageState = STORED AND r.createdAt < :before
             """)
-    int expireImagesBefore(Instant before);
+    int markImagesExpiredBefore(Instant before);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM ClassificationRequest r WHERE r.id = :id")
@@ -112,7 +113,9 @@ public interface ClassificationRequestRepository extends Repository<Classificati
                    requester_type AS requesterType,
                    CASE WHEN requester_type = 'MINDUSTRY_NETWORK' THEN coalesce(requester_name, '') ELSE '' END
                        AS network,
-                   CASE WHEN length(version) BETWEEN 1 AND 32 THEN version ELSE '' END AS version,
+                   CASE WHEN length(version) BETWEEN 1
+                       AND :#{T(com.xpdustry.nohorny.server.persistence.DailyStat).MAX_VERSION_LENGTH}
+                       THEN version ELSE '' END AS version,
                    COUNT(*) AS total
             FROM request
             WHERE remote_address IN (:addresses) AND authenticated = 0
@@ -178,13 +181,14 @@ public interface ClassificationRequestRepository extends Repository<Classificati
     @Query(nativeQuery = true, value = """
             SELECT version AS name, COUNT(*) AS total
             FROM request
-            WHERE created_at >= :since AND version IS NOT NULL AND length(version) BETWEEN 1 AND 32
+            WHERE created_at >= :since AND version IS NOT NULL AND length(version) BETWEEN 1
+                AND :#{T(com.xpdustry.nohorny.server.persistence.DailyStat).MAX_VERSION_LENGTH}
             GROUP BY version
             """)
     List<NamedCount> countByVersionSince(long since);
 
     /// @return the number of retained requests per plugin version created since the given instant, the versions past
-    ///     32 characters left out like in [DailyStat]
+    ///     [DailyStat#MAX_VERSION_LENGTH] characters left out
     default List<NamedCount> countByVersionSince(final Instant since) {
         return this.countByVersionSince(since.toEpochMilli());
     }

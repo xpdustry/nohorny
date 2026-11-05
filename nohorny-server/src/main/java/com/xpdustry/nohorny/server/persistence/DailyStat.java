@@ -33,10 +33,13 @@ public class DailyStat {
         return this.count;
     }
 
+    /// None of the columns is null, the empty string stands for the absence of a value: SQLite `UNIQUE` treats NULLs
+    /// as distinct, so the upsert of a key holding one would never conflict.
+    ///
     /// @param day the ISO-8601 date in UTC
     /// @param requesterType the name of the [RequesterType], empty for the counts migrated without their requests
-    /// @param network the network of a named [RequesterType#MINDUSTRY_NETWORK] requester, empty otherwise
-    /// @param version the plugin version sent by the client, empty without one or past [#MAX_VERSION_LENGTH]
+    /// @param network the network of a named [RequesterType#MINDUSTRY_NETWORK] requester
+    /// @param version the plugin version sent by the client, absent past [#MAX_VERSION_LENGTH]
     @Embeddable
     public record Key(
             String day,

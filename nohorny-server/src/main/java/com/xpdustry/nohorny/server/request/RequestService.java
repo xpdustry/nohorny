@@ -64,7 +64,7 @@ public class RequestService {
         if (request.isEmpty()) {
             return Optional.empty();
         }
-        this.requests.deleteImage(id);
+        this.requests.markImageDeleted(id);
         this.deleteImageUnlessShared(request.get());
         return this.find(id);
     }
@@ -83,7 +83,7 @@ public class RequestService {
     @Transactional
     public int expireImagesBefore(final Instant before) {
         final var orphans = this.requests.findHashesStoredOnlyBefore(before);
-        final var expired = this.requests.expireImagesBefore(before);
+        final var expired = this.requests.markImagesExpiredBefore(before);
         orphans.forEach(this.images::delete);
         return expired;
     }
