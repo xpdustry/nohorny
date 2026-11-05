@@ -1,12 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # https://depot.dev/docs/container-builds/optimal-dockerfiles/java-gradle-dockerfile
 
-# The natives are compiled by the natives-compile stage,
-#   unless a directory of the context holding prebuilt ones is given (what CI does)
-ARG PREBUILT_NATIVES
-ARG NATIVES_STAGE=${PREBUILT_NATIVES:+prebuilt}
-
-
 FROM docker.io/eclipse-temurin:26-jdk@sha256:a45ef8c9f6304700665c5a5ac7250122e951831593bfa95859c295aea67f7d16 AS gradle
 
 ENV GRADLE_HOME=/opt/gradle \
@@ -31,35 +25,7 @@ WORKDIR /app
 
 COPY settings.gradle.kts ./
 COPY build.gradle.kts ./
-RUN mkdir nohorny-common nohorny-native nohorny-plugin nohorny-frontend nohorny-server
-
-
-FROM gradle AS natives-compile
-
-RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build g++ \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV CMAKE_GENERATOR=Ninja
-
-COPY nohorny-native/CMakeLists.txt nohorny-native/
-COPY nohorny-native/cmake/ nohorny-native/cmake/
-COPY nohorny-native/src/ nohorny-native/src/
-
-# The cmake directory is cached since OpenCV takes a while to compile
-RUN --mount=type=cache,target=/cache/.gradle \
-    --mount=type=cache,target=/app/nohorny-native/build/cmake \
-    gradle :nohorny-native:cmakeBuild --no-daemon --stacktrace \
-    && cp -r nohorny-native/build/generated/native /natives
-
-
-FROM scratch AS natives-prebuilt
-
-ARG PREBUILT_NATIVES
-COPY ${PREBUILT_NATIVES}/ /natives/
-
-
-# Only the selected stage is built
-FROM natives-${NATIVES_STAGE:-compile} AS natives
+RUN mkdir nohorny-common nohorny-plugin nohorny-frontend nohorny-server
 
 
 FROM ghcr.io/pnpm/pnpm:12.14.0@sha256:71202ae73719148f6b6e129ca1e9fa3ceabbc9a037dc34800715606f2b5290a1 AS frontend
@@ -87,14 +53,13 @@ FROM gradle AS build
 
 ARG IS_RELEASE=false
 
-ENV GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_natives=prebuilt-natives -Pprebuilt_frontend=prebuilt-frontend"
+ENV GRADLE_ARGS="-Pis_release=${IS_RELEASE} -Pprebuilt_frontend=prebuilt-frontend"
 
 RUN --mount=type=cache,target=/cache/.gradle \
     gradle dependencies --no-daemon --stacktrace ${GRADLE_ARGS}
 
 COPY nohorny-common/src/ nohorny-common/src/
 COPY nohorny-server/src/ nohorny-server/src/
-COPY --from=natives /natives prebuilt-natives/
 COPY --from=frontend /frontend prebuilt-frontend/
 
 RUN --mount=type=cache,target=/cache/.gradle \

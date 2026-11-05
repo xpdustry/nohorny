@@ -79,7 +79,7 @@ nohorny:
           # Only needed for private or gated Hugging Face models.
           # token: ${HF_TOKEN}
         local:
-          # ONNX model file, see download-and-convert-model.sh to convert a Hugging Face ViT model.
+          # Local ONNX model file.
           path: my_model.onnx
       # Labels returned by the model, in the same order as its output probabilities.
       labels:

@@ -13,7 +13,6 @@ import net.kyori.indra.git.task.RequireClean
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.springframework.boot.gradle.tasks.run.BootRun
-import java.util.Locale
 import javax.inject.Inject
 
 plugins {
@@ -59,8 +58,8 @@ configure<SpotlessExtension> {
     }
 }
 
-// nohorny-native is a CMake project and nohorny-frontend is a pnpm project
-configure(subprojects - project(":nohorny-native") - project(":nohorny-frontend")) {
+// nohorny-frontend is a pnpm project
+configure(subprojects - project(":nohorny-frontend")) {
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "net.kyori.indra")
     apply(plugin = "net.ltgt.errorprone")
@@ -269,96 +268,12 @@ project(":nohorny-plugin") {
     }
 }
 
-abstract class CMakeBuild : DefaultTask() {
-    @get:Inject
-    abstract val exec: ExecOperations
-
-    @get:Inject
-    abstract val fs: FileSystemOperations
-
-    @get:Internal
-    abstract val sourceDirectory: DirectoryProperty
-
+class ViTModelArgument(
     @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val sources: ConfigurableFileCollection
-
-    @get:Input
-    abstract val buildType: Property<String>
-
-    @get:Input
-    abstract val platform: Property<String>
-
-    // Kept between builds, OpenCV takes a while to compile
-    @get:Internal
-    abstract val buildDirectory: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
-
-    @TaskAction
-    fun build() {
-        // CMake relinks the library if it is missing, so it does not leave stale files behind
-        fs.delete { delete(outputDirectory) }
-        // Bundled as a resource next to the NoHornyNative class of the server
-        val output = outputDirectory.get().dir("com/xpdustry/nohorny/server/natives/${platform.get()}").asFile
-        exec.exec {
-            commandLine(
-                "cmake",
-                "-S",
-                sourceDirectory.get().asFile,
-                "-B",
-                buildDirectory.get().asFile,
-                "-DCMAKE_BUILD_TYPE=${buildType.get()}",
-                "-DNOHORNY_OUTPUT_DIRECTORY=$output",
-            )
-        }
-        // Without a job count, the Makefile generator spawns as many jobs as there are sources
-        val jobs = Runtime.getRuntime().availableProcessors()
-        exec.exec {
-            commandLine(
-                "cmake",
-                "--build",
-                buildDirectory.get().asFile,
-                "--config",
-                buildType.get(),
-                "--parallel",
-                jobs,
-            )
-        }
-    }
-}
-
-project(":nohorny-native") {
-    apply(plugin = "base")
-
-    // Must match the platform naming of NoHornyNative
-    val os = System.getProperty("os.name").lowercase(Locale.ROOT)
-    val arch = System.getProperty("os.arch").lowercase(Locale.ROOT)
-    val platformOs =
-        when {
-            "win" in os -> "windows"
-            "mac" in os -> "macos"
-            else -> "linux"
-        }
-    val platformArch = if (arch == "amd64" || arch == "x86_64") "x86_64" else arch
-    val platform = "$platformOs-$platformArch"
-
-    val cmakeBuild = tasks.register<CMakeBuild>("cmakeBuild") {
-        description = "Compile the native library with CMake."
-        sourceDirectory = layout.projectDirectory
-        sources.from("CMakeLists.txt", "cmake", "src")
-        buildType = "Release"
-        this.platform = platform
-        buildDirectory = layout.buildDirectory.dir("cmake")
-        outputDirectory = layout.buildDirectory.dir("generated/native")
-    }
-
-    configurations.register("natives") {
-        isCanBeConsumed = true
-        isCanBeResolved = false
-        outgoing.artifact(cmakeBuild.flatMap { it.outputDirectory })
-    }
+    @get:PathSensitive(PathSensitivity.NONE)
+    val model: FileCollection,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dnohorny.test.vit-model=${model.singleFile.absolutePath}")
 }
 
 abstract class Jmh : JavaExec() {
@@ -487,9 +402,23 @@ project(":nohorny-server") {
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")
 
+    repositories {
+        maven("https://maven.xpdustry.com/releases") {
+            content { includeGroup("com.xpdustry") }
+        }
+        // Lets Gradle download and cache the ViT model of the tests like any other dependency
+        ivy("https://huggingface.co") {
+            name = "huggingface"
+            patternLayout { artifact("[organisation]/[module]/resolve/[revision]/onnx/[artifact].[ext]") }
+            metadataSources { artifact() }
+            content { includeGroup("onnx-community") }
+        }
+    }
+
     dependencies {
         "api"(project(":nohorny-common"))
 
+        "implementation"("com.xpdustry:nohorny-natives:0.1.0")
         "implementation"("org.springframework.boot:spring-boot-starter-webmvc")
         "implementation"("org.springframework.boot:spring-boot-starter-validation")
         "implementation"("org.springframework.boot:spring-boot-starter-security")
@@ -507,18 +436,25 @@ project(":nohorny-server") {
         "developmentOnly"("org.springframework.boot:spring-boot-devtools")
     }
 
-    // The natives are bundled as resources, either compiled here by nohorny-native
-    //   or taken from -Pprebuilt_natives=<dir> which CI fills with the natives of every platform
-    val natives = configurations.register("natives") {
+    // The half precision variant of the default model in application.yaml, for a smaller download
+    val vitModel = configurations.register("vitModel") {
         isCanBeConsumed = false
         isCanBeResolved = true
     }
     dependencies {
-        "natives"(project(path = ":nohorny-native", configuration = "natives"))
+        "vitModel"("onnx-community:nsfw_image_detection-ONNX:1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5") {
+            artifact {
+                name = "model_fp16"
+                type = "onnx"
+                extension = "onnx"
+            }
+        }
     }
-    val prebuilt = providers.gradleProperty("prebuilt_natives").map { rootProject.file(it) }
-    val main = the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME]
-    main.resources.srcDir(if (prebuilt.isPresent) prebuilt else natives)
+
+    tasks.withType<Test> {
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+        jvmArgumentProviders.add(ViTModelArgument(vitModel.get()))
+    }
 
     // The pages are bundled as resources, either built here by nohorny-frontend
     //   or taken from -Pprebuilt_frontend=<dir> with a static/ directory. The Docker build passes the latter
@@ -530,6 +466,7 @@ project(":nohorny-server") {
         "frontend"(project(path = ":nohorny-frontend", configuration = "frontend"))
     }
     val prebuiltFrontend = providers.gradleProperty("prebuilt_frontend").map { rootProject.file(it) }
+    val main = the<SourceSetContainer>()[SourceSet.MAIN_SOURCE_SET_NAME]
     main.resources.srcDir(if (prebuiltFrontend.isPresent) prebuiltFrontend else frontend)
 
     tasks.named<Jar>(JavaPlugin.JAR_TASK_NAME) {
