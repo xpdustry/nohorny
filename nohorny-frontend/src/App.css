@@ -15,6 +15,8 @@
 :root {
   color-scheme: dark;
   --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The size of the slider thumb. The stops under a slider sit half of it inside the ends of the track. */
+  --range-thumb: 1.125rem;
   --brand: #ff7ad9;
   --brand-deep: #c24e9b;
   --bg: oklch(0.18 0.012 340);
@@ -276,10 +278,10 @@
     background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-3) var(--fill));
   }
   &::-webkit-slider-thumb {
-    @apply -mt-1.5 size-[1.125rem] appearance-none rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+    @apply -mt-1.5 size-(--range-thumb) appearance-none rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
   }
   &::-moz-range-thumb {
-    @apply size-[1.125rem] rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
+    @apply size-(--range-thumb) rounded-full border-2 border-bg bg-ink shadow-float transition-[scale] duration-150;
   }
   &:active::-webkit-slider-thumb {
     scale: 1.15;
@@ -402,6 +404,11 @@
   .steps > li {
     animation: relay var(--loop) var(--d, 0s) var(--ease-snap) infinite;
   }
+  [data-step="watch"] {
+    --columns: 12;
+    /* How long the line takes to cross the art, the scan keyframes end at 18% of the loop */
+    --sweep: calc(var(--loop) * 0.18);
+  }
   [data-step="watch"] .scan {
     animation: scan var(--loop) linear infinite;
   }
@@ -409,8 +416,8 @@
     animation: scan-line var(--loop) infinite;
   }
   [data-step="watch"] .lit {
-    /* As the line crosses the middle of the column, 1.44 s over the 12 columns */
-    animation: spot var(--loop) calc(0.06s + var(--x) * 0.12s) ease-out infinite;
+    /* As the line crosses the middle of the column */
+    animation: spot var(--loop) calc(var(--sweep) / var(--columns) * (var(--x) + 0.5)) ease-out infinite;
   }
   [data-step="render"] .pixels {
     animation: develop var(--loop) var(--d) infinite;

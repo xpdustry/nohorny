@@ -5,8 +5,14 @@ import { RATING_FILL, RatingDot } from './ui';
 
 const TICKS = 4;
 
+/** The most labels along the time axis. */
+const MAX_LABELS = 8;
+
+/** 1.5rem wide, narrower when the slots are packed, and half the slot when they are few, like the 7 days. */
+const BAR_WIDTH = 'max(50%, min(85%, 1.5rem))';
+
 /** Rounds the top of the axis, so the ticks read 0, 5, 10, 15 rather than 0, 4.25, 8.5. */
-function niceMax(max: number): number {
+function roundUpToTickStep(max: number): number {
   if (max <= TICKS) return TICKS;
   const step = max / TICKS;
   const magnitude = 10 ** Math.floor(Math.log10(step));
@@ -24,11 +30,11 @@ function slotLabel(start: string, slot: History['slot']): string {
 
 const SLOT_MILLIS = { hour: 3_600_000, day: 86_400_000 };
 
-/** `onSelect` receives the bounds of a clicked slot, in milliseconds, the end excluded. */
+/** `onSelect` receives the bounds of a clicked slot, the end excluded. */
 export function ActivityChart(props: {
   history: History;
   shown: Record<Bucket, boolean>;
-  onSelect?: (from: number, to: number) => void;
+  onSelect?: (range: { fromMillis: number; toMillis: number }) => void;
 }) {
   const [hovered, setHovered] = createSignal<number | null>(null);
   const visible = createMemo(() => BUCKETS.filter((key) => props.shown[key]));
@@ -41,15 +47,14 @@ export function ActivityChart(props: {
       return { slot, parts, total: parts.reduce((sum, part) => sum + part.count, 0) };
     }),
   );
-  const max = createMemo(() => niceMax(Math.max(0, ...bars().map((bar) => bar.total))));
+  const max = createMemo(() => roundUpToTickStep(Math.max(0, ...bars().map((bar) => bar.total))));
   const ticks = createMemo(() =>
     Array.from({ length: TICKS + 1 }, (_, index) => ({
       value: (max() / TICKS) * (TICKS - index),
       at: (index / TICKS) * 100,
     })),
   );
-  // At most 8 labels along the axis
-  const labelEvery = () => Math.ceil(props.history.slots.length / 8);
+  const labelEvery = () => Math.ceil(props.history.slots.length / MAX_LABELS);
 
   return (
     <div class="relative flex gap-3" aria-hidden="true">
@@ -82,14 +87,13 @@ export function ActivityChart(props: {
                   // A tap selects the slot without leaving a tooltip behind
                   onPointerEnter={(event) => event.pointerType === 'mouse' && setHovered(index())}
                   onClick={() => {
-                    const from = Date.parse(bar().slot.start);
-                    props.onSelect?.(from, from + SLOT_MILLIS[props.history.slot]);
+                    const fromMillis = Date.parse(bar().slot.start);
+                    props.onSelect?.({ fromMillis, toMillis: fromMillis + SLOT_MILLIS[props.history.slot] });
                   }}>
-                  {/* 1.5rem wide, narrower when the slots are packed, and half the slot when they are few, like the 7 days */}
                   <Show when={bar().total > 0}>
                     <div
                       class="flex flex-col-reverse self-center overflow-hidden rounded-t-[4px]"
-                      style={{ height: `${(bar().total / max()) * 100}%`, width: 'max(50%, min(85%, 1.5rem))' }}>
+                      style={{ height: `${(bar().total / max()) * 100}%`, width: BAR_WIDTH }}>
                       {/* At least 4px of colour per segment, so a handful of failures among hundreds still shows */}
                       <For each={bar().parts} keyed={(part) => part.key}>
                         {(part) => (

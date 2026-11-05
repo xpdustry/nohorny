@@ -6,12 +6,13 @@ import { createLiveStats, type LiveStats } from './stats';
 export interface Admin {
   stats: LiveStats;
   /** Outcome of the last action, shown as a dismissable notice at the bottom of the screen. */
-  status: () => Status | null;
-  /** Shows the outcome of an action. Pass null to clear it. */
-  notify: (text: string | null, tone?: Status['tone']) => void;
+  notice: () => Notice | null;
+  /** Shows the outcome of an action. */
+  notify: (text: string, tone?: Notice['tone']) => void;
+  dismiss: () => void;
 }
 
-export interface Status {
+export interface Notice {
   tone: 'success' | 'error';
   text: string;
 }
@@ -21,15 +22,20 @@ export const AdminContext = createContext<Admin>();
 const SUCCESS_MILLIS = 6000;
 
 export function createAdmin(): Admin {
-  const [status, setStatus] = createSignal<Status | null>(null);
+  const [notice, setNotice] = createSignal<Notice | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const dismiss = () => {
+    clearTimeout(timer);
+    setNotice(null);
+  };
   return {
     stats: createLiveStats(60, () => call<Stats>('/api/stats')),
-    status,
+    notice,
     notify: (text, tone = 'success') => {
-      clearTimeout(timer);
-      setStatus(text === null ? null : { tone, text });
-      if (text !== null && tone === 'success') timer = setTimeout(() => setStatus(null), SUCCESS_MILLIS);
+      dismiss();
+      setNotice({ tone, text });
+      if (tone === 'success') timer = setTimeout(dismiss, SUCCESS_MILLIS);
     },
+    dismiss,
   };
 }

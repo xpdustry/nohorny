@@ -3,18 +3,19 @@
 
 import { onSettled } from 'solid-js';
 
-/** The gap between the element and its tooltip, and the closest the tooltip comes to the edges of the window. */
-const GAP = 6;
+/** The gap between the element and its tooltip. */
+const ANCHOR_GAP = 6;
 
-/** How long the tooltip fades out before leaving the top layer, in milliseconds. Matches the transition of App.css. */
-const FADE_MILLIS = 120;
+/** The closest the tooltip comes to the edges of the window. */
+const EDGE_MARGIN = 6;
 
 export function TooltipHost() {
   let tip!: HTMLDivElement;
   let target: HTMLElement | null = null;
   // Created once mounted, the page is also rendered on the server
   let observer: MutationObserver | undefined;
-  let closing: ReturnType<typeof setTimeout> | undefined;
+  // Identifies the last fade out, a newer show or hide cancels the leaving of the older ones
+  let fade = 0;
 
   function place() {
     if (target === null) return;
@@ -24,12 +25,12 @@ export function TooltipHost() {
     const anchor = target.getBoundingClientRect();
     const { width, height } = tip.getBoundingClientRect();
     const left = Math.min(
-      Math.max(GAP, anchor.left + anchor.width / 2 - width / 2),
-      document.documentElement.clientWidth - width - GAP,
+      Math.max(EDGE_MARGIN, anchor.left + anchor.width / 2 - width / 2),
+      document.documentElement.clientWidth - width - EDGE_MARGIN,
     );
-    const above = anchor.top - height - GAP;
+    const above = anchor.top - height - ANCHOR_GAP;
     tip.style.left = `${left}px`;
-    tip.style.top = `${above >= GAP ? above : anchor.bottom + GAP}px`;
+    tip.style.top = `${above >= EDGE_MARGIN ? above : anchor.bottom + ANCHOR_GAP}px`;
   }
 
   function show(element: HTMLElement) {
@@ -39,7 +40,7 @@ export function TooltipHost() {
     // Read out as a description, unless it repeats the label of an icon button
     if (element.dataset.tooltip !== element.getAttribute('aria-label'))
       element.setAttribute('aria-describedby', tip.id);
-    clearTimeout(closing);
+    fade++;
     if (!tip.matches(':popover-open')) tip.showPopover();
     tip.dataset.open = '';
     place();
@@ -52,7 +53,11 @@ export function TooltipHost() {
     target = null;
     // Faded out here rather than in CSS, Firefox does not animate a popover leaving the top layer
     delete tip.dataset.open;
-    closing = setTimeout(() => tip.hidePopover(), FADE_MILLIS);
+    const leaving = ++fade;
+    // The animations are known once the style is recalculated, which getAnimations() forces
+    Promise.allSettled(tip.getAnimations().map((animation) => animation.finished)).then(() => {
+      if (leaving === fade) tip.hidePopover();
+    });
   }
 
   const owner = (node: EventTarget | null) => {
@@ -87,7 +92,7 @@ export function TooltipHost() {
     window.addEventListener('resize', hide);
     return () => {
       hide();
-      clearTimeout(closing);
+      fade++;
       document.removeEventListener('pointerover', over);
       document.removeEventListener('pointerout', out);
       document.removeEventListener('focusin', focus);

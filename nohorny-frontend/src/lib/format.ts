@@ -100,17 +100,17 @@ export function requesterLabel(requester: Requester): string {
 
 export interface ClassifierInfo {
   /** The kind of classifier, 'vit' or 'sight-engine'. */
-  label: string;
-  /** The model on two lines, its name then where it comes from. Absent without a model. */
-  details?: string;
+  kind: string;
+  /** Absent without a model. */
+  model?: { name: string; origin: string };
   href?: string;
 }
 
 function sightEngineInfo(model: string): ClassifierInfo {
   const nudity = /^nudity-(\d+\.\d+)$/.exec(model);
   return {
-    label: 'sight-engine',
-    details: `${model}\nSightEngine API`,
+    kind: 'sight-engine',
+    model: { name: model, origin: 'SightEngine API' },
     href: nudity ? `https://sightengine.com/docs/advanced-nudity-detection-model-${nudity[1]}` : undefined,
   };
 }
@@ -121,11 +121,12 @@ function sightEngineInfo(model: string): ClassifierInfo {
  */
 export function classifierInfo(id: string): ClassifierInfo {
   const slash = id.indexOf('/');
-  if (slash === -1) return { label: id };
-  const label = id.slice(0, slash);
+  if (slash === -1) return { kind: id };
+  const kind = id.slice(0, slash);
   const source = id.slice(slash + 1);
-  if (label === 'sight-engine') return sightEngineInfo(source);
-  if (source.startsWith('local/')) return { label, details: `${source.slice('local/'.length)}\nLocal model` };
+  if (kind === 'sight-engine') return sightEngineInfo(source);
+  if (source.startsWith('local/'))
+    return { kind, model: { name: source.slice('local/'.length), origin: 'Local model' } };
   const colon = source.lastIndexOf(':');
   const repository = colon === -1 ? source : source.slice(0, colon);
   const revision = colon === -1 ? null : source.slice(colon + 1);
@@ -134,8 +135,8 @@ export function classifierInfo(id: string): ClassifierInfo {
   const origin = [split === -1 ? 'Hugging Face' : `by ${repository.slice(0, split)}`];
   if (revision) origin.push(revision.slice(0, 7));
   return {
-    label,
-    details: `${name}\n${origin.join(' · ')}`,
+    kind,
+    model: { name, origin: origin.join(' · ') },
     href: `https://huggingface.co/${repository}${revision ? `/tree/${revision}` : ''}`,
   };
 }
