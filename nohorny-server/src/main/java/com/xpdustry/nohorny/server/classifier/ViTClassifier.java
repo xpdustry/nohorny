@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.classifier;
 
-import com.xpdustry.nohorny.server.natives.NativeClassifier;
+import com.xpdustry.nohorny.natives.NativeClassifier;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.awt.image.BufferedImage;

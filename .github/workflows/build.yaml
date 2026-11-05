@@ -112,42 +112,9 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: "${{ secrets.XPDUSTRY_MAVEN_SIGNING_KEY }}"
           ORG_GRADLE_PROJECT_signingPassword: "${{ secrets.XPDUSTRY_MAVEN_SIGNING_PASSWORD }}"
 
-  # Only Linux jobs touch the natives cache, so the native runners only start when it misses
-  natives-plan:
-    name: "Natives Plan"
-    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      key: ${{ steps.lookup.outputs.key }}
-      cached: ${{ steps.lookup.outputs.cached }}
-    steps:
-
-      - name: "Checkout Repository"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: "Lookup Natives"
-        id: lookup
-        uses: ./.github/actions/natives-lookup
-
-  # A reusable workflow, since a skipped matrix job shows its name with the matrix expressions unexpanded
-  natives:
-    name: "Natives"
-    needs: natives-plan
-    if: ${{ needs.natives-plan.outputs.cached != 'true' }}
-    uses: ./.github/workflows/natives.yaml
-    with:
-      key: ${{ needs.natives-plan.outputs.key }}
-    permissions:
-      contents: read
-
   server:
     name: "Server"
-    needs: [ natives-plan, natives ]
-    # The natives job is skipped when the natives are cached, which would skip this one too
-    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name) }}
+    if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -182,16 +149,8 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: "nohorny-frontend/pnpm-lock.yaml"
 
-      # The natives of every platform are bundled in the server jar
-      - name: "Restore Natives"
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: prebuilt-natives
-          key: ${{ needs.natives-plan.outputs.key }}
-          fail-on-cache-miss: true
-
       - name: "Build Server"
-        run: ./gradlew :nohorny-frontend:check :nohorny-server:build -Pprebuilt_natives=prebuilt-natives
+        run: ./gradlew :nohorny-frontend:check :nohorny-server:build
 
       - name: "Upload Server Jar"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -212,9 +171,8 @@ jobs:
 
   docker:
     name: "Docker"
-    needs: [ natives-plan, server ]
-    # The natives job is skipped when the natives are cached, which would skip this one too
-    if: ${{ !cancelled() && !failure() && (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
+    needs: server
+    if: ${{ (github.event_name == 'release' || (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'))) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -227,16 +185,6 @@ jobs:
 
       - name: "Checkout Repository"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: "Restore Natives"
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: prebuilt-natives
-          key: ${{ needs.natives-plan.outputs.key }}
-          fail-on-cache-miss: true
-
-      - name: "Keep Linux x86_64 Natives"
-        run: find prebuilt-natives/com/xpdustry/nohorny/server/natives -mindepth 1 -maxdepth 1 ! -name linux-x86_64 -exec rm -rf {} +
 
       - name: "Setup Docker Builder"
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -271,13 +219,11 @@ jobs:
           labels: "${{ steps.meta.outputs.labels }}"
           build-args: |
             IS_RELEASE=${{ github.event_name == 'release' }}
-            PREBUILT_NATIVES=prebuilt-natives
 
   post-release:
     name: "Post Release"
     needs: [ plugin, server ]
-    # The natives job is skipped when the natives are cached, which would skip this one too
-    if: ${{ !cancelled() && !failure() && github.event_name == 'release' }}
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

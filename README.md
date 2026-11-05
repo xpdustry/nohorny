@@ -147,7 +147,6 @@ The code is split into these modules:
 | [`nohorny-plugin`](nohorny-plugin) | Track buildings, render art, call the API, and moderate the game. |
 | [`nohorny-common`](nohorny-common) | Shared image types, geometry, and API response types. |
 | [`nohorny-server`](nohorny-server) | Classification API, accounts, rate limits, storage, and request history. |
-| [`nohorny-native`](nohorny-native) | Run ONNX models with OpenCV, called through Java's Foreign Function and Memory API. |
 | [`nohorny-frontend`](nohorny-frontend) | Solid 2 and Tailwind CSS app for statistics, request pages, and the admin panel. |
 
 For the tracking code, start with [`NoHornyEventBus`](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/NoHornyEventBus.java) and [`GroupCollector`](nohorny-plugin/src/main/java/com/xpdustry/nohorny/client/GroupCollector.java).
@@ -312,7 +311,7 @@ Keep the default `none` if clients connect directly.
 ### Build and run locally
 
 Use a JDK 25 or later.
-**The plugin build needs only the JDK.** To build the server, also install Node.js 22.12 or later, [pnpm 12](https://pnpm.io), CMake, and a C++20 compiler.
+**The plugin build needs only the JDK.** To build the server, also install Node.js 22.12 or later and [pnpm 12](https://pnpm.io).
 
 Run these commands from the repository root:
 
@@ -321,12 +320,11 @@ Run these commands from the repository root:
 | Build the plugin | `./gradlew :nohorny-plugin:shadowJar` | `nohorny-plugin/build/libs/nohorny-plugin.jar` |
 | Build the server | `./gradlew :nohorny-server:bootJar` | `nohorny-server/build/libs/nohorny-server.jar` |
 | Run Mindustry with the plugin | `./gradlew :nohorny-plugin:runMindustryServer` | Local sandbox server. |
-| Build the native classifier | `./gradlew :nohorny-native:cmakeBuild` | Native OpenCV library for your platform. |
 | Check the frontend | `./gradlew :nohorny-frontend:check` | Type and lint checks. |
 | Format Java and Gradle files | `./gradlew spotlessApply` | Formatted code and license headers. |
 
-The server build compiles and bundles the native classifier and frontend.
-The first native build takes longer because it also compiles OpenCV.
+The server build bundles the frontend.
+The image classifier comes prebuilt from [nohorny-natives](https://github.com/xpdustry/nohorny-natives).
 Run the resulting server JAR with `java -jar nohorny-server/build/libs/nohorny-server.jar`.
 
 For frontend work, start the Java server at `127.0.0.1:8080`, then run:
@@ -341,7 +339,7 @@ Vite proxies API and login requests to the Java server.
 Set `NOHORNY_BACKEND` to use a different backend address.
 
 To build the Docker image locally, run `docker build -t nohorny-server .`.
-The build handles Java, native libraries, and the frontend in separate stages.
+The build handles Java and the frontend in separate stages.
 
 ### Integrate another Mindustry plugin
 
