@@ -233,12 +233,25 @@
   @apply mx-auto w-full max-w-6xl px-4 sm:px-8;
 }
 
-/* An overscroll pulls the page past its edge, the tint carries on past the bar so the gap reads as more of the bar
-   instead of the bare page. A shadow, as it paints past the page without growing its scrollable area */
 @utility bar-top {
-  @apply border-line border-b bg-bg/70 backdrop-blur-lg;
-  box-shadow: 0 -50lvh 0 50lvh --alpha(var(--color-bg) / 70%);
+  @apply border-line border-b;
+
+  &::before {
+    @apply pointer-events-none absolute bg-bg/70 backdrop-blur-lg;
+    content: "";
+    /* Overflow above the page adds no scroll space. */
+    inset: -50lvh 0 0;
+    z-index: -1;
+  }
+
+  /* Keep the viewport edge filtered during bounce; h-16 matches the header row. */
+  &::after {
+    @apply pointer-events-none fixed inset-x-0 top-0 h-16 backdrop-blur-lg;
+    content: "";
+    z-index: -1;
+  }
 }
+/* The footer shadow extends tint without adding scroll space. */
 @utility bar-bottom {
   @apply border-line border-t bg-bg/70 backdrop-blur-lg;
   box-shadow: 0 50lvh 0 50lvh --alpha(var(--color-bg) / 70%);
