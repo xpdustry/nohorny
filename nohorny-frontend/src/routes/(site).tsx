@@ -52,7 +52,7 @@ export default function SiteLayout(props: RouteSectionProps) {
         {props.children}
       </main>
 
-      <footer class="bar-bottom mt-24">
+      <footer class="bar-bottom sticky mt-24">
         <div class="wrap flex flex-wrap items-center gap-x-6 gap-y-3 py-8 text-sm">
           <Brand />
           <nav aria-label="Footer" class="flex flex-wrap gap-4 text-ink-2 [&_a:hover]:text-ink">
