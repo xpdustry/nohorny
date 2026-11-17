@@ -1,4 +1,4 @@
-import type { RouteSectionProps } from '@solidjs/router';
+import { type RouteSectionProps, useIsRouting } from '@solidjs/router';
 import xpdustryLogo from '../assets/xpdustry.svg';
 import { ArrowUpIcon, CircleUserRoundIcon, DiscordIcon, GitHubIcon } from '../components/icon';
 import { Brand, buttonClass } from '../components/ui';
@@ -11,6 +11,7 @@ const NAV_LINK =
 const YEAR = new Date().getFullYear();
 
 export default function SiteLayout(props: RouteSectionProps) {
+  const routing = useIsRouting();
   return (
     <div class="flex min-h-dvh flex-col">
       <a
@@ -19,6 +20,8 @@ export default function SiteLayout(props: RouteSectionProps) {
         Skip to content
       </a>
       <header class="bar-top sticky top-0 z-40">
+        {/* The previous page stays until the next one is ready, the bar tells that the click was heard */}
+        <span aria-hidden="true" class={['progress-bar', { active: routing() }]} />
         <div class="wrap flex h-16 items-center gap-1">
           <Brand />
           <nav aria-label="Main" class="ml-4 hidden items-center gap-1 sm:flex">
