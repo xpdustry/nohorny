@@ -6,6 +6,7 @@ import {
   type Request,
   type Requester as RequesterData,
   type RequesterType,
+  type Step,
 } from '../lib/api';
 import { bucket, classifierInfo, duration, formatTime, percent, shortId, stepBucket } from '../lib/format';
 import { EXTERNAL } from '../lib/links';
@@ -21,18 +22,7 @@ import {
   UserIcon,
   XIcon,
 } from './icon';
-import {
-  Button,
-  Chip,
-  Meter,
-  RATING_TEXT,
-  RatingBadge,
-  Spinner,
-  State,
-  Timeline,
-  TimelineDot,
-  TimelineItem,
-} from './ui';
+import { Button, Meter, RATING_TEXT, Spinner, State, Timeline, TimelineDot, TimelineItem } from './ui';
 
 const PLACEHOLDERS = {
   none: 'No image kept',
@@ -124,7 +114,7 @@ export function RequestImage(props: {
                 <b class="font-normal text-lg">
                   {rating() === 'failed' ? 'Not classified' : `Flagged as ${props.request.rating}`}
                 </b>
-                <span class="label text-ink-2">Click to reveal</span>
+                <span class="text-ink-2 text-sm">Click to reveal</span>
               </button>
             </Show>
           </>
@@ -134,91 +124,103 @@ export function RequestImage(props: {
   );
 }
 
-export function Card(props: { title: string; children: JSX.Element; class?: string }) {
+function Card(props: { label: string; children: JSX.Element }) {
   return (
-    <section class={['card flex flex-col gap-4 p-6', props.class]}>
-      <h2 class="label">{props.title}</h2>
+    <section aria-label={props.label} class="card flex min-w-0 flex-col gap-4 p-5 sm:p-6">
       {props.children}
     </section>
   );
 }
 
-export function VerdictCard(props: { request: Request }) {
-  const rating = () => bucket(props.request);
+interface Path {
+  steps: Step[];
+  /** The step whose verdict the request kept, or the one that failed it. */
+  picked: number;
+}
+
+/**
+ * The chain escalates while the verdicts are NSFW. A failing step ends it: the request keeps the verdict before it, and
+ * fails without one. Older requests have no steps, the request itself stands in for its single step.
+ */
+function pathOf(request: Request): Path {
+  if (request.steps.length === 0) {
+    const step = {
+      classifier: request.classifier ?? 'unknown',
+      rating: request.successful ? request.rating : null,
+      confidence: request.confidence,
+      durationMillis: request.durationMillis,
+      error: request.error ?? undefined,
+    };
+    return { steps: [step], picked: 0 };
+  }
+  const picked = request.successful
+    ? request.steps.findLastIndex((step) => step.rating && step.classifier === request.classifier)
+    : request.steps.length - 1;
+  return { steps: request.steps, picked: Math.max(picked, 0) };
+}
+
+/** The path through the chain, its picked step grown into the verdict. */
+export function ClassificationCard(props: { request: Request }) {
+  const path = () => pathOf(props.request);
+  const kept = () => path().picked < path().steps.length - 1;
   return (
-    <Card title="Verdict">
-      <p class={['text-6xl', RATING_TEXT[rating()]]}>{rating() === 'failed' ? 'FAILED' : props.request.rating}</p>
-      <Show when={props.request.confidence != null}>
-        <div class="flex items-center gap-3 text-sm">
-          <Meter value={props.request.confidence ?? 0} rating={rating()} class="flex-1" />
-          <span class="text-ink-2">
-            NSFW score <b class="font-mono font-normal text-ink">{percent(props.request.confidence)}</b>
-          </span>
-        </div>
-      </Show>
-      {/* The classifier chain names the deciding step, this only shows for a request recorded without its steps */}
-      <Show when={props.request.steps.length === 0 && props.request.classifier}>
-        <p class="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-ink-2 text-sm">
-          {rating() === 'failed' ? 'Failed in' : 'Decided by'} <Classifier id={props.request.classifier ?? ''} />
-          <Show when={props.request.error}>
-            {(error) => (
-              <>
-                with <FailureTrace details={error()} />
-              </>
-            )}
-          </Show>
+    <Card label="Classification">
+      <Timeline>
+        <For each={path().steps}>
+          {(step, index) => {
+            const rating = () => stepBucket(step);
+            const picked = () => index() === path().picked;
+            return (
+              <TimelineItem marker={<TimelineDot rating={rating()} emphasized={picked()} />}>
+                <div class="flex min-h-6 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <Classifier id={step.classifier} class="wrap-anywhere" />
+                  <Show when={!picked()}>
+                    <span class={RATING_TEXT[rating()]}>{step.rating ?? 'Failed'}</span>
+                  </Show>
+                  <span class="ms-auto flex gap-3 font-mono text-xs tabular-nums">
+                    <Show when={!picked() && step.confidence != null}>
+                      <span class="text-ink-2">{percent(step.confidence)}</span>
+                    </Show>
+                    <span class="text-ink-3">{duration(step.durationMillis)}</span>
+                  </span>
+                </div>
+                <Show when={picked()}>
+                  <Verdict request={props.request} class="pt-1 pb-2" />
+                </Show>
+                <Show when={step.error}>{(error) => <FailureTrace details={error()} />}</Show>
+              </TimelineItem>
+            );
+          }}
+        </For>
+      </Timeline>
+      <Show when={kept()}>
+        <p class="ps-9 text-ink-3 text-sm">
+          The chain stopped at the failure, the verdict of <Classifier id={path().steps[path().picked].classifier} />{' '}
+          stands.
         </p>
       </Show>
     </Card>
   );
 }
 
-export function ChainCard(props: { request: Request }) {
+function Verdict(props: { request: Request; class?: string }) {
+  const rating = () => bucket(props.request);
   return (
-    <Show when={props.request.steps.length > 0}>
-      <Card title="Classifier chain">
-        <ClassifierTimeline request={props.request} />
-      </Card>
-    </Show>
-  );
-}
-
-/** An NSFW verdict escalates to the next classifier. */
-export function ClassifierTimeline(props: { request: Request }) {
-  // The verdict comes from the last step of its classifier with a rating, a failed request has none
-  const decided = () =>
-    props.request.successful
-      ? props.request.steps.findLastIndex((step) => step.rating && step.classifier === props.request.classifier)
-      : -1;
-  return (
-    <Timeline>
-      <For each={props.request.steps}>
-        {(step, index) => {
-          const rating = () => stepBucket(step);
-          return (
-            <TimelineItem marker={<TimelineDot rating={rating()} emphasized={index() === decided()} />}>
-              <div class="flex min-h-6 items-center justify-between gap-3">
-                <span class="flex min-w-0 items-center gap-2">
-                  <Classifier id={step.classifier} class="truncate text-sm" />
-                  <Show when={index() === decided()}>
-                    <Chip>final</Chip>
-                  </Show>
-                </span>
-                <span class="shrink-0 font-mono text-ink-3 text-xs">{duration(step.durationMillis)}</span>
-              </div>
-              <div class="flex min-w-0 items-center gap-3 text-sm">
-                <RatingBadge rating={rating()} label={step.rating ?? 'Error'} />
-                <Show when={step.confidence != null}>
-                  <Meter value={step.confidence ?? 0} rating={rating()} class="max-w-40 flex-1" />
-                  <b class="font-mono font-normal text-ink">{percent(step.confidence)}</b>
-                </Show>
-                <Show when={step.error}>{(error) => <FailureTrace details={error()} />}</Show>
-              </div>
-            </TimelineItem>
-          );
-        }}
-      </For>
-    </Timeline>
+    <div class={['flex flex-col gap-3', props.class]}>
+      <div class="flex items-end justify-between gap-4">
+        <p class={['text-4xl leading-none sm:text-5xl', RATING_TEXT[rating()]]}>
+          {rating() === 'failed' ? 'Failed' : props.request.rating}
+        </p>
+        <Show when={props.request.confidence != null}>
+          <p class="font-mono text-xl tabular-nums" data-tooltip="NSFW score">
+            {percent(props.request.confidence)}
+          </p>
+        </Show>
+      </div>
+      <Show when={props.request.confidence != null}>
+        <Meter value={props.request.confidence ?? 0} rating={rating()} class="w-full" />
+      </Show>
+    </div>
   );
 }
 
@@ -275,7 +277,7 @@ function FailureTrace(props: { details: FailureDetails }) {
       <button
         type="button"
         data-tooltip="Show the stack trace"
-        class="min-w-0 cursor-pointer truncate font-mono text-danger text-xs underline decoration-dotted underline-offset-2 hover:decoration-solid"
+        class="min-w-0 max-w-full cursor-pointer self-start truncate text-left font-mono text-danger text-xs underline decoration-dotted underline-offset-2 hover:decoration-solid"
         onClick={() => setOpen(true)}>
         {props.details.type}
       </button>
@@ -377,9 +379,12 @@ export function DetailsCard(props: { request: Request }) {
     ['Requester', <Requester requester={props.request.requester} />],
     ['Plugin', <code>{props.request.version ? `v${props.request.version}` : 'unknown'}</code>],
     ['Request ID', <CopyCode text={props.request.id} label="request ID" />],
+    ...(props.request.remoteAddress
+      ? [['Address', <code class="break-all">{props.request.remoteAddress}</code>] as [string, JSX.Element]]
+      : []),
   ];
   return (
-    <Card title="Details">
+    <Card label="Details">
       <KeyValues rows={rows()} />
     </Card>
   );
@@ -390,9 +395,9 @@ export function KeyValues(props: { rows: [string, JSX.Element][] }) {
     <dl class="divide-y divide-line">
       <For each={props.rows} keyed={([key]) => key}>
         {(row) => (
-          <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-4 py-2.5 first:pt-0 last:pb-0 sm:grid-cols-[8rem_minmax(0,1fr)]">
+          <div class="grid grid-cols-[6rem_minmax(0,1fr)] gap-3 py-2.5 first:pt-0 last:pb-0 sm:grid-cols-[8rem_minmax(0,1fr)]">
             <dt class="text-ink-3">{row()[0]}</dt>
-            <dd>{row()[1]}</dd>
+            <dd class="min-w-0">{row()[1]}</dd>
           </div>
         )}
       </For>

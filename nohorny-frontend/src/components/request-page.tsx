@@ -4,17 +4,8 @@ import { runAction } from '../lib/action';
 import { api, apiEmpty, describe, type Request, requestPath, statusOf } from '../lib/api';
 import { relativeTime, shortId } from '../lib/format';
 import { checkSession, isAdmin } from '../lib/session';
-import { ArrowLeftIcon, ListIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
-import {
-  Card,
-  ChainCard,
-  confirmImageDeletion,
-  confirmRequestDeletion,
-  DetailsCard,
-  KeyValues,
-  RequestImage,
-  VerdictCard,
-} from './request';
+import { ArrowLeftIcon, ImageOffIcon, SearchXIcon, TrashIcon, TriangleAlertIcon } from './icon';
+import { ClassificationCard, confirmImageDeletion, confirmRequestDeletion, DetailsCard, RequestImage } from './request';
 import { Button, buttonClass, Notice, State } from './ui';
 
 const CAPTIONS = {
@@ -189,49 +180,43 @@ function RequestView(props: { request: Request; onChange: () => void; onDeleted:
         )}
       </Show>
 
-      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[1.2fr_1fr]">
+      <div class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div class="flex flex-col gap-4">
           <RequestImage request={props.request} revealed={revealed()} onReveal={setRevealed} />
-          <Show
-            when={CAPTIONS[props.request.image.state as keyof typeof CAPTIONS]}
-            fallback={
-              <Show when={props.request.image.state === 'stored'}>
-                <Button variant="danger" class="self-start" busy={busy()} onClick={deleteImage}>
-                  <Show when={!busy()}>
-                    <TrashIcon />
-                  </Show>
-                  Delete image
-                </Button>
-              </Show>
-            }>
-            {(caption) => (
-              <p class="flex items-center gap-2 text-ink-3 text-sm">
-                <TrashIcon />
-                {caption()}
-              </p>
-            )}
-          </Show>
+          <div class="flex flex-wrap items-center gap-2">
+            <Show
+              when={CAPTIONS[props.request.image.state as keyof typeof CAPTIONS]}
+              fallback={
+                <Show when={props.request.image.state === 'stored'}>
+                  <Button variant="danger" busy={busy()} onClick={deleteImage}>
+                    <Show when={!busy()}>
+                      <ImageOffIcon />
+                    </Show>
+                    Delete image
+                  </Button>
+                </Show>
+              }>
+              {(caption) => (
+                <p class="flex flex-1 items-center gap-2 text-ink-3 text-sm">
+                  <ImageOffIcon />
+                  {caption()}
+                </p>
+              )}
+            </Show>
+            <Show when={isAdmin()}>
+              <Button variant="solid-danger" busy={busy()} onClick={remove}>
+                <Show when={!busy()}>
+                  <TrashIcon />
+                </Show>
+                Delete request
+              </Button>
+            </Show>
+          </div>
         </div>
 
         <div class="flex flex-col gap-4">
-          <VerdictCard request={props.request} />
-          <ChainCard request={props.request} />
+          <ClassificationCard request={props.request} />
           <DetailsCard request={props.request} />
-          <Show when={isAdmin()}>
-            <Card title="Moderation · admins only">
-              <KeyValues rows={[['Address', <code class="break-all">{props.request.remoteAddress ?? '–'}</code>]]} />
-              <div class="flex flex-wrap gap-2">
-                <Button variant="danger" busy={busy()} onClick={remove}>
-                  <TrashIcon />
-                  Delete request
-                </Button>
-                <a class={buttonClass()} href="/admin">
-                  <ListIcon />
-                  All requests
-                </a>
-              </div>
-            </Card>
-          </Show>
         </div>
       </div>
     </div>

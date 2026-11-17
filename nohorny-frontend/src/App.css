@@ -271,10 +271,6 @@
   @apply rounded-2xl border border-line bg-surface;
 }
 
-@utility label {
-  @apply font-mono text-[0.68rem] tracking-[0.14em] text-ink-3 uppercase;
-}
-
 @utility field {
   @apply h-10 w-full rounded-xl border border-line-strong bg-bg-2 px-3 text-ink transition-colors placeholder:text-ink-3 focus-visible:outline-offset-1 aria-invalid:border-danger pointer-coarse:h-11;
 }
