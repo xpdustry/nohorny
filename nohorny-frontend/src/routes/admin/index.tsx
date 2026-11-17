@@ -30,15 +30,14 @@ import {
 } from '../../components/icon';
 import { NetworkChart } from '../../components/network-chart';
 import {
-  ClassifierTimeline,
+  ClassificationCard,
   confirmImageDeletion,
   confirmRequestDeletion,
   KeyValues,
   Requester,
   RequestImage,
-  VerdictCard,
 } from '../../components/request';
-import { Button, buttonClass, Chip, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
+import { Button, buttonClass, Meter, RatingBadge, RatingDot, Spinner, State } from '../../components/ui';
 import { VersionChart } from '../../components/version-chart';
 import { runAction } from '../../lib/action';
 import { AdminContext } from '../../lib/admin';
@@ -183,7 +182,7 @@ function Overview(props: { onChartFilter: (filters: ChartFilters) => void }) {
                       draft[key] = !draft[key];
                     })
                   }>
-                  <span class="label flex items-center gap-2">
+                  <span class="flex items-center gap-2 text-ink-2 text-sm">
                     <RatingDot rating={key} hollow={!shown[key]} />
                     {ratingLabel(key)}
                   </span>
@@ -702,7 +701,7 @@ function RequestList(props: { chartFilter: ChartFilters | null }) {
         </label>
         <div class="grid gap-2 max-sm:w-full sm:flex sm:items-center">
           <label class="grid grid-cols-[2.5rem_1fr] items-center gap-2 sm:flex">
-            <span class="label">From</span>
+            <span class="text-ink-3 text-sm">From</span>
             <input
               type="datetime-local"
               class={[FILTER_FIELD, 'w-full cursor-pointer font-sans']}
@@ -713,7 +712,7 @@ function RequestList(props: { chartFilter: ChartFilters | null }) {
             />
           </label>
           <label class="grid grid-cols-[2.5rem_1fr] items-center gap-2 sm:flex">
-            <span class="label">To</span>
+            <span class="text-ink-3 text-sm">To</span>
             <input
               type="datetime-local"
               class={[FILTER_FIELD, 'w-full cursor-pointer font-sans']}
@@ -886,13 +885,7 @@ function RequestList(props: { chartFilter: ChartFilters | null }) {
                   </div>
                 </div>
                 <div class="flex flex-col gap-4">
-                  <VerdictCard request={value().item} />
-                  <Show when={value().item.steps.length > 0}>
-                    <section class="flex flex-col gap-3 px-1 pb-2">
-                      <h3 class="label">Classifier chain</h3>
-                      <ClassifierTimeline request={value().item} />
-                    </section>
-                  </Show>
+                  <ClassificationCard request={value().item} />
                   <section class="px-1">
                     <KeyValues
                       rows={[
@@ -1017,7 +1010,7 @@ function RequestRow(props: {
           <a class="link-quiet font-mono text-sm" href={`/requests/${props.request.id}`}>
             {shortId(props.request.id)}
           </a>
-          <Chip>{props.request.version ? `v${props.request.version}` : 'unknown'}</Chip>
+          <code class="text-ink-3 text-xs">{props.request.version ? `v${props.request.version}` : 'unknown'}</code>
           <Requester requester={props.request.requester} class="text-sm" />
         </span>
         <span class="truncate font-mono text-ink-3 text-xs">{props.request.remoteAddress}</span>

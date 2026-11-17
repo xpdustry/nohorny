@@ -123,15 +123,11 @@ export function RatingDot(props: { rating: Bucket; hollow?: boolean }) {
   );
 }
 
-export function RatingBadge(props: { rating: Bucket; label?: string }) {
+export function RatingBadge(props: { rating: Bucket }) {
   return (
-    <span
-      class={[
-        'inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-0.5 font-mono text-[0.68rem] uppercase tracking-wider',
-        RATING_TEXT[props.rating],
-      ]}>
+    <span class={['inline-flex items-center gap-1.5 text-sm', RATING_TEXT[props.rating]]}>
       <RatingDot rating={props.rating} />
-      {props.label ?? ratingLabel(props.rating)}
+      {ratingLabel(props.rating)}
     </span>
   );
 }
@@ -206,9 +202,7 @@ export function Brand(props: { tag?: string }) {
       <img src={logo} alt="" width="34" height="21" />
       <span>NoHorny</span>
       <Show when={props.tag}>
-        <span class="rounded-full border border-line-strong px-2 py-px font-mono text-[0.6rem] text-ink-2 uppercase tracking-widest">
-          {props.tag}
-        </span>
+        <span class="text-ink-3">{props.tag}</span>
       </Show>
     </a>
   );

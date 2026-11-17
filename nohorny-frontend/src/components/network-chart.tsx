@@ -191,7 +191,7 @@ export function NetworkChart(props: { networks: Networks; onSelect?: (filter: Re
               fallback={
                 <>
                   <b class="font-normal text-3xl">{number(props.networks.total)}</b>
-                  <span class="label">requests</span>
+                  <span class="text-ink-2 text-xs">requests</span>
                 </>
               }>
               {(slice) => (
