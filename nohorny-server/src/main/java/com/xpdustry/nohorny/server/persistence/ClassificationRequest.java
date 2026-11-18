@@ -2,168 +2,52 @@
 package com.xpdustry.nohorny.server.persistence;
 
 import com.xpdustry.nohorny.common.ArtKind;
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OrderColumn;
-import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import org.hibernate.annotations.BatchSize;
 import org.jspecify.annotations.Nullable;
 
-/// The reads run outside of transactions, so the steps are fetched eagerly: one query loads those of a whole page.
-@Entity
-@Table(name = "request")
-public class ClassificationRequest extends AssignedIdEntity<String> {
+/// Stored in `request`, its steps in `request_step`, see [ClassificationRequestRepository].
+///
+/// @param classifier the classifier of the final verdict, or the one that failed
+/// @param authenticated whether it was sent with an account, rather than given a requester by a mapping
+/// @param imageHash the [ImageStore#hash] of the image, given while the image state is [ImageState#STORED] and kept
+///     once it expired or was deleted
+public record ClassificationRequest(
+        String id,
+        Instant createdAt,
+        long durationMillis,
+        String classifier,
+        Outcome outcome,
+        @Nullable String version,
+        @Nullable ArtKind artKind,
+        Requester requester,
+        boolean authenticated,
+        String remoteAddress,
+        ImageState imageState,
+        @Nullable String imageHash,
+        List<ClassificationStep> steps) {
 
-    @Id
-    private String id;
-
-    @Convert(converter = EpochMillisConverter.class)
-    private Instant createdAt;
-
-    private long durationMillis;
-
-    private String classifier;
-
-    @Column(name = "outcome")
-    @Enumerated(EnumType.STRING)
-    private RatingBucket bucket;
-
-    private @Nullable Double confidence;
-
-    private @Nullable String error;
-
-    private @Nullable String version;
-
-    @Enumerated(EnumType.STRING)
-    private @Nullable ArtKind artKind;
-
-    @Enumerated(EnumType.STRING)
-    private RequesterType requesterType;
-
-    private @Nullable String requesterName;
-
-    private boolean authenticated;
-
-    private String remoteAddress;
-
-    @Enumerated(EnumType.STRING)
-    private ImageState imageState;
-
-    private @Nullable String imageHash;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @BatchSize(size = 128)
-    @CollectionTable(name = "request_step", joinColumns = @JoinColumn(name = "request_id"))
-    @OrderColumn(name = "position")
-    private List<ClassificationStep> steps;
-
-    @SuppressWarnings("NullAway")
-    protected ClassificationRequest() {}
-
-    /// @param classifier the classifier of the final verdict, or the one that failed
-    /// @param authenticated whether it was sent with an account, rather than given a requester by a mapping
-    /// @param imageHash the [ImageStore#hash] of the image, given if and only if the image state is
-    ///     [ImageState#STORED]
-    public ClassificationRequest(
-            final String id,
-            final Instant createdAt,
-            final long durationMillis,
-            final String classifier,
-            final Outcome outcome,
-            final @Nullable String version,
-            final @Nullable ArtKind artKind,
-            final Requester requester,
-            final boolean authenticated,
-            final String remoteAddress,
-            final ImageState imageState,
-            final @Nullable String imageHash,
-            final List<ClassificationStep> steps) {
-        if ((imageState == ImageState.STORED) != (imageHash != null)) {
-            throw new IllegalArgumentException("The image hash must be given if and only if the image is stored");
+    public ClassificationRequest {
+        if (imageState == ImageState.STORED && imageHash == null) {
+            throw new IllegalArgumentException("The image hash must be given while the image is stored");
         }
-        this.id = id;
-        this.createdAt = createdAt;
-        this.durationMillis = durationMillis;
-        this.classifier = classifier;
-        this.bucket = outcome.bucket();
-        this.confidence = Outcome.confidence(outcome);
-        this.error = Outcome.error(outcome);
-        this.version = version;
-        this.artKind = artKind;
-        this.requesterType = requester.type();
-        this.requesterName = requester.name();
-        this.authenticated = authenticated;
-        this.remoteAddress = remoteAddress;
-        this.imageState = imageState;
-        this.imageHash = imageHash;
-        this.steps = new ArrayList<>(steps);
+        steps = List.copyOf(steps);
     }
 
-    @Override
-    public String getId() {
-        return this.id;
-    }
-
-    public Instant getCreatedAt() {
-        return this.createdAt;
-    }
-
-    public long getDurationMillis() {
-        return this.durationMillis;
-    }
-
-    public String getClassifier() {
-        return this.classifier;
-    }
-
-    public Outcome getOutcome() {
-        return Outcome.of(this.bucket, this.confidence, this.error);
-    }
-
-    public @Nullable String getVersion() {
-        return this.version;
-    }
-
-    public @Nullable ArtKind getArtKind() {
-        return this.artKind;
-    }
-
-    public Requester getRequester() {
-        return new Requester(this.requesterType, this.requesterName);
-    }
-
-    public boolean isAuthenticated() {
-        return this.authenticated;
-    }
-
-    public String getRemoteAddress() {
-        return this.remoteAddress;
-    }
-
-    public ImageState getImageState() {
-        return this.imageState;
-    }
-
-    public @Nullable String getImageHash() {
-        return this.imageHash;
-    }
-
-    public List<ClassificationStep> getSteps() {
-        return List.copyOf(this.steps);
-    }
-
-    public RatingBucket bucket() {
-        return this.bucket;
+    ClassificationRequest withSteps(final List<ClassificationStep> steps) {
+        return new ClassificationRequest(
+                this.id,
+                this.createdAt,
+                this.durationMillis,
+                this.classifier,
+                this.outcome,
+                this.version,
+                this.artKind,
+                this.requester,
+                this.authenticated,
+                this.remoteAddress,
+                this.imageState,
+                this.imageHash,
+                steps);
     }
 }

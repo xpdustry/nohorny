@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.request;
 
+import com.xpdustry.nohorny.server.database.SQLiteDatabase;
+import com.xpdustry.nohorny.server.database.SQLiteDatabase.Transaction;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequest;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
@@ -13,31 +15,35 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RequestService {
 
+    private final SQLiteDatabase database;
     private final ClassificationRequestRepository requests;
     private final DailyStatRepository dailyStats;
     private final ImageStore images;
 
     public RequestService(
+            final SQLiteDatabase database,
             final ClassificationRequestRepository requests,
             final DailyStatRepository dailyStats,
             final ImageStore images) {
+        this.database = database;
         this.requests = requests;
         this.dailyStats = dailyStats;
         this.images = images;
     }
 
-    @Transactional
     public void record(final ClassificationRequest request, final byte[] image) {
-        if (!this.images.store(image).equals(request.getImageHash())) {
-            throw new IllegalArgumentException("The request does not reference the image given");
-        }
-        this.requests.save(request);
-        this.dailyStats.increment(request);
+        this.database.withTransaction(transaction -> {
+            if (!this.images.store(transaction, image).equals(request.imageHash())) {
+                throw new IllegalArgumentException("The request does not reference the image given");
+            }
+            this.requests.insert(request);
+            this.dailyStats.increment(request);
+            return Boolean.TRUE;
+        });
     }
 
     public Optional<ClassificationRequest> find(final String id) {
@@ -53,55 +59,61 @@ public class RequestService {
         return storedHash(request).flatMap(this.images::find);
     }
 
-    @Transactional
     public Optional<ClassificationRequest> deleteImage(final String id) {
-        final var request = this.requests.findById(id);
-        if (request.isEmpty()) {
-            return Optional.empty();
-        }
-        final var hash = storedHash(request.get());
-        this.requests.markImageDeleted(id);
-        hash.ifPresent(this::deleteUnlessShared);
-        return this.find(id);
+        return this.database.withTransaction(transaction -> {
+            final var request = this.requests.findById(id);
+            if (request.isEmpty()) {
+                return Optional.empty();
+            }
+            final var hash = storedHash(request.get());
+            this.requests.markImageDeleted(id);
+            if (hash.isPresent()) {
+                this.deleteUnlessShared(transaction, hash.get());
+            }
+            return this.find(id);
+        });
     }
 
-    @Transactional
     public boolean delete(final String id) {
-        final var request = this.requests.findById(id);
-        if (request.isEmpty()) {
-            return false;
-        }
-        final var hash = storedHash(request.get());
-        this.requests.deleteById(id);
-        hash.ifPresent(this::deleteUnlessShared);
-        return true;
+        return this.database.withTransaction(transaction -> {
+            final var request = this.requests.findById(id);
+            if (request.isEmpty()) {
+                return false;
+            }
+            final var hash = storedHash(request.get());
+            this.requests.deleteById(id);
+            if (hash.isPresent()) {
+                this.deleteUnlessShared(transaction, hash.get());
+            }
+            return true;
+        });
     }
 
-    @Transactional
     public int expireImagesBefore(final Instant before) {
-        final var orphans = this.requests.findHashesStoredOnlyBefore(before);
-        final var expired = this.requests.markImagesExpiredBefore(before);
-        orphans.forEach(this.images::delete);
-        return expired;
+        return this.database.withTransaction(transaction -> {
+            final var orphans = this.requests.findHashesStoredOnlyBefore(before);
+            final var expired = this.requests.markImagesExpiredBefore(before);
+            orphans.forEach(hash -> this.images.delete(transaction, hash));
+            return expired;
+        });
     }
 
-    @Transactional
     public int deleteCreatedBefore(final Instant before) {
-        final var orphans = this.requests.findHashesStoredOnlyBefore(before);
-        final var deleted = this.requests.deleteCreatedBefore(before);
-        orphans.forEach(this.images::delete);
-        return deleted;
+        return this.database.withTransaction(transaction -> {
+            final var orphans = this.requests.findHashesStoredOnlyBefore(before);
+            final var deleted = this.requests.deleteCreatedBefore(before);
+            orphans.forEach(hash -> this.images.delete(transaction, hash));
+            return deleted;
+        });
     }
 
-    private void deleteUnlessShared(final String hash) {
+    private void deleteUnlessShared(final Transaction transaction, final String hash) {
         if (this.requests.countStoredByHash(hash) == 0) {
-            this.images.delete(hash);
+            this.images.delete(transaction, hash);
         }
     }
 
     private static Optional<String> storedHash(final ClassificationRequest request) {
-        return request.getImageState() == ImageState.STORED
-                ? Optional.ofNullable(request.getImageHash())
-                : Optional.empty();
+        return request.imageState() == ImageState.STORED ? Optional.ofNullable(request.imageHash()) : Optional.empty();
     }
 }

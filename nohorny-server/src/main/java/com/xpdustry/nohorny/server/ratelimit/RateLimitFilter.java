@@ -94,7 +94,7 @@ public final class RateLimitFilter extends OncePerRequestFilter {
                                     Objects.requireNonNull(name),
                                     this.users
                                             .findById(name)
-                                            .map(UserAccount::getRateLimit)
+                                            .map(UserAccount::rateLimit)
                                             .orElse(0));
                         case MINDUSTRY_NETWORK ->
                             Limit.of("classify-mindustry", name == null ? address : name, this.limits.mindustry());

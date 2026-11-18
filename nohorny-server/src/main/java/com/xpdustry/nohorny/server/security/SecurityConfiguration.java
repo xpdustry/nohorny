@@ -77,11 +77,11 @@ public class SecurityConfiguration {
         return username -> {
             final var account = users.findById(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Unknown user: " + username));
-            final var authorities = account.isAdmin()
+            final var authorities = account.admin()
                     ? List.of(new SimpleGrantedAuthority("ROLE_USER"), new SimpleGrantedAuthority(ADMIN_AUTHORITY))
                     : List.of(new SimpleGrantedAuthority("ROLE_USER"));
             return new AccountDetails(
-                    account.getUsername(), account.getPasswordHash(), authorities, account.getSessionVersion());
+                    account.username(), account.passwordHash(), authorities, account.sessionVersion());
         };
     }
 

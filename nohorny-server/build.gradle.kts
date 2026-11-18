@@ -21,11 +21,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("com.zaxxer:HikariCP")
     implementation(libs.sqlite.jdbc)
-    // Provides the SQLite dialect
-    implementation("org.hibernate.orm:hibernate-community-dialects")
+    // Provides the @Language annotation of the SQL statements
+    compileOnlyApi(libs.jetbrains.annotations)
     // Required by the Argon2 password encoder
     implementation(libs.bouncycastle)
     implementation(libs.bucket4j)

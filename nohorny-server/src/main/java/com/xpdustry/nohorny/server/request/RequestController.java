@@ -111,7 +111,7 @@ public final class RequestController {
         final var items = found.subList(0, Math.min(found.size(), size));
         return new RequestPage(
                 items.stream().map(request -> this.toView(request, true)).toList(),
-                found.size() > size ? items.getLast().getId() : null);
+                found.size() > size ? items.getLast().id() : null);
     }
 
     @DeleteMapping("/{id}")
@@ -124,34 +124,32 @@ public final class RequestController {
 
     private RequestView toView(final ClassificationRequest request, final boolean admin) {
         // The network names come from the public server list, the usernames are kept from the public
-        final var requester = request.getRequester();
+        final var requester = request.requester();
         final var name = admin || requester.type() != RequesterType.USER ? requester.name() : null;
-        final var verdict = request.getOutcome() instanceof Verdict value ? value : null;
-        final var failure = request.getOutcome() instanceof Failure value ? value : null;
-        final var kind = request.getArtKind();
+        final var verdict = request.outcome() instanceof Verdict value ? value : null;
+        final var failure = request.outcome() instanceof Failure value ? value : null;
+        final var kind = request.artKind();
         return new RequestView(
-                request.getId(),
-                request.getCreatedAt(),
-                request.getDurationMillis(),
+                request.id(),
+                request.createdAt(),
+                request.durationMillis(),
                 verdict != null,
                 verdict == null ? null : verdict.rating(),
                 verdict == null ? null : verdict.confidence(),
-                request.getClassifier(),
-                request.getVersion(),
+                request.classifier(),
+                request.version(),
                 kind == null ? null : kind.key(),
                 new RequestView.Requester(requester.type(), name),
                 new RequestView.Image(
-                        request.getImageState().key(),
-                        request.getImageState() == ImageState.STORED
-                                ? "/api/requests/" + request.getId() + "/image"
-                                : null),
-                request.getSteps().stream().map(step -> toView(step, admin)).toList(),
+                        request.imageState().key(),
+                        request.imageState() == ImageState.STORED ? "/api/requests/" + request.id() + "/image" : null),
+                request.steps().stream().map(step -> toView(step, admin)).toList(),
                 admin ? adminOnly(request, failure) : null);
     }
 
     private static RequestView.AdminOnly adminOnly(
             final ClassificationRequest request, final @Nullable Failure failure) {
-        return new RequestView.AdminOnly(request.getRemoteAddress(), failure == null ? null : toView(failure));
+        return new RequestView.AdminOnly(request.remoteAddress(), failure == null ? null : toView(failure));
     }
 
     private static RequestView.Step toView(final ClassificationStep step, final boolean admin) {

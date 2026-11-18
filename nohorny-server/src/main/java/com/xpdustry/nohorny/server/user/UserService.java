@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.user;
 
+import com.xpdustry.nohorny.server.database.SQLiteDatabase;
 import com.xpdustry.nohorny.server.mapping.RequesterMappingService;
 import com.xpdustry.nohorny.server.persistence.UserAccount;
 import com.xpdustry.nohorny.server.persistence.UserAccountRepository;
@@ -16,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -24,6 +24,7 @@ public class UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
+    private final SQLiteDatabase database;
     private final UserAccountRepository users;
     private final RequesterMappingService mappings;
     private final PasswordEncoder passwordEncoder;
@@ -31,11 +32,13 @@ public class UserService {
     private final int defaultRateLimit;
 
     public UserService(
+            final SQLiteDatabase database,
             final UserAccountRepository users,
             final RequesterMappingService mappings,
             final PasswordEncoder passwordEncoder,
             final ApiSecurityProperties properties,
             final RateLimitProperties limits) {
+        this.database = database;
         this.users = users;
         this.mappings = mappings;
         this.passwordEncoder = passwordEncoder;
@@ -43,7 +46,6 @@ public class UserService {
         this.defaultRateLimit = limits.user();
     }
 
-    @Transactional
     public void ensureBootstrapAdministrator() {
         final var password = this.bootstrap.password();
         if (this.bootstrap.unresolved()) {
@@ -56,21 +58,28 @@ public class UserService {
             return;
         }
         final var username = this.bootstrap.username();
-        final var existing = this.users.findById(username);
-        if (existing.isEmpty()) {
-            this.users.save(new UserAccount(username, this.encode(password), true, this.defaultRateLimit, now()));
-            log.info("Created the bootstrap administrator {}", username);
-            return;
-        }
-        final var account = existing.get();
-        if (!this.passwordEncoder.matches(password, account.getPasswordHash())) {
-            account.changePassword(this.encode(password));
-            log.info("Reset the password of the bootstrap administrator {} to the configured one", username);
-        }
-        if (!account.isAdmin()) {
-            account.changeRole(true);
-            log.info("Restored the administrator role of the bootstrap administrator {}", username);
-        }
+        this.database.withTransaction(transaction -> {
+            final var existing = this.users.findById(username);
+            if (existing.isEmpty()) {
+                this.users.insert(
+                        UserAccount.create(username, this.encode(password), true, this.defaultRateLimit, now()));
+                log.info("Created the bootstrap administrator {}", username);
+                return Boolean.TRUE;
+            }
+            var account = existing.get();
+            if (!this.passwordEncoder.matches(password, account.passwordHash())) {
+                account = account.withPassword(this.encode(password));
+                log.info("Reset the password of the bootstrap administrator {} to the configured one", username);
+            }
+            if (!account.admin()) {
+                account = account.withRole(true);
+                log.info("Restored the administrator role of the bootstrap administrator {}", username);
+            }
+            if (!account.equals(existing.get())) {
+                this.users.update(account);
+            }
+            return Boolean.TRUE;
+        });
     }
 
     public boolean isBootstrap(final String username) {
@@ -78,73 +87,81 @@ public class UserService {
     }
 
     public List<UserView> list() {
-        return this.users.findAllByOrderByUsernameAsc().stream()
-                .map(this::toView)
-                .toList();
+        return this.users.findAllOrderedByUsername().stream().map(this::toView).toList();
     }
 
-    @Transactional
     public UserView create(
             final String username, final String password, final boolean admin, final @Nullable Integer rateLimit) {
-        if (this.users.existsById(username)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "user already exists");
-        }
-        final var limit = rateLimit == null ? this.defaultRateLimit : rateLimit;
-        final var account = this.users.save(new UserAccount(username, this.encode(password), admin, limit, now()));
-        log.info("Created user {} (admin={}, rateLimit={})", username, admin, limit);
-        return this.toView(account);
+        return this.database.withTransaction(transaction -> {
+            if (this.users.existsById(username)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "user already exists");
+            }
+            final var limit = rateLimit == null ? this.defaultRateLimit : rateLimit;
+            final var account = UserAccount.create(username, this.encode(password), admin, limit, now());
+            this.users.insert(account);
+            log.info("Created user {} (admin={}, rateLimit={})", username, admin, limit);
+            return this.toView(account);
+        });
     }
 
-    @Transactional
     public void setRateLimit(final String username, final int rateLimit) {
-        this.find(username).setRateLimit(rateLimit);
-        log.info("Set the rate limit of user {} to {} per minute", username, rateLimit);
+        this.database.withTransaction(transaction -> {
+            this.users.update(this.find(username).withRateLimit(rateLimit));
+            log.info("Set the rate limit of user {} to {} per minute", username, rateLimit);
+            return Boolean.TRUE;
+        });
     }
 
     /// Ends the sessions of the user, the caller included when it changes its own password.
-    @Transactional
     public void changePassword(final String username, final String password) {
-        final var account = this.find(username);
-        if (this.isBootstrap(username)) {
-            throw conflict("cannot change the password of the bootstrap administrator");
-        }
-        account.changePassword(this.encode(password));
-        log.info("Changed the password of user {}", username);
+        this.database.withTransaction(transaction -> {
+            final var account = this.find(username);
+            if (this.isBootstrap(username)) {
+                throw conflict("cannot change the password of the bootstrap administrator");
+            }
+            this.users.update(account.withPassword(this.encode(password)));
+            log.info("Changed the password of user {}", username);
+            return Boolean.TRUE;
+        });
     }
 
-    @Transactional
     public void changeRole(final String username, final boolean admin, final String caller) {
-        final var account = this.find(username);
-        if (account.isAdmin() == admin) {
-            return;
-        }
-        if (!admin) {
+        this.database.withTransaction(transaction -> {
+            final var account = this.find(username);
+            if (account.admin() == admin) {
+                return Boolean.FALSE;
+            }
+            if (!admin) {
+                if (this.isBootstrap(username)) {
+                    throw conflict("cannot demote the bootstrap administrator");
+                }
+                if (username.equals(caller)) {
+                    throw conflict("cannot demote your own account");
+                }
+                if (this.users.countAdministrators() <= 1) {
+                    throw conflict("cannot demote the last administrator");
+                }
+            }
+            this.users.update(account.withRole(admin));
+            log.info("Set admin={} for user {}", admin, username);
+            return Boolean.TRUE;
+        });
+    }
+
+    public void delete(final String username, final String caller) {
+        this.database.withTransaction(transaction -> {
+            final var account = this.find(username);
             if (this.isBootstrap(username)) {
-                throw conflict("cannot demote the bootstrap administrator");
+                throw conflict("cannot delete the bootstrap administrator");
             }
             if (username.equals(caller)) {
-                throw conflict("cannot demote your own account");
+                throw conflict("cannot delete your own account");
             }
-            if (this.users.countByAdminTrue() <= 1) {
-                throw conflict("cannot demote the last administrator");
-            }
-        }
-        account.changeRole(admin);
-        log.info("Set admin={} for user {}", admin, username);
-    }
-
-    @Transactional
-    public void delete(final String username, final String caller) {
-        final var account = this.find(username);
-        if (this.isBootstrap(username)) {
-            throw conflict("cannot delete the bootstrap administrator");
-        }
-        if (username.equals(caller)) {
-            throw conflict("cannot delete your own account");
-        }
-        this.mappings.deleteForUser(username);
-        this.users.delete(account);
-        log.info("Deleted user {}", username);
+            this.mappings.deleteForUser(username);
+            this.users.delete(account.username());
+            log.info("Deleted user {}", username);
+            return Boolean.TRUE;
+        });
     }
 
     private UserAccount find(final String username) {
@@ -155,11 +172,11 @@ public class UserService {
 
     private UserView toView(final UserAccount account) {
         return new UserView(
-                account.getUsername(),
-                account.isAdmin(),
-                account.getRateLimit(),
-                account.getCreatedAt(),
-                this.isBootstrap(account.getUsername()));
+                account.username(),
+                account.admin(),
+                account.rateLimit(),
+                account.createdAt(),
+                this.isBootstrap(account.username()));
     }
 
     private String encode(final String password) {

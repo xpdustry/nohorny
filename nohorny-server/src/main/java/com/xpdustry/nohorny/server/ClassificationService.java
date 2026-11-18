@@ -120,7 +120,7 @@ public final class ClassificationService {
         try {
             this.requests.record(request, image);
         } catch (final RuntimeException exception) {
-            log.error("Failed to record classification request {}", request.getId(), exception);
+            log.error("Failed to record classification request {}", request.id(), exception);
             return false;
         }
         return true;

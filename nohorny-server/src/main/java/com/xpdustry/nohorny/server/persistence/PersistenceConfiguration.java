@@ -7,15 +7,13 @@ import java.nio.file.Files;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.sqlite.SQLiteConfig;
 import org.sqlite.SQLiteDataSource;
 
-/// Since every transaction takes the write lock, the repositories do not open transactions by themselves.
-/// Reads run in autocommit mode alongside the writer, writes go through the `@Transactional` services.
+/// The only code tied to the SQLite driver, the rest only sees the [javax.sql.DataSource] through
+/// [com.xpdustry.nohorny.server.database.SQLiteDatabase].
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(StorageProperties.class)
-@EnableJpaRepositories(enableDefaultTransactions = false)
 public class PersistenceConfiguration {
 
     @Bean
@@ -31,13 +29,15 @@ public class PersistenceConfiguration {
         config.setBusyTimeout(5_000);
         config.setJournalMode(SQLiteConfig.JournalMode.WAL);
         config.setSynchronous(SQLiteConfig.SynchronousMode.NORMAL);
-        // Take the write lock when a transaction begins rather than on its first write, avoiding upgrade deadlocks
+        // Take the write lock when a transaction begins rather than on its first write, avoiding upgrade deadlocks.
+        //   Used by Flyway, SQLiteDatabase begins its write transactions as IMMEDIATE by itself
         config.setTransactionMode(SQLiteConfig.TransactionMode.IMMEDIATE);
 
         final var sqlite = new SQLiteDataSource(config);
         sqlite.setUrl("jdbc:sqlite:" + absolute);
 
-        // WAL allows concurrent readers alongside the single writer
+        // WAL allows concurrent readers alongside the single writer. The connections stay in auto-commit mode, see
+        //   SQLiteDatabaseImpl
         final var pool = new HikariDataSource();
         pool.setPoolName("nohorny-sqlite");
         pool.setDataSource(sqlite);

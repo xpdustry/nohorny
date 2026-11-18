@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.persistence;
 
+import com.xpdustry.nohorny.server.database.SQLiteDatabase.Transaction;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -8,22 +9,18 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /// The writes follow the transaction of the rows referencing the files: a stored file is removed again if it rolls
-/// back, a deleted one only goes once it committed. [#store] and [#delete] must be called from a transaction.
+/// back, a deleted one only goes once it committed. The deletions run before the next write transaction begins, see
+/// [SQLiteDatabase#withTransaction], so no other transaction can reference a file that is about to be deleted.
 @Component
 public final class ImageStore {
 
@@ -31,10 +28,6 @@ public final class ImageStore {
     private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
 
     private final Path directory;
-
-    // Held from the first write of a transaction until it completes. The deletions run after the commit released the
-    // write lock of SQLite, without it another transaction could reference a file that is about to be deleted.
-    private final ReentrantLock lock = new ReentrantLock();
 
     public ImageStore(final StorageProperties properties) throws IOException {
         this.directory = Files.createDirectories(properties.images().toAbsolutePath());
@@ -49,8 +42,7 @@ public final class ImageStore {
     }
 
     /// @return the [#hash] of the bytes
-    public String store(final byte[] bytes) {
-        final var transaction = this.transaction();
+    public String store(final Transaction transaction, final byte[] bytes) {
         final var hash = hash(bytes);
         final var target = this.pathOf(hash);
         if (Files.exists(target)) {
@@ -70,7 +62,7 @@ public final class ImageStore {
         } catch (final IOException exception) {
             throw new UncheckedIOException("Failed to store image " + hash, exception);
         }
-        transaction.stored.add(target);
+        transaction.afterRollback(() -> remove(target));
         return hash;
     }
 
@@ -79,8 +71,9 @@ public final class ImageStore {
         return Files.isRegularFile(path) ? Optional.of(new FileSystemResource(path)) : Optional.empty();
     }
 
-    public void delete(final String hash) {
-        this.transaction().deleted.add(this.pathOf(hash));
+    public void delete(final Transaction transaction, final String hash) {
+        final var path = this.pathOf(hash);
+        transaction.afterCommit(() -> remove(path));
     }
 
     private Path pathOf(final String hash) {
@@ -91,48 +84,11 @@ public final class ImageStore {
         return this.directory.resolve(hash.substring(0, 2)).resolve(hash);
     }
 
-    private Transaction transaction() {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("The images can only be written from a transaction");
-        }
-        if (TransactionSynchronizationManager.getResource(this) instanceof Transaction existing) {
-            return existing;
-        }
-        this.lock.lock();
-        final var created = new Transaction();
-        TransactionSynchronizationManager.bindResource(this, created);
-        TransactionSynchronizationManager.registerSynchronization(created);
-        return created;
-    }
-
-    private final class Transaction implements TransactionSynchronization {
-
-        private final List<Path> stored = new ArrayList<>();
-        private final List<Path> deleted = new ArrayList<>();
-
-        @Override
-        public void afterCommit() {
-            this.deleted.forEach(Transaction::remove);
-        }
-
-        @Override
-        public void afterCompletion(final int status) {
-            try {
-                if (status == STATUS_ROLLED_BACK) {
-                    this.stored.forEach(Transaction::remove);
-                }
-            } finally {
-                TransactionSynchronizationManager.unbindResource(ImageStore.this);
-                ImageStore.this.lock.unlock();
-            }
-        }
-
-        private static void remove(final Path path) {
-            try {
-                Files.deleteIfExists(path);
-            } catch (final IOException exception) {
-                log.warn("Failed to delete the image file {}", path, exception);
-            }
+    private static void remove(final Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (final IOException exception) {
+            log.warn("Failed to delete the image file {}", path, exception);
         }
     }
 }
