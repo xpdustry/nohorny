@@ -3,10 +3,6 @@ spring:
   web.error.whitelabel.enabled: false
   # The Mindustry server list refresh resolves host names, a second thread keeps the retention on time meanwhile.
   task.scheduling.pool.size: 2
-  jpa:
-    # The schema is managed by the Flyway migrations in db/migration.
-    hibernate.ddl-auto: none
-    open-in-view: false
 
 server:
   # Listen on localhost. Use 0.0.0.0 to expose the API on your network.

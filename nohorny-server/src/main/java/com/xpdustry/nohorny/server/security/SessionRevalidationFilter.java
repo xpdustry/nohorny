@@ -41,7 +41,7 @@ final class SessionRevalidationFilter extends OncePerRequestFilter {
     private boolean isCurrent(final AccountDetails details) {
         return this.users
                 .findById(details.getUsername())
-                .map(account -> account.getSessionVersion() == details.sessionVersion())
+                .map(account -> account.sessionVersion() == details.sessionVersion())
                 .orElse(false);
     }
 }

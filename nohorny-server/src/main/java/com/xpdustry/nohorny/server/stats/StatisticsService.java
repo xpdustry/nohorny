@@ -75,13 +75,13 @@ public class StatisticsService {
         final var first = range.first();
         if (range.slot() == Range.Slot.HOUR) {
             final var total = sum(this.requests.countByBucketSince(first).stream()
-                    .map(BucketCount::getTotal)
+                    .map(BucketCount::total)
                     .toList());
             return Counts.of(retained.apply(first), total);
         }
         final var day = range.slot().idOf(first);
         final var total = sum(this.dailyStats.countByDaySince(day).stream()
-                .map(SlotCount::getTotal)
+                .map(SlotCount::total)
                 .toList());
         return Counts.of(daily.apply(day), total);
     }
@@ -91,7 +91,7 @@ public class StatisticsService {
         static Counts of(final List<NamedCount> counts, final long total) {
             return new Counts(
                     counts.stream()
-                            .map(count -> new Count(count.getName(), count.getTotal()))
+                            .map(count -> new Count(count.name(), count.total()))
                             .sorted(Comparator.comparingLong(Count::count)
                                     .reversed()
                                     .thenComparing(Count::name))
@@ -122,8 +122,8 @@ public class StatisticsService {
     private static Map<String, Map<RatingBucket, Long>> bySlot(final List<SlotCount> counts) {
         final var slots = new HashMap<String, Map<RatingBucket, Long>>();
         for (final var count : counts) {
-            slots.computeIfAbsent(count.getSlot(), ignored -> new EnumMap<>(RatingBucket.class))
-                    .merge(count.getBucket(), count.getTotal(), Long::sum);
+            slots.computeIfAbsent(count.slot(), ignored -> new EnumMap<>(RatingBucket.class))
+                    .merge(count.bucket(), count.total(), Long::sum);
         }
         return slots;
     }
@@ -131,7 +131,7 @@ public class StatisticsService {
     private static Map<RatingBucket, Long> toMap(final List<BucketCount> counts) {
         final var map = new EnumMap<RatingBucket, Long>(RatingBucket.class);
         for (final var count : counts) {
-            map.merge(count.getBucket(), count.getTotal(), Long::sum);
+            map.merge(count.bucket(), count.total(), Long::sum);
         }
         return map;
     }

@@ -2,11 +2,11 @@
 package com.xpdustry.nohorny.server.persistence;
 
 import com.xpdustry.nohorny.server.ServerTest;
+import com.xpdustry.nohorny.server.database.SQLiteDatabase;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,15 +18,15 @@ final class ImageStoreTest extends ServerTest {
     private ImageStore images;
 
     @Autowired
-    private TransactionTemplate transactions;
+    private SQLiteDatabase database;
 
     @Test
     void rollbackRemovesStoredImage() {
         final var bytes = uniqueBytes();
         assertThrows(
                 Rollback.class,
-                () -> this.transactions.executeWithoutResult(status -> {
-                    this.images.store(bytes);
+                () -> this.database.withTransaction(transaction -> {
+                    this.images.store(transaction, bytes);
                     throw new Rollback();
                 }));
         assertFalse(this.exists(bytes));
@@ -35,11 +35,11 @@ final class ImageStoreTest extends ServerTest {
     @Test
     void rollbackKeepsImageStoredBefore() {
         final var bytes = uniqueBytes();
-        this.transactions.executeWithoutResult(status -> this.images.store(bytes));
+        this.database.withTransaction(transaction -> this.images.store(transaction, bytes));
         assertThrows(
                 Rollback.class,
-                () -> this.transactions.executeWithoutResult(status -> {
-                    this.images.store(bytes);
+                () -> this.database.withTransaction(transaction -> {
+                    this.images.store(transaction, bytes);
                     throw new Rollback();
                 }));
         assertTrue(this.exists(bytes));
@@ -48,10 +48,11 @@ final class ImageStoreTest extends ServerTest {
     @Test
     void deletionWaitsForCommit() {
         final var bytes = uniqueBytes();
-        final var hash = this.transactions.execute(status -> this.images.store(bytes));
-        this.transactions.executeWithoutResult(status -> {
-            this.images.delete(hash);
+        final var hash = this.database.withTransaction(transaction -> this.images.store(transaction, bytes));
+        this.database.withTransaction(transaction -> {
+            this.images.delete(transaction, hash);
             assertTrue(this.exists(bytes));
+            return Boolean.TRUE;
         });
         assertFalse(this.exists(bytes));
     }
@@ -59,19 +60,14 @@ final class ImageStoreTest extends ServerTest {
     @Test
     void rollbackKeepsDeletedImage() {
         final var bytes = uniqueBytes();
-        final var hash = this.transactions.execute(status -> this.images.store(bytes));
+        final var hash = this.database.withTransaction(transaction -> this.images.store(transaction, bytes));
         assertThrows(
                 Rollback.class,
-                () -> this.transactions.executeWithoutResult(status -> {
-                    this.images.delete(hash);
+                () -> this.database.withTransaction(transaction -> {
+                    this.images.delete(transaction, hash);
                     throw new Rollback();
                 }));
         assertTrue(this.exists(bytes));
-    }
-
-    @Test
-    void writeOutsideTransactionFails() {
-        assertThrows(IllegalStateException.class, () -> this.images.store(uniqueBytes()));
     }
 
     private boolean exists(final byte[] bytes) {

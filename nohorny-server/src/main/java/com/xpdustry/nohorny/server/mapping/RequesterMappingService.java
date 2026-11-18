@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.mapping;
 
+import com.xpdustry.nohorny.server.database.SQLiteDatabase;
+import com.xpdustry.nohorny.server.database.SQLiteDatabase.Transaction;
 import com.xpdustry.nohorny.server.persistence.ClassificationRequestRepository;
 import com.xpdustry.nohorny.server.persistence.DailyStatRepository;
 import com.xpdustry.nohorny.server.persistence.Requester;
@@ -21,9 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -33,6 +32,7 @@ public class RequesterMappingService {
 
     public static final int MAX_NETWORK_LENGTH = 64;
 
+    private final SQLiteDatabase database;
     private final RequesterMappingRepository mappings;
     private final UserAccountRepository users;
     private final ClassificationRequestRepository requests;
@@ -41,10 +41,12 @@ public class RequesterMappingService {
     private volatile RuleSet rules = new RuleSet(List.of());
 
     public RequesterMappingService(
+            final SQLiteDatabase database,
             final RequesterMappingRepository mappings,
             final UserAccountRepository users,
             final ClassificationRequestRepository requests,
             final DailyStatRepository dailyStats) {
+        this.database = database;
         this.mappings = mappings;
         this.users = users;
         this.requests = requests;
@@ -58,96 +60,100 @@ public class RequesterMappingService {
 
     public List<RequesterMappingView> list() {
         return this.mappings.findAll().stream()
-                .sorted(Comparator.comparing(RequesterMapping::getRange, RANGE_ORDER))
+                .sorted(Comparator.comparing(RequesterMapping::range, RANGE_ORDER))
                 .map(RequesterMappingService::toView)
                 .toList();
     }
 
-    @Transactional
     public RequesterMappingView create(final String range, final RequesterType type, final @Nullable String name) {
-        final var parsed = parseRange(range);
-        final var requester = this.requester(type, name);
-        if (this.mappings.existsByRange(parsed)) {
-            throw conflict();
-        }
-        final var mapping = this.mappings.save(new RequesterMapping(
-                UuidV7.next().toString(), parsed, requester, Instant.now().truncatedTo(ChronoUnit.MILLIS)));
-        log.info("Mapped {} to {}", parsed, describe(requester));
-        this.reloadAfterCommit();
-        return toView(mapping);
+        return this.database.withTransaction(transaction -> {
+            final var parsed = parseRange(range);
+            final var requester = this.requester(type, name);
+            if (this.mappings.existsByRange(parsed)) {
+                throw conflict();
+            }
+            final var mapping = new RequesterMapping(
+                    UuidV7.next().toString(), parsed, requester, Instant.now().truncatedTo(ChronoUnit.MILLIS));
+            this.mappings.insert(mapping);
+            log.info("Mapped {} to {}", parsed, describe(requester));
+            this.reloadAfterCommit(transaction);
+            return toView(mapping);
+        });
     }
 
-    @Transactional
     public RequesterMappingView update(
             final String id, final String range, final RequesterType type, final @Nullable String name) {
-        final var mapping = this.find(id);
-        final var parsed = parseRange(range);
-        final var requester = this.requester(type, name);
-        if (!parsed.equals(mapping.getRange()) && this.mappings.existsByRange(parsed)) {
-            throw conflict();
-        }
-        mapping.update(parsed, requester);
-        log.info("Changed mapping {} to {} -> {}", id, parsed, describe(requester));
-        this.reloadAfterCommit();
-        return toView(mapping);
+        return this.database.withTransaction(transaction -> {
+            final var mapping = this.find(id);
+            final var parsed = parseRange(range);
+            final var requester = this.requester(type, name);
+            if (!parsed.equals(mapping.range()) && this.mappings.existsByRange(parsed)) {
+                throw conflict();
+            }
+            final var updated = new RequesterMapping(mapping.id(), parsed, requester, mapping.createdAt());
+            this.mappings.update(updated);
+            log.info("Changed mapping {} to {} -> {}", id, parsed, describe(requester));
+            this.reloadAfterCommit(transaction);
+            return toView(updated);
+        });
     }
 
-    @Transactional
     public void delete(final String id) {
-        final var mapping = this.find(id);
-        this.mappings.delete(mapping);
-        log.info("Deleted the mapping of {}", mapping.getRange());
-        this.reloadAfterCommit();
+        this.database.withTransaction(transaction -> {
+            final var mapping = this.find(id);
+            this.mappings.delete(mapping.id());
+            log.info("Deleted the mapping of {}", mapping.range());
+            this.reloadAfterCommit(transaction);
+            return Boolean.TRUE;
+        });
     }
 
-    @Transactional
     public void deleteForUser(final String username) {
-        if (this.mappings.deleteByUser(username) > 0) {
+        this.database.withTransaction(transaction -> {
+            if (this.mappings.deleteByUser(username) == 0) {
+                return Boolean.FALSE;
+            }
             log.info("Deleted the mappings to user {}", username);
-            this.reloadAfterCommit();
-        }
+            this.reloadAfterCommit(transaction);
+            return Boolean.TRUE;
+        });
     }
 
     /// The statistics of the deleted requests stay, their addresses are gone.
-    @Transactional
     public int apply(final String id) {
-        final var mapping = this.find(id);
-        final var range = mapping.getRange();
-        final var requester = mapping.getRequester();
-        final var rules = rulesOf(this.mappings.findRows());
-        final var addresses = this.requests.findUnauthenticatedAddresses().stream()
-                .filter(value -> {
-                    final var address = AddressRange.parseRemoteAddress(value);
-                    return address != null
-                            && range.contains(address)
-                            && rules.match(address)
-                                    .map(rule -> rule.id().equals(id))
-                                    .orElse(false);
-                })
-                .toList();
-        if (addresses.isEmpty()) {
-            return 0;
-        }
-        final var type = requester.type().name();
-        this.dailyStats.move(this.requests.countRelabeled(addresses, type, requester.name()), requester);
-        final var changed = this.requests.relabel(addresses, type, requester.name());
-        log.info("Applied the mapping of {} to {} requests", mapping.getRange(), changed);
-        return changed;
+        return this.database.withTransaction(transaction -> {
+            final var mapping = this.find(id);
+            final var range = mapping.range();
+            final var requester = mapping.requester();
+            final var rules = rulesOf(this.mappings.findAll());
+            final var addresses = this.requests.findUnauthenticatedAddresses().stream()
+                    .filter(value -> {
+                        final var address = AddressRange.parseRemoteAddress(value);
+                        return address != null
+                                && range.contains(address)
+                                && rules.match(address)
+                                        .map(rule -> rule.id().equals(id))
+                                        .orElse(false);
+                    })
+                    .toList();
+            if (addresses.isEmpty()) {
+                return 0;
+            }
+            this.dailyStats.move(this.requests.countRelabeled(addresses, requester), requester);
+            final var changed = this.requests.relabel(addresses, requester);
+            log.info("Applied the mapping of {} to {} requests", range, changed);
+            return changed;
+        });
     }
 
     /// Synchronized, so two reloads cannot publish out of order: the last one reads every committed change.
     private synchronized void reload() {
-        this.rules = rulesOf(this.mappings.findRows());
+        this.rules = rulesOf(this.mappings.findAll());
     }
 
     /// The reads run on other connections, they only see the change once committed.
-    private void reloadAfterCommit() {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                RequesterMappingService.this.reload();
-            }
-        });
+    private void reloadAfterCommit(final Transaction transaction) {
+        transaction.afterCommit(this::reload);
     }
 
     private RequesterMapping find(final String id) {
@@ -186,23 +192,16 @@ public class RequesterMappingService {
         }
     }
 
-    private static RuleSet rulesOf(final List<RequesterMappingRepository.Row> rows) {
-        return new RuleSet(rows.stream()
-                .map(row -> new Rule(
-                        row.getId(),
-                        AddressRange.parse(row.getRange()),
-                        new Requester(RequesterType.valueOf(row.getRequesterType()), row.getRequesterName())))
+    private static RuleSet rulesOf(final List<RequesterMapping> mappings) {
+        return new RuleSet(mappings.stream()
+                .map(mapping -> new Rule(mapping.id(), mapping.range(), mapping.requester()))
                 .toList());
     }
 
     private static RequesterMappingView toView(final RequesterMapping mapping) {
-        final var requester = mapping.getRequester();
+        final var requester = mapping.requester();
         return new RequesterMappingView(
-                mapping.getId(),
-                mapping.getRange().toString(),
-                requester.type(),
-                requester.name(),
-                mapping.getCreatedAt());
+                mapping.id(), mapping.range().toString(), requester.type(), requester.name(), mapping.createdAt());
     }
 
     private static String describe(final Requester requester) {
