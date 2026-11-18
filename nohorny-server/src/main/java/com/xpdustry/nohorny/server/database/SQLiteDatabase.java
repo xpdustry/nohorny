@@ -25,6 +25,7 @@ public interface SQLiteDatabase {
     <R> R withTransaction(SQLFunction<Transaction, R> function);
 
     /// Runs the function in a transaction that only reads, alongside the writer. It joins a write transaction too.
+    /// Statements that write fail, and the transaction has no callbacks.
     <R> R withReadTransaction(SQLFunction<Transaction, R> function);
 
     interface Transaction {
@@ -33,10 +34,14 @@ public interface SQLiteDatabase {
 
         /// Runs the action once the outermost transaction committed. A failing action is logged, the others still run.
         /// The action can read, but not write.
+        ///
+        /// @throws IllegalStateException in a read transaction
         void afterCommit(Runnable action);
 
         /// Runs the action once the outermost transaction rolled back. A failing action is logged, the others still
         /// run. The action can read, but not write.
+        ///
+        /// @throws IllegalStateException in a read transaction
         void afterRollback(Runnable action);
     }
 

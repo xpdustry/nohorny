@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package com.xpdustry.nohorny.server.database;
 
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -90,14 +91,27 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
         return result;
     }
 
+    /// The read transactions run with `query_only`, so a statement that writes fails instead of skipping the lock.
+    /// A connection that could not roll back or leave `query_only` is evicted, it may still hold a transaction.
+    /// Failing to return a connection is only logged, the transaction already ended.
     private <R> R transact(
             final String begin,
             final boolean readOnly,
             final Callbacks callbacks,
             final SQLFunction<Transaction, R> function) {
-        try (final var connection = this.source.getConnection()) {
-            final var transaction = new TransactionImpl(this, connection, readOnly, callbacks);
+        final Connection connection;
+        try {
+            connection = this.source.getConnection();
+        } catch (final SQLException exception) {
+            throw new RuntimeException("Failed to get a connection", exception);
+        }
+        var reusable = true;
+        try {
+            if (readOnly) {
+                execute(connection, "PRAGMA query_only = ON");
+            }
             execute(connection, begin);
+            final var transaction = new TransactionImpl(this, connection, readOnly, callbacks);
             try {
                 final var result = ScopedValue.where(HANDLE, transaction).call(() -> function.apply(transaction));
                 if (transaction.rollbackOnly) {
@@ -109,12 +123,35 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
                 try {
                     execute(connection, "ROLLBACK");
                 } catch (final SQLException exception) {
+                    reusable = false;
                     throwable.addSuppressed(exception);
                 }
                 throw throwable;
             }
         } catch (final SQLException exception) {
             throw new RuntimeException("Failed to run a transaction", exception);
+        } finally {
+            this.release(connection, readOnly, reusable);
+        }
+    }
+
+    private void release(final Connection connection, final boolean readOnly, final boolean reusable) {
+        var evict = !reusable;
+        if (readOnly && reusable) {
+            try {
+                execute(connection, "PRAGMA query_only = OFF");
+            } catch (final SQLException exception) {
+                log.warn("Failed to leave query_only, evicting the connection", exception);
+                evict = true;
+            }
+        }
+        if (evict && this.source instanceof HikariDataSource pool) {
+            pool.evictConnection(connection);
+        }
+        try {
+            connection.close();
+        } catch (final SQLException exception) {
+            log.warn("Failed to return a connection to the pool", exception);
         }
     }
 
@@ -180,12 +217,20 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
 
         @Override
         public void afterCommit(final Runnable action) {
+            this.requireWrite();
             this.callbacks.commit.add(action);
         }
 
         @Override
         public void afterRollback(final Runnable action) {
+            this.requireWrite();
             this.callbacks.rollback.add(action);
+        }
+
+        private void requireWrite() {
+            if (this.readOnly) {
+                throw new IllegalStateException("Only the write transactions have callbacks");
+            }
         }
     }
 
