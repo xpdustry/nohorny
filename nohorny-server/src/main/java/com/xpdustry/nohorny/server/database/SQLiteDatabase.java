@@ -13,13 +13,15 @@ import org.jspecify.annotations.Nullable;
 /// and wait for each other, while the read transactions run alongside them on a snapshot of the committed data.
 ///
 /// A call made while the thread, or one of its scoped children, runs a transaction of this database joins it rather
-/// than opening its own: it sees the uncommitted changes and shares the commit or the rollback.
+/// than opening its own: it sees the uncommitted changes and shares the commit or the rollback. A joined call that
+/// throws rolls the whole transaction back, even if its caller catches the exception.
 public interface SQLiteDatabase {
 
     /// Runs the function in a transaction holding the write lock, committed once it returns and rolled back if it
     /// throws. The next write transaction only begins once the [Transaction#afterCommit] callbacks of this one ran.
     ///
-    /// @throws IllegalStateException if called from a read transaction, which cannot take the write lock safely
+    /// @throws IllegalStateException if called from a read transaction, which cannot take the write lock safely, or
+    ///     from a callback, whose write would commit before the remaining callbacks of its transaction
     <R> R withTransaction(SQLFunction<Transaction, R> function);
 
     /// Runs the function in a transaction that only reads, alongside the writer. It joins a write transaction too.
@@ -30,10 +32,11 @@ public interface SQLiteDatabase {
         StatementBuilder prepareStatement(@Language("SQL") String statement) throws SQLException;
 
         /// Runs the action once the outermost transaction committed. A failing action is logged, the others still run.
+        /// The action can read, but not write.
         void afterCommit(Runnable action);
 
         /// Runs the action once the outermost transaction rolled back. A failing action is logged, the others still
-        /// run.
+        /// run. The action can read, but not write.
         void afterRollback(Runnable action);
     }
 

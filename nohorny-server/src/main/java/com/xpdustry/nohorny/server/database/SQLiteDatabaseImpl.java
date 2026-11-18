@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 import javax.sql.DataSource;
@@ -35,7 +37,7 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
     private final DataSource source;
 
     // Taken before the connection, so the waiting writers leave the pool to the readers rather than waiting on the
-    // busy timeout of SQLite. Released after the commit callbacks, see withTransaction.
+    // busy timeout of SQLite. Released after the callbacks, so no other write sneaks in before an image cleanup.
     private final ReentrantLock writer = new ReentrantLock();
 
     public SQLiteDatabaseImpl(final DataSource source) {
@@ -50,6 +52,11 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
                 throw new IllegalStateException("A write transaction cannot join a read transaction");
             }
             return join(current, function);
+        }
+        // Only a callback holds the lock outside a transaction. Its write would commit between the transaction and
+        // the rest of its callbacks, which could then delete a file the new write references.
+        if (this.writer.isHeldByCurrentThread()) {
+            throw new IllegalStateException("A transaction callback cannot open a write transaction");
         }
         this.writer.lock();
         try {
@@ -69,37 +76,58 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
         return HANDLE.isBound() && HANDLE.get().database == this ? HANDLE.get() : null;
     }
 
+    /// Runs the callbacks once the connection went back to the pool, so they can open transactions of their own.
     private <R> R run(final String begin, final boolean readOnly, final SQLFunction<Transaction, R> function) {
-        final TransactionImpl transaction;
+        final var callbacks = new Callbacks();
         final R result;
+        try {
+            result = this.transact(begin, readOnly, callbacks, function);
+        } catch (final Throwable throwable) {
+            runAll(callbacks.rollback);
+            throw throwable;
+        }
+        runAll(callbacks.commit);
+        return result;
+    }
+
+    private <R> R transact(
+            final String begin,
+            final boolean readOnly,
+            final Callbacks callbacks,
+            final SQLFunction<Transaction, R> function) {
         try (final var connection = this.source.getConnection()) {
-            transaction = new TransactionImpl(this, connection, readOnly);
+            final var transaction = new TransactionImpl(this, connection, readOnly, callbacks);
             execute(connection, begin);
             try {
-                result = ScopedValue.where(HANDLE, transaction).call(() -> function.apply(transaction));
+                final var result = ScopedValue.where(HANDLE, transaction).call(() -> function.apply(transaction));
+                if (transaction.rollbackOnly) {
+                    throw new IllegalStateException("A joined call failed, the transaction was rolled back");
+                }
                 execute(connection, "COMMIT");
+                return result;
             } catch (final Throwable throwable) {
                 try {
                     execute(connection, "ROLLBACK");
                 } catch (final SQLException exception) {
                     throwable.addSuppressed(exception);
                 }
-                runAll(transaction.rollbackActions);
                 throw throwable;
             }
         } catch (final SQLException exception) {
             throw new RuntimeException("Failed to run a transaction", exception);
         }
-        // Outside the scope, the callbacks open their own transactions
-        runAll(transaction.commitActions);
-        return result;
     }
 
+    /// A failing call rolls the whole transaction back, even when the caller catches its exception, like Spring did.
     private static <R> R join(final TransactionImpl transaction, final SQLFunction<Transaction, R> function) {
         try {
             return function.apply(transaction);
         } catch (final SQLException exception) {
+            transaction.rollbackOnly = true;
             throw new RuntimeException("Failed to run a joined transaction", exception);
+        } catch (final RuntimeException | Error throwable) {
+            transaction.rollbackOnly = true;
+            throw throwable;
         }
     }
 
@@ -109,7 +137,7 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
         }
     }
 
-    private static void runAll(final List<Runnable> actions) {
+    private static void runAll(final Queue<Runnable> actions) {
         for (final var action : actions) {
             try {
                 action.run();
@@ -119,19 +147,29 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
         }
     }
 
+    /// Concurrent, the scoped children of a transaction register theirs alongside it.
+    private static final class Callbacks {
+        private final Queue<Runnable> commit = new ConcurrentLinkedQueue<>();
+        private final Queue<Runnable> rollback = new ConcurrentLinkedQueue<>();
+    }
+
     private static final class TransactionImpl implements Transaction {
 
         private final SQLiteDatabaseImpl database;
         private final Connection connection;
         private final boolean readOnly;
-        private final List<Runnable> commitActions = new ArrayList<>();
-        private final List<Runnable> rollbackActions = new ArrayList<>();
+        private final Callbacks callbacks;
+        private volatile boolean rollbackOnly = false;
 
         private TransactionImpl(
-                final SQLiteDatabaseImpl database, final Connection connection, final boolean readOnly) {
+                final SQLiteDatabaseImpl database,
+                final Connection connection,
+                final boolean readOnly,
+                final Callbacks callbacks) {
             this.database = database;
             this.connection = connection;
             this.readOnly = readOnly;
+            this.callbacks = callbacks;
         }
 
         @SuppressWarnings("SqlSourceToSinkFlow")
@@ -142,12 +180,12 @@ public final class SQLiteDatabaseImpl implements SQLiteDatabase {
 
         @Override
         public void afterCommit(final Runnable action) {
-            this.commitActions.add(action);
+            this.callbacks.commit.add(action);
         }
 
         @Override
         public void afterRollback(final Runnable action) {
-            this.rollbackActions.add(action);
+            this.callbacks.rollback.add(action);
         }
     }
 
